@@ -283,8 +283,9 @@
         </div>
       </div>
       <div class="derived-box">
-        <span class="k">Derived bias from Objective 1</span>
+        <span class="k">Derived bias from HTF DOL stack</span>
         <span class="v" id="derivedBias">—</span>
+        <div class="hint" id="biasLogic">Objective 1 is primary. Objectives 2-3 are used when Objective 1 is neutral, or to warn when objectives conflict.</div>
       </div>
       <div class="hint">External-range liquidity is the real objective; internal-range liquidity is where partials come off. Determine the draw before the entry. <span style="color:#6a6a7e">[ep06 | Internal vs External Range Liquidity; silver_bullet.html]</span></div>
       <div class="hint">Pool quality matters: perfect equal highs/lows and data highs/lows are highest quality; NWOG/NDOG, relative equal highs/lows, and previous session highs/lows are useful B-tier references; standalone order blocks are hit-or-miss as draw liquidity. Combining pools can improve the draw. <span style="color:#6a6a7e">[Liquidity Pools Tier List]</span></div>
@@ -601,14 +602,73 @@
     var n = Number(v);
     return Number.isFinite(n) ? n : NaN;
   }
+  function drawSide(n){
+    return selectedSide('draw'+n) || sideForLabel(val('draw'+n));
+  }
+  function deriveBias(){
+    var sides = [1,2,3].map(function(n){ return { n:n, side:drawSide(n), label:val('draw'+n) }; }).filter(function(x){ return !!x.label; });
+    var directional = sides.filter(function(x){ return x.side === 'bull' || x.side === 'bear'; });
+    var primary = sides.filter(function(x){ return x.n === 1; })[0];
+    var bullCount = directional.filter(function(x){ return x.side === 'bull'; }).length;
+    var bearCount = directional.filter(function(x){ return x.side === 'bear'; }).length;
+    var result = { bias:null, reason:'No HTF DOL selected yet.' };
+    if(!sides.length) return result;
+    if(primary && (primary.side === 'bull' || primary.side === 'bear')){
+      if((primary.side === 'bull' && bearCount) || (primary.side === 'bear' && bullCount)){
+        result.reason = 'Objective 1 is ' + (primary.side === 'bull' ? 'buy-side' : 'sell-side') + ', but secondary objectives include the opposite side. Treat bias as unclear until the DOL stack is reconciled.';
+        return result;
+      }
+      result.bias = primary.side;
+      result.reason = 'Objective 1 is directional and controls the HTF bias. Objectives 2-3 are aligned or neutral context.';
+      return result;
+    }
+    if(bullCount && !bearCount){
+      result.bias = 'bull';
+      result.reason = 'Objective 1 is neutral/inefficiency, so Objectives 2-3 provide the directional read: buy-side draw.';
+      return result;
+    }
+    if(bearCount && !bullCount){
+      result.bias = 'bear';
+      result.reason = 'Objective 1 is neutral/inefficiency, so Objectives 2-3 provide the directional read: sell-side draw.';
+      return result;
+    }
+    if(bullCount && bearCount){
+      result.reason = 'Objectives include both buy-side and sell-side draws. Bias is neutral until one side becomes the dominant HTF DOL.';
+      return result;
+    }
+    result.reason = 'Only neutral/inefficiency objectives are selected. Bias stays neutral until directional draw context is added.';
+    return result;
+  }
+  function deriveSavedBias(fields){
+    function savedSide(n){ return sideForLabel(fields['draw'+n] || ''); }
+    var sides = [1,2,3].map(function(n){ return { n:n, side:savedSide(n), label:fields['draw'+n] || '' }; }).filter(function(x){ return !!x.label; });
+    var directional = sides.filter(function(x){ return x.side === 'bull' || x.side === 'bear'; });
+    var primary = sides.filter(function(x){ return x.n === 1; })[0];
+    var bullCount = directional.filter(function(x){ return x.side === 'bull'; }).length;
+    var bearCount = directional.filter(function(x){ return x.side === 'bear'; }).length;
+    if(!sides.length) return { bias:null, reason:'No HTF DOL selected.' };
+    if(primary && (primary.side === 'bull' || primary.side === 'bear')){
+      if((primary.side === 'bull' && bearCount) || (primary.side === 'bear' && bullCount)){
+        return { bias:null, reason:'Objective 1 is directional, but secondary objectives include the opposite side; HTF bias is unclear.' };
+      }
+      return { bias:primary.side, reason:'Objective 1 is directional and controls the HTF bias.' };
+    }
+    if(bullCount && !bearCount) return { bias:'bull', reason:'Objective 1 is neutral; Objectives 2-3 point to buy-side draw.' };
+    if(bearCount && !bullCount) return { bias:'bear', reason:'Objective 1 is neutral; Objectives 2-3 point to sell-side draw.' };
+    if(bullCount && bearCount) return { bias:null, reason:'Objectives include both buy-side and sell-side draws; HTF bias is neutral/unclear.' };
+    return { bias:null, reason:'Only neutral/inefficiency objectives are selected.' };
+  }
   function syncDerivedBias(){
-    var side = selectedSide('draw1') || sideForLabel(val('draw1'));
-    bias = side === 'bull' ? 'bull' : side === 'bear' ? 'bear' : null;
+    var derived = deriveBias();
+    bias = derived.bias === 'bull' ? 'bull' : derived.bias === 'bear' ? 'bear' : null;
     var el = document.getElementById('derivedBias');
     if(el){
       el.textContent = bias === 'bull' ? 'BULLISH' : bias === 'bear' ? 'BEARISH' : '—';
       el.className = 'v' + (bias === 'bull' ? ' out-dir-bull' : bias === 'bear' ? ' out-dir-bear' : '');
     }
+    var logic = document.getElementById('biasLogic');
+    if(logic) logic.textContent = derived.reason;
+    return derived;
   }
   function objectiveText(prefix){
     var out = [];
@@ -652,7 +712,7 @@
     return row;
   }
   function buildSummary(){
-    syncDerivedBias();
+    var derived = syncDerivedBias();
     var dir = bias==='bull' ? 'BULLISH' : bias==='bear' ? 'BEARISH' : '';
     var dirCls = bias==='bull' ? 'out-dir-bull' : bias==='bear' ? 'out-dir-bear' : '';
     var sweepFull = [val('sweepTf'), objectiveText('opp')].filter(Boolean).join(' · ');
@@ -669,6 +729,7 @@
       makeLine('Time', val('tradeTime')),
       makeLine('Instrument', val('instrument')),
       makeLine('Bias', dir, dirCls, 'bias'),
+      makeLine('Bias Logic', derived.reason),
       makeLine('HTF DOL', drawFull, '', 'draw'),
       makeLine('Opposing Pools', sweepFull, '', 'sweep'),
       makeLine('Macro', val('macro'), '', 'macro'),
@@ -778,8 +839,8 @@
     if(!out.fields.opp1Level && typeof d.fields.sweep === 'string') out.fields.opp1Level = d.fields.sweep;
     if(!out.fields.mssNote && typeof d.fields.mss === 'string') out.fields.mssNote = d.fields.mss;
     if(!out.fields.mssStatus && out.fields.mssNote) out.fields.mssStatus = 'Confirmed';
-    var derivedSide = sideForLabel(out.fields.draw1);
-    out.bias = d.bias === 'bull' || d.bias === 'bear' ? d.bias : derivedSide === 'bull' ? 'bull' : derivedSide === 'bear' ? 'bear' : null;
+    var savedDerived = deriveSavedBias(out.fields);
+    out.bias = savedDerived.bias || (d.bias === 'bull' || d.bias === 'bear' ? d.bias : null);
     out.phases = Array.isArray(d.phases) ? d.phases.slice(0,4).map(function(p){ return NEXT_PHASE[p] ? p : ''; }) : [];
     out.ticks = d.ticks && typeof d.ticks === 'object' ? JSON.parse(JSON.stringify(d.ticks)) : {};
     out.outcome = ['','W','L','B'].indexOf(d.outcome) >= 0 ? d.outcome : '';
@@ -800,11 +861,13 @@
       return parts.join('  ');
     }
     var savedMss = f.mssStatus === 'N/A' ? 'N/A' : [f.mssStatus,f.mssTf,f.mssLevel,f.mssNote].filter(Boolean).join(' · ');
+    var savedBias = deriveSavedBias(f);
     var riskN = parseAmount(f.riskAmt), profitN = parseAmount(f.profitAmt);
     var rr = (riskN > 0 && profitN > 0) ? (profitN/riskN).toFixed(2)+'R' : '';
     var lines = [
       'Date: '+(f.tradeDate||'—')+'   Time: '+(f.tradeTime||'—')+'   Instrument: '+(f.instrument||'—'),
-      'Bias: '+(d.bias==='bull'?'BULLISH':d.bias==='bear'?'BEARISH':'—'),
+      'Bias: '+(savedBias.bias==='bull'?'BULLISH':savedBias.bias==='bear'?'BEARISH':'—'),
+      'Bias logic: '+savedBias.reason,
       'HTF DOL: '+(savedObj('draw')||'—'),
       'Opposing Pools: '+([f.sweepTf,savedObj('opp')].filter(Boolean).join(' · ')||'—'),
       'Macro: '+(f.macro||'—'),
