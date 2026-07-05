@@ -11,760 +11,134 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#0a0a0f; --card:#1a1a24; --inset:#12121a;
-    --text:#e8e8ed; --sub:#9898a8; --border:#2a2a3a;
-    --gold:#ffa502; --bull:#2ed573; --bear:#ff4757;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html{overflow-x:hidden}
-  body{
-    background:var(--bg);color:var(--text);
-    font-family:'Space Grotesk',sans-serif;line-height:1.55;
-    min-height:100vh;padding:36px 20px 72px;
-  }
-  .wrap{max-width:760px;margin:0 auto;min-width:0}
-  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
-  .clock-row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap}
-  h1{font-size:25px;font-weight:700;margin-bottom:6px}
-  .nyclock{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--gold);letter-spacing:.04em;white-space:nowrap}
-  .nyclock span{font-size:11px;color:var(--sub);font-weight:500;letter-spacing:.1em}
-  .sub{color:var(--sub);font-size:14px;margin-bottom:26px}
-  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 18px}
-  .tab-btn{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;background:var(--inset);border:1px solid var(--border);color:var(--sub);border-radius:8px;padding:10px 8px;cursor:pointer;transition:all .15s}
-  .tab-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(255,165,2,.08)}
-  .tab-btn:focus-visible,.copy-btn:focus-visible,.reset:focus-visible,.chk:focus-visible,.in:focus-visible,.jbtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-  .page{display:none}.page.active{display:block}
-  .state{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:.06em;border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:24px;background:var(--inset);display:flex;justify-content:space-between;align-items:center;gap:12px}
-  .state .v{color:var(--sub);text-align:right}.state.ready .v{color:var(--bull)}
-  .step{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:14px;transition:border-color .2s,opacity .2s}
-  .step.done{border-color:rgba(46,213,115,.4)}
-  .step.locked{opacity:.45}
-  .step-head{display:flex;align-items:flex-start;gap:12px;min-width:0}
-  .step-head>div{min-width:0}
-  .chk{appearance:none;-webkit-appearance:none;flex:0 0 20px;width:20px;height:20px;margin-top:2px;border:2px solid var(--sub);border-radius:5px;background:transparent;cursor:pointer;position:relative}
-  .chk:checked{background:var(--bull);border-color:var(--bull)}
-  .chk:checked::after{content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;border:solid var(--bg);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
-  .num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);letter-spacing:.1em;display:block;margin-bottom:2px;text-transform:uppercase}
-  .title{font-size:17px;font-weight:600;overflow-wrap:anywhere}
-  .cite{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#6a6a7e;margin-top:4px;line-height:1.4;overflow-wrap:anywhere}
-  .body{margin-top:14px}
-  .label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);display:block;margin:12px 0 5px}
-  .in{width:100%;background:var(--inset);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;padding:10px 12px}
-  .in::placeholder{color:#5a5a6e}
-  .hint{font-size:13px;color:var(--sub);margin-top:8px;line-height:1.5;overflow-wrap:anywhere}.hint b{color:var(--text);font-weight:600}
-  .meta-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}.meta-row.three{grid-template-columns:1fr 1fr 1fr}
-  .rp-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
-  .dol-list{display:flex;flex-direction:column;gap:10px;margin-top:4px}
-  .dol-row{background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:11px 12px}
-  .dol-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}
-  .dol-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--gold);text-transform:uppercase}
-  .dol-tag{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--sub);border:1px solid var(--border);border-radius:999px;padding:2px 7px;white-space:nowrap}
-  .dol-grid{display:grid;grid-template-columns:1.5fr .8fr .85fr 1fr;gap:8px}
-  .derived-box,.model-info{margin-top:12px;background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:11px 13px}
-  .derived-box .k{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:3px}
-  .derived-box .v{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--text)}
-  .model-info{display:none}.model-info.on{display:block}
-  .mi{display:flex;justify-content:space-between;gap:12px;font-family:'JetBrains Mono',monospace;font-size:12px;padding:3px 0}.mi .k{color:var(--sub);flex:0 0 auto}.mi .val{text-align:right;min-width:0;overflow-wrap:anywhere}.mi .val.gap{color:var(--gold)}.mi-src{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#5a5a6e;margin-top:7px;padding-top:7px;border-top:1px solid var(--border)}
+  :root{--bg:#0a0a0f;--card:#1a1a24;--inset:#12121a;--text:#e8e8ed;--sub:#9898a8;--border:#2a2a3a;--gold:#ffa502;--bull:#2ed573;--bear:#ff4757}
+  *{box-sizing:border-box;margin:0;padding:0} html{overflow-x:hidden}
+  body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;line-height:1.55;min-height:100vh;padding:36px 20px 72px}
+  .wrap{max-width:780px;margin:0 auto;min-width:0}.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+  .clock-row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap}h1{font-size:25px;font-weight:700;margin-bottom:6px}.nyclock{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--gold);letter-spacing:.04em;white-space:nowrap}.nyclock span{font-size:11px;color:var(--sub);font-weight:500;letter-spacing:.1em}.sub{color:var(--sub);font-size:14px;margin-bottom:26px}
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 18px}.tab-btn{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;background:var(--inset);border:1px solid var(--border);color:var(--sub);border-radius:8px;padding:10px 8px;cursor:pointer;transition:all .15s}.tab-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(255,165,2,.08)}
+  .tab-btn:focus-visible,.copy-btn:focus-visible,.reset:focus-visible,.chk:focus-visible,.in:focus-visible,.jbtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}.page{display:none}.page.active{display:block}
+  .state{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:.06em;border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:24px;background:var(--inset);display:flex;justify-content:space-between;align-items:center;gap:12px}.state .v{color:var(--sub);text-align:right}.state.ready .v{color:var(--bull)}
+  .step{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:14px;transition:border-color .2s,opacity .2s}.step.done{border-color:rgba(46,213,115,.4)}.step.locked{opacity:.45}.step-head{display:flex;align-items:flex-start;gap:12px;min-width:0}.step-head>div{min-width:0}.chk{appearance:none;-webkit-appearance:none;flex:0 0 20px;width:20px;height:20px;margin-top:2px;border:2px solid var(--sub);border-radius:5px;background:transparent;cursor:pointer;position:relative}.chk:checked{background:var(--bull);border-color:var(--bull)}.chk:checked::after{content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;border:solid var(--bg);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+  .num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);letter-spacing:.1em;display:block;margin-bottom:2px;text-transform:uppercase}.title{font-size:17px;font-weight:600;overflow-wrap:anywhere}.cite{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#6a6a7e;margin-top:4px;line-height:1.4;overflow-wrap:anywhere}.body{margin-top:14px}.label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);display:block;margin:12px 0 5px}.in{width:100%;background:var(--inset);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;padding:10px 12px}.in::placeholder{color:#5a5a6e}.hint{font-size:13px;color:var(--sub);margin-top:8px;line-height:1.5;overflow-wrap:anywhere}.hint b{color:var(--text);font-weight:600}
+  .meta-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}.meta-row.three{grid-template-columns:1fr 1fr 1fr}.rp-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+  .draw-list{display:flex;flex-direction:column;gap:10px;margin-top:4px}.draw-row{background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:12px}.draw-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}.draw-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--gold);text-transform:uppercase}.draw-tag{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--sub);border:1px solid var(--border);border-radius:999px;padding:2px 7px;white-space:nowrap}.draw-grid{display:grid;grid-template-columns:1.45fr .8fr .85fr 1fr;gap:8px}.draw-grid label{position:absolute;left:-9999px}
+  .derived-box,.model-info{margin-top:12px;background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:11px 13px}.derived-box .k{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:3px}.derived-box .v{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--text)}.model-info{display:none}.model-info.on{display:block}.mi{display:flex;justify-content:space-between;gap:12px;font-family:'JetBrains Mono',monospace;font-size:12px;padding:3px 0}.mi .k{color:var(--sub);flex:0 0 auto}.mi .val{text-align:right;min-width:0;overflow-wrap:anywhere}.mi .val.gap{color:var(--gold)}.mi-src{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#5a5a6e;margin-top:7px;padding-top:7px;border-top:1px solid var(--border)}
   .phase-tbl{width:100%;border-collapse:collapse;margin-top:4px}.phase-tbl th{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:500}.phase-tbl td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:middle}.phase-tbl td:first-child{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--text);width:64px}.phase-tbl select{width:100%;background:var(--inset);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:7px 9px}.phase-tbl td.next-cell{font-family:'Space Grotesk',sans-serif;font-size:11.5px;color:var(--sub);line-height:1.4}.phase-tbl select.p-consolidation{color:var(--bear);border-color:rgba(255,71,87,.4)}.phase-tbl select.p-expansion,.phase-tbl select.p-retracement,.phase-tbl select.p-reversal{color:var(--bull);border-color:rgba(46,213,115,.4)}
-  .out-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:18px 0 8px}
-  .out-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}.out-head span{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}.out-btns{display:flex;gap:8px}
-  .copy-btn{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:6px;padding:6px 12px;cursor:pointer}.copy-btn:hover{border-color:var(--gold);color:var(--gold)}
-  .out-body{font-size:13.5px;line-height:1.7}.out-line{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)}.out-line:last-child{border-bottom:none}.out-k{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);flex:0 0 112px;padding-top:2px}.out-v{color:var(--text);flex:1;min-width:0;overflow-wrap:anywhere}.out-v.empty{color:#5a5a6e;font-style:italic}.out-dir-bull{color:var(--bull);font-weight:700}.out-dir-bear{color:var(--bear);font-weight:700}
+  .out-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:18px 0 8px}.out-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}.out-head span{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}.out-btns{display:flex;gap:8px}.copy-btn{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:6px;padding:6px 12px;cursor:pointer}.copy-btn:hover{border-color:var(--gold);color:var(--gold)}.out-body{font-size:13.5px;line-height:1.7}.out-line{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)}.out-line:last-child{border-bottom:none}.out-k{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);flex:0 0 112px;padding-top:2px}.out-v{color:var(--text);flex:1;min-width:0;overflow-wrap:anywhere}.out-v.empty{color:#5a5a6e;font-style:italic}.out-dir-bull{color:var(--bull);font-weight:700}.out-dir-bear{color:var(--bear);font-weight:700}
   .jlist{display:flex;flex-direction:column;gap:8px}.jempty{font-family:'JetBrains Mono',monospace;font-size:12px;color:#5a5a6e;font-style:italic}.jrow{display:flex;align-items:center;gap:10px;background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:9px 12px}.jrow .jinfo{flex:1;min-width:0;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);line-height:1.4;overflow-wrap:anywhere}.jrow .jinfo small{display:block;color:var(--sub);font-size:10.5px}.jrow .jbtn{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:5px;padding:5px 9px;cursor:pointer}.jrow .jbtn:hover{border-color:var(--gold);color:var(--gold)}.jrow .jbtn.del:hover{border-color:var(--bear);color:var(--bear)}.jrow select.outcome{background:var(--inset);border:1px solid var(--border);border-radius:5px;color:var(--sub);font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 6px}.jrow select.outcome.w{color:var(--bull);border-color:rgba(46,213,115,.4)}.jrow select.outcome.l{color:var(--bear);border-color:rgba(255,71,87,.4)}.jrow select.outcome.b{color:var(--gold);border-color:rgba(255,165,2,.4)}
-  .learn-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.learn-card{background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:13px 14px;min-width:0}.learn-card h3{font-size:15px;font-weight:700;margin-bottom:5px;color:var(--text);overflow-wrap:anywhere}.learn-card p{font-size:13px;color:var(--sub);line-height:1.55;overflow-wrap:anywhere}.learn-card .tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;color:var(--gold);text-transform:uppercase;margin-bottom:5px}.principles{margin-top:12px;display:flex;flex-direction:column;gap:8px}.principle{display:flex;gap:10px;background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--sub)}.principle strong{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);flex:0 0 82px;text-transform:uppercase}
-  .reset{margin-top:8px;width:100%;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:8px;padding:11px 0;cursor:pointer;transition:all .15s}.reset:hover{border-color:var(--bear);color:var(--bear)}.footer{font-family:'JetBrains Mono',monospace;font-size:11px;color:#5a5a6e;margin-top:26px;line-height:1.6}
-  @media (max-width:760px){body{padding:24px 14px 56px}.wrap{max-width:100%}.meta-row,.meta-row.three,.rp-row,.dol-grid{grid-template-columns:1fr}.learn-grid{grid-template-columns:1fr}.in,.copy-btn,.reset,.jrow .jbtn{min-height:44px}.out-head,.jrow{align-items:flex-start;flex-wrap:wrap}.out-btns{width:100%;display:grid;grid-template-columns:1fr 1fr}.out-card{padding:14px 14px}.jrow{display:grid;grid-template-columns:1fr;gap:8px}.jrow select.outcome,.jrow .jbtn{width:100%}}
-  @media (max-width:520px){body{padding:18px 10px 44px}h1{font-size:22px}.sub{font-size:13px;margin-bottom:18px}.clock-row{gap:6px}.nyclock{font-size:17px}.state{position:sticky;top:0;z-index:10;margin:0 -2px 16px;padding:10px 12px;border-color:rgba(255,165,2,.35);box-shadow:0 8px 18px rgba(0,0,0,.28)}.state span:first-child{display:none}.state .v{font-size:11px;letter-spacing:.02em;overflow-wrap:anywhere}.tabs{grid-template-columns:1fr;gap:6px;margin-bottom:14px}.tab-btn{min-height:42px}.step{padding:14px 12px;border-radius:8px;margin-bottom:12px}.step-head{gap:9px}.title{font-size:15.5px}.num{font-size:10px;letter-spacing:.08em}.cite{font-size:10px}.hint{font-size:12px}.label{font-size:9.5px;letter-spacing:.1em}.dol-row{padding:10px;border-radius:8px}.model-info .mi{display:grid;grid-template-columns:1fr;gap:1px}.mi .val{text-align:left}.out-line{display:grid;grid-template-columns:auto 1fr;gap:6px 9px;padding:7px 0}.out-k{flex-basis:auto;font-size:10px;padding-top:0}.out-v{font-size:13px}.out-head span{font-size:11px}.principle{display:block}.principle strong{display:block;margin-bottom:4px}.footer{font-size:10px}}
+  .learn-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.learn-card{background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:13px 14px}.learn-card h3{font-size:15px;font-weight:700;margin-bottom:5px;color:var(--text)}.learn-card p{font-size:13px;color:var(--sub);line-height:1.55}.learn-card .tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;color:var(--gold);text-transform:uppercase;margin-bottom:5px}.principles{margin-top:12px;display:flex;flex-direction:column;gap:8px}.principle{display:flex;gap:10px;background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--sub)}.principle strong{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);flex:0 0 82px;text-transform:uppercase}.reset{margin-top:8px;width:100%;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:8px;padding:11px 0;cursor:pointer;transition:all .15s}.reset:hover{border-color:var(--bear);color:var(--bear)}.footer{font-family:'JetBrains Mono',monospace;font-size:11px;color:#5a5a6e;margin-top:26px;line-height:1.6}
+  @media (max-width:780px){body{padding:24px 14px 56px}.wrap{max-width:100%}.meta-row,.meta-row.three,.rp-row,.draw-grid{grid-template-columns:1fr}.learn-grid{grid-template-columns:1fr}.in,.copy-btn,.reset,.jrow .jbtn{min-height:44px}.out-head,.jrow{align-items:flex-start;flex-wrap:wrap}.out-btns{width:100%;display:grid;grid-template-columns:1fr 1fr}.out-card{padding:14px}.jrow{display:grid;grid-template-columns:1fr;gap:8px}.jrow select.outcome,.jrow .jbtn{width:100%}}
+  @media (max-width:520px){body{padding:18px 10px 44px}h1{font-size:22px}.sub{font-size:13px;margin-bottom:18px}.clock-row{gap:6px}.nyclock{font-size:17px}.state{position:sticky;top:0;z-index:10;margin:0 -2px 16px;padding:10px 12px;border-color:rgba(255,165,2,.35);box-shadow:0 8px 18px rgba(0,0,0,.28)}.state span:first-child{display:none}.state .v{font-size:11px}.tabs{grid-template-columns:1fr;gap:6px;margin-bottom:14px}.tab-btn{min-height:42px}.step{padding:14px 12px;border-radius:8px;margin-bottom:12px}.title{font-size:15.5px}.num{font-size:10px;letter-spacing:.08em}.cite{font-size:10px}.hint{font-size:12px}.label{font-size:9.5px}.draw-row{padding:10px}.out-line{display:grid;grid-template-columns:auto 1fr;gap:6px 9px;padding:7px 0}.out-k{flex-basis:auto;font-size:10px}.out-v{font-size:13px}.principle{display:block}.principle strong{display:block;margin-bottom:4px}.footer{font-size:10px}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="eyebrow">Premise &amp; Framework</div>
-  <div class="clock-row">
-    <h1>Draw · Sweep · Entry</h1>
-    <div class="nyclock" id="nyClock" aria-live="off">--:--:-- <span>NY</span></div>
-  </div>
-  <p class="sub">ICT setup planner: choose the instrument, define up to three draws on liquidity, map the potential sweep time, then confirm the entry model.</p>
+  <div class="clock-row"><h1>Draw · Sweep · Entry</h1><div class="nyclock" id="nyClock" aria-live="off">--:--:-- <span>NY</span></div></div>
+  <p class="sub">ICT setup planner: choose the instrument, enter up to three draws on liquidity, map the potential sweep time, then confirm the entry model.</p>
+  <nav class="tabs" aria-label="App sections"><button class="tab-btn active" type="button" data-page="plannerPage">Planner</button><button class="tab-btn" type="button" data-page="savedPage">Saved Setups</button><button class="tab-btn" type="button" data-page="phasesPage">Market Phases</button></nav>
 
-  <nav class="tabs" aria-label="App sections">
-    <button class="tab-btn active" type="button" data-page="plannerPage">Planner</button>
-    <button class="tab-btn" type="button" data-page="savedPage">Saved Setups</button>
-    <button class="tab-btn" type="button" data-page="phasesPage">Market Phases</button>
-  </nav>
+  <datalist id="dolOptions">
+    <option value="Previous day high (PDH)"><option value="Previous day low (PDL)"><option value="Previous week high (PWH)"><option value="Previous week low (PWL)"><option value="Session high"><option value="Session low"><option value="Relative equal highs (REH)"><option value="Relative equal lows (REL)"><option value="Old high / prior swing high"><option value="Old low / prior swing low"><option value="New Week Opening Gap (NWOG)"><option value="New Day Opening Gap (NDOG)"><option value="HTF fair value gap (SIBI / BISI)"><option value="Midnight open">
+  </datalist>
 
   <section class="page active" id="plannerPage">
     <div class="meta-row three">
-      <div>
-        <label class="label" for="tradeDate">Date</label>
-        <input class="in" id="tradeDate" type="date">
-      </div>
-      <div>
-        <label class="label" for="tradeTime">Trading time</label>
-        <select class="in" id="tradeTime">
-          <option value="">— select —</option>
-          <option>2am NY (London Killzone)</option>
-          <option>5am NY (Pre-NY)</option>
-          <option>7am NY</option>
-          <option>9:20am NY</option>
-          <option>NY AM</option>
-          <option>NY Lunch</option>
-          <option>London Close</option>
-        </select>
-      </div>
-      <div>
-        <label class="label" for="instrument">Instrument</label>
-        <select class="in" id="instrument">
-          <option value="">— select instrument —</option>
-          <option>MNQ</option><option>NQ</option><option>MES</option><option>ES</option>
-          <option>MYM</option><option>YM</option><option>MGC</option><option>GC</option>
-          <option>CL</option><option>EURUSD</option><option>GBPUSD</option><option>BTCUSD</option>
-        </select>
-      </div>
+      <div><label class="label" for="tradeDate">Date</label><input class="in" id="tradeDate" type="date"></div>
+      <div><label class="label" for="tradeTime">Trading time</label><select class="in" id="tradeTime"><option value="">— select —</option><option>2am NY (London Killzone)</option><option>5am NY (Pre-NY)</option><option>7am NY</option><option>9:20am NY</option><option>NY AM</option><option>NY Lunch</option><option>London Close</option></select></div>
+      <div><label class="label" for="instrument">Instrument</label><select class="in" id="instrument"><option value="">— select instrument —</option><option>MNQ</option><option>NQ</option><option>MES</option><option>ES</option><option>MYM</option><option>YM</option><option>MGC</option><option>GC</option><option>CL</option><option>EURUSD</option><option>GBPUSD</option><option>BTCUSD</option></select></div>
     </div>
+    <div class="state" id="stateBox"><span>Setup</span><span class="v" id="stateVal">0 / 4 — not ready</span></div>
 
-    <div class="state" id="stateBox">
-      <span>Setup</span><span class="v" id="stateVal">0 / 4 — not ready</span>
-    </div>
-
-    <div class="step" id="s1">
-      <div class="step-head">
-        <input type="checkbox" class="chk" id="c1" aria-label="Step 1 complete">
-        <div>
-          <span class="num">Step 1 of 4 · Market context</span>
-          <div class="title">What market condition is price in now?</div>
-          <div class="cite">Use this as context only. Final readiness comes from draw, sweep timing, and entry evidence.</div>
-        </div>
-      </div>
-      <div class="body">
-        <table class="phase-tbl" aria-label="Market phase per timeframe">
-          <thead><tr><th>Timeframe</th><th>Condition now</th><th>Context note</th></tr></thead>
-          <tbody id="phaseRows"></tbody>
-        </table>
-        <div class="hint">Do not force every timeframe to agree. Use the higher timeframe draw to control the directional read.</div>
-      </div>
-    </div>
+    <div class="step" id="s1"><div class="step-head"><input type="checkbox" class="chk" id="c1" aria-label="Step 1 complete"><div><span class="num">Step 1 of 4 · Market context</span><div class="title">What market condition is price in now?</div><div class="cite">Use this as context only. Final readiness comes from draw, sweep timing, and entry evidence.</div></div></div><div class="body"><table class="phase-tbl" aria-label="Market phase per timeframe"><thead><tr><th>Timeframe</th><th>Condition now</th><th>Context note</th></tr></thead><tbody id="phaseRows"></tbody></table><div class="hint">Do not force every timeframe to agree. Use the higher timeframe draw to control the directional read.</div></div></div>
 
     <div class="step locked" id="s2">
-      <div class="step-head">
-        <input type="checkbox" class="chk" id="c2" aria-label="Step 2 complete">
-        <div>
-          <span class="num">Step 2 of 4 · Draws on liquidity</span>
-          <div class="title">Input up to three potential draws on liquidity</div>
-          <div class="cite">Each draw captures the liquidity objective, confidence, and expected hit time. No draw note field is used.</div>
-        </div>
-      </div>
+      <div class="step-head"><input type="checkbox" class="chk" id="c2" aria-label="Step 2 complete"><div><span class="num">Step 2 of 4 · Draws on liquidity</span><div class="title">Enter up to three independent draws on liquidity</div><div class="cite">Each completed DOL row has its own draw, confidence, and expected hit time. At least one complete row is required; Draw 2 and Draw 3 can be used independently.</div></div></div>
       <div class="body">
-        <div class="dol-list">
-          <div class="dol-row">
-            <div class="dol-head"><span class="dol-title">Draw 1</span><span class="dol-tag">Primary</span></div>
-            <div class="dol-grid">
-              <select class="in dol-select" id="draw1" aria-label="Draw on liquidity 1"></select>
-              <input class="in" id="draw1Level" type="text" inputmode="decimal" placeholder="price level">
-              <select class="in" id="draw1Confidence" aria-label="Draw 1 confidence">
-                <option value="">— confidence —</option><option>Low</option><option>Medium</option><option>High</option>
-              </select>
-              <select class="in" id="draw1HitTime" aria-label="Draw 1 hit time">
-                <option value="">— hit time —</option>
-              </select>
-            </div>
-            <div class="hint" id="draw1Help">Primary draw. This drives the displayed bias when directional.</div>
-          </div>
-          <div class="dol-row">
-            <div class="dol-head"><span class="dol-title">Draw 2</span><span class="dol-tag">Optional</span></div>
-            <div class="dol-grid">
-              <select class="in dol-select" id="draw2" aria-label="Draw on liquidity 2"></select>
-              <input class="in" id="draw2Level" type="text" inputmode="decimal" placeholder="price level">
-              <select class="in" id="draw2Confidence" aria-label="Draw 2 confidence">
-                <option value="">— confidence —</option><option>Low</option><option>Medium</option><option>High</option>
-              </select>
-              <select class="in" id="draw2HitTime" aria-label="Draw 2 hit time">
-                <option value="">— hit time —</option>
-              </select>
-            </div>
-            <div class="hint" id="draw2Help">Optional confluence or next draw.</div>
-          </div>
-          <div class="dol-row">
-            <div class="dol-head"><span class="dol-title">Draw 3</span><span class="dol-tag">Optional</span></div>
-            <div class="dol-grid">
-              <select class="in dol-select" id="draw3" aria-label="Draw on liquidity 3"></select>
-              <input class="in" id="draw3Level" type="text" inputmode="decimal" placeholder="price level">
-              <select class="in" id="draw3Confidence" aria-label="Draw 3 confidence">
-                <option value="">— confidence —</option><option>Low</option><option>Medium</option><option>High</option>
-              </select>
-              <select class="in" id="draw3HitTime" aria-label="Draw 3 hit time">
-                <option value="">— hit time —</option>
-              </select>
-            </div>
-            <div class="hint" id="draw3Help">Optional extended draw.</div>
-          </div>
+        <div class="draw-list">
+          <div class="draw-row" data-draw-row="1"><div class="draw-head"><span class="draw-title">DOL 1</span><span class="draw-tag">1 of 3</span></div><div class="draw-grid"><label for="draw1">Draw on liquidity 1</label><input class="in" id="draw1" list="dolOptions" placeholder="draw on liquidity e.g. PDH"><label for="draw1Level">Price level 1</label><input class="in" id="draw1Level" type="text" inputmode="decimal" placeholder="price level"><label for="draw1Confidence">Confidence 1</label><select class="in" id="draw1Confidence"><option value="">— confidence —</option><option>Low</option><option>Medium</option><option>High</option></select><label for="draw1HitTime">Hit time 1</label><select class="in" id="draw1HitTime"><option value="">— hit time —</option></select></div></div>
+          <div class="draw-row" data-draw-row="2"><div class="draw-head"><span class="draw-title">DOL 2</span><span class="draw-tag">2 of 3</span></div><div class="draw-grid"><label for="draw2">Draw on liquidity 2</label><input class="in" id="draw2" list="dolOptions" placeholder="draw on liquidity e.g. PWH"><label for="draw2Level">Price level 2</label><input class="in" id="draw2Level" type="text" inputmode="decimal" placeholder="price level"><label for="draw2Confidence">Confidence 2</label><select class="in" id="draw2Confidence"><option value="">— confidence —</option><option>Low</option><option>Medium</option><option>High</option></select><label for="draw2HitTime">Hit time 2</label><select class="in" id="draw2HitTime"><option value="">— hit time —</option></select></div></div>
+          <div class="draw-row" data-draw-row="3"><div class="draw-head"><span class="draw-title">DOL 3</span><span class="draw-tag">3 of 3</span></div><div class="draw-grid"><label for="draw3">Draw on liquidity 3</label><input class="in" id="draw3" list="dolOptions" placeholder="draw on liquidity e.g. NWOG"><label for="draw3Level">Price level 3</label><input class="in" id="draw3Level" type="text" inputmode="decimal" placeholder="price level"><label for="draw3Confidence">Confidence 3</label><select class="in" id="draw3Confidence"><option value="">— confidence —</option><option>Low</option><option>Medium</option><option>High</option></select><label for="draw3HitTime">Hit time 3</label><select class="in" id="draw3HitTime"><option value="">— hit time —</option></select></div></div>
         </div>
-        <div class="derived-box">
-          <span class="k">Derived bias from DOL stack</span>
-          <span class="v" id="derivedBias">—</span>
-          <div class="hint" id="biasLogic">Draw 1 is primary. Draws 2-3 can support or warn of conflict.</div>
-        </div>
+        <div class="derived-box"><span class="k">Derived bias from DOL stack</span><span class="v" id="derivedBias">—</span><div class="hint" id="biasLogic">The first directional completed DOL controls the working bias unless another completed DOL conflicts.</div></div>
       </div>
     </div>
 
-    <div class="step locked" id="s3">
-      <div class="step-head">
-        <input type="checkbox" class="chk" id="c3" aria-label="Step 3 complete">
-        <div>
-          <span class="num">Step 3 of 4 · Potential sweep</span>
-          <div class="title">When could price sweep liquidity?</div>
-          <div class="cite">Use a controlled sweep time dropdown. No sweep note field is used.</div>
-        </div>
-      </div>
-      <div class="body">
-        <label class="label" for="sweepTime">Sweep time (potential)</label>
-        <select class="in" id="sweepTime">
-          <option value="">— select potential sweep time —</option>
-        </select>
-        <div class="rp-row">
-          <div>
-            <label class="label" for="sweepTf">Sweep timeframe</label>
-            <select class="in" id="sweepTf">
-              <option value="">— timeframe —</option>
-              <option>4H</option><option>1H</option><option>15m</option><option>5m</option><option>3m</option><option>1m</option>
-            </select>
-          </div>
-          <div>
-            <label class="label" for="sweepPool">Opposing pool swept</label>
-            <select class="in" id="sweepPool" aria-label="Opposing liquidity pool swept"></select>
-          </div>
-        </div>
-        <label class="label" for="sweepLevel">Sweep price level</label>
-        <input class="in" id="sweepLevel" type="text" inputmode="decimal" placeholder="price level swept">
-        <div class="hint">The sweep should normally raid liquidity opposite the intended draw before displacement or MSS.</div>
-      </div>
-    </div>
+    <div class="step locked" id="s3"><div class="step-head"><input type="checkbox" class="chk" id="c3" aria-label="Step 3 complete"><div><span class="num">Step 3 of 4 · Potential sweep</span><div class="title">When could price sweep liquidity?</div><div class="cite">Use a controlled sweep time dropdown. No sweep note field is used.</div></div></div><div class="body"><label class="label" for="sweepTime">Sweep time (potential)</label><select class="in" id="sweepTime"><option value="">— select potential sweep time —</option></select><div class="rp-row"><div><label class="label" for="sweepTf">Sweep timeframe</label><select class="in" id="sweepTf"><option value="">— timeframe —</option><option>4H</option><option>1H</option><option>15m</option><option>5m</option><option>3m</option><option>1m</option></select></div><div><label class="label" for="sweepPool">Opposing pool swept</label><input class="in" id="sweepPool" list="dolOptions" placeholder="e.g. PDL / REL / session low"></div></div><label class="label" for="sweepLevel">Sweep price level</label><input class="in" id="sweepLevel" type="text" inputmode="decimal" placeholder="price level swept"><div class="hint">The sweep should normally raid liquidity opposite the intended draw before displacement or MSS.</div></div></div>
 
-    <div class="step locked" id="s4">
-      <div class="step-head">
-        <input type="checkbox" class="chk" id="c4" aria-label="Step 4 complete">
-        <div>
-          <span class="num">Step 4 of 4 · Entry model</span>
-          <div class="title">Confirm market structure and apply the entry model</div>
-          <div class="cite">Model 2022 and FVG Drill require sweep → MSS/displacement → FVG. Other models use their own prerequisites.</div>
-        </div>
-      </div>
-      <div class="body">
-        <label class="label" for="model">Entry model</label>
-        <select class="in" id="model">
-          <option value="">— select model —</option>
-          <option value="2022">Model 2022 (sweep → MSS → FVG entry)</option>
-          <option value="fvgdrill">FVG Entry Drill (timeframe cascade)</option>
-          <option value="ifvg">Inversion FVG (failed gap → opposite role)</option>
-          <option value="ote">OTE (retracement into discount/premium)</option>
-          <option value="ob">Order Block entry</option>
-          <option value="breaker">Breaker entry</option>
-          <option value="turtlesoup">Turtle Soup (stop raid reversal)</option>
-          <option value="silverbullet">Silver Bullet (time-windowed FVG)</option>
-        </select>
-        <div class="model-info" id="modelInfo">
-          <div class="mi"><span class="k">Trigger</span><span class="val" id="miTrig">—</span></div>
-          <div class="mi"><span class="k">Invalidation</span><span class="val" id="miInval">—</span></div>
-          <div class="mi"><span class="k">Target logic</span><span class="val" id="miTgt">—</span></div>
-          <div class="mi-src" id="miSrc">—</div>
-        </div>
-        <label class="label" for="mssStatus">Market structure shift</label>
-        <select class="in" id="mssStatus">
-          <option value="">— select MSS status —</option>
-          <option>Confirmed</option>
-          <option>N/A</option>
-        </select>
-        <div class="rp-row">
-          <div>
-            <label class="label" for="mssTf">MSS timeframe</label>
-            <select class="in" id="mssTf">
-              <option value="">— timeframe —</option>
-              <option>4H</option><option>1H</option><option>15m</option><option>5m</option><option>3m</option><option>1m</option>
-            </select>
-          </div>
-          <div>
-            <label class="label" for="mssLevel">MSS price level</label>
-            <input class="in" id="mssLevel" type="text" inputmode="decimal" placeholder="e.g. 29512 or N/A">
-          </div>
-        </div>
-        <label class="label" for="entryNote">Execution timeframe &amp; entry note</label>
-        <input class="in" id="entryNote" placeholder="e.g. 1m FVG entry after displacement, or N/A">
-        <div class="rp-row">
-          <div>
-            <label class="label" for="riskAmt">Risk amount</label>
-            <input class="in" id="riskAmt" type="text" inputmode="decimal" placeholder="XXX or N/A">
-          </div>
-          <div>
-            <label class="label" for="profitAmt">Profit amount</label>
-            <input class="in" id="profitAmt" type="text" inputmode="decimal" placeholder="XXX or N/A">
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="step locked" id="s4"><div class="step-head"><input type="checkbox" class="chk" id="c4" aria-label="Step 4 complete"><div><span class="num">Step 4 of 4 · Entry model</span><div class="title">Confirm market structure and apply the entry model</div><div class="cite">Model 2022 and FVG Drill require sweep → MSS/displacement → FVG. Other models use their own prerequisites.</div></div></div><div class="body"><label class="label" for="model">Entry model</label><select class="in" id="model"><option value="">— select model —</option><option value="2022">Model 2022 (sweep → MSS → FVG entry)</option><option value="fvgdrill">FVG Entry Drill (timeframe cascade)</option><option value="ifvg">Inversion FVG (failed gap → opposite role)</option><option value="ote">OTE (retracement into discount/premium)</option><option value="ob">Order Block entry</option><option value="breaker">Breaker entry</option><option value="turtlesoup">Turtle Soup (stop raid reversal)</option><option value="silverbullet">Silver Bullet (time-windowed FVG)</option></select><div class="model-info" id="modelInfo"><div class="mi"><span class="k">Trigger</span><span class="val" id="miTrig">—</span></div><div class="mi"><span class="k">Invalidation</span><span class="val" id="miInval">—</span></div><div class="mi"><span class="k">Target logic</span><span class="val" id="miTgt">—</span></div><div class="mi-src" id="miSrc">—</div></div><label class="label" for="mssStatus">Market structure shift</label><select class="in" id="mssStatus"><option value="">— select MSS status —</option><option>Confirmed</option><option>N/A</option></select><div class="rp-row"><div><label class="label" for="mssTf">MSS timeframe</label><select class="in" id="mssTf"><option value="">— timeframe —</option><option>4H</option><option>1H</option><option>15m</option><option>5m</option><option>3m</option><option>1m</option></select></div><div><label class="label" for="mssLevel">MSS price level</label><input class="in" id="mssLevel" type="text" inputmode="decimal" placeholder="e.g. 29512 or N/A"></div></div><label class="label" for="entryNote">Execution timeframe &amp; entry note</label><input class="in" id="entryNote" placeholder="e.g. 1m FVG entry after displacement, or N/A"><div class="rp-row"><div><label class="label" for="riskAmt">Risk amount</label><input class="in" id="riskAmt" type="text" inputmode="decimal" placeholder="XXX or N/A"></div><div><label class="label" for="profitAmt">Profit amount</label><input class="in" id="profitAmt" type="text" inputmode="decimal" placeholder="XXX or N/A"></div></div></div></div>
 
-    <div class="out-card" id="outCard">
-      <div class="out-head">
-        <span id="outTitle">Setup summary</span>
-        <div class="out-btns">
-          <button class="copy-btn" id="saveBtn" type="button">Save slip</button>
-          <button class="copy-btn" id="copyBtn" type="button">Copy</button>
-        </div>
-      </div>
-      <div class="out-body" id="outBody"></div>
-    </div>
-    <button class="reset" id="resetBtn" type="button">Reset</button>
+    <div class="out-card" id="outCard"><div class="out-head"><span id="outTitle">Setup summary</span><div class="out-btns"><button class="copy-btn" id="saveBtn" type="button">Save slip</button><button class="copy-btn" id="copyBtn" type="button">Copy</button></div></div><div class="out-body" id="outBody"></div></div><button class="reset" id="resetBtn" type="button">Reset</button>
   </section>
 
-  <section class="page" id="savedPage">
-    <div class="out-card" id="journalCard">
-      <div class="out-head">
-        <span>Saved slips</span>
-        <button class="copy-btn" id="exportBtn" type="button">Export all</button>
-      </div>
-      <div id="journalList" class="jlist"><div class="jempty">No saved slips yet.</div></div>
-    </div>
-  </section>
-
-  <section class="page" id="phasesPage">
-    <div class="out-card">
-      <div class="out-head"><span>Market Phases</span></div>
-      <div class="hint">Use these as context labels, not mechanical predictions. Start with the higher-timeframe draw and current dealing range.</div>
-      <div class="learn-grid">
-        <div class="learn-card"><span class="tag">Condition 1</span><h3>Consolidation</h3><p>Price is contained inside a range, often building liquidity on both sides.</p></div>
-        <div class="learn-card"><span class="tag">Condition 2</span><h3>Expansion</h3><p>Price displaces away from a range, liquidity pool, or key level.</p></div>
-        <div class="learn-card"><span class="tag">Condition 3</span><h3>Retracement</h3><p>Price returns into a prior dealing range, FVG, order block, or premium/discount area.</p></div>
-        <div class="learn-card"><span class="tag">Condition 4</span><h3>Reversal</h3><p>Price changes delivery direction after a liquidity objective, failed continuation, or MSS.</p></div>
-      </div>
-    </div>
-    <div class="out-card">
-      <div class="out-head"><span>How To Apply</span></div>
-      <div class="principles">
-        <div class="principle"><strong>Start</strong><span>Label the traded timeframe and higher timeframe separately.</span></div>
-        <div class="principle"><strong>Bias</strong><span>Let the draw on liquidity dictate directional bias.</span></div>
-        <div class="principle"><strong>Confirm</strong><span>Use sweep timing, MSS/displacement, and the selected entry model to decide if the setup is actionable.</span></div>
-        <div class="principle"><strong>Avoid</strong><span>Do not treat timing as a standalone signal.</span></div>
-      </div>
-    </div>
-  </section>
-
-  <div class="footer">
-    Framework planner: select instrument → define up to three DOLs → map the potential sweep time → apply the entry model.<br>
-    Saved slips retain the first-save timestamp and can be updated after loading without overwriting that original timestamp.
-  </div>
+  <section class="page" id="savedPage"><div class="out-card" id="journalCard"><div class="out-head"><span>Saved slips</span><button class="copy-btn" id="exportBtn" type="button">Export all</button></div><div id="journalList" class="jlist"><div class="jempty">No saved slips yet.</div></div></div></section>
+  <section class="page" id="phasesPage"><div class="out-card"><div class="out-head"><span>Market Phases</span></div><div class="hint">Use these as context labels, not mechanical predictions. Start with the higher-timeframe draw and current dealing range.</div><div class="learn-grid"><div class="learn-card"><span class="tag">Condition 1</span><h3>Consolidation</h3><p>Price is contained inside a range, often building liquidity on both sides.</p></div><div class="learn-card"><span class="tag">Condition 2</span><h3>Expansion</h3><p>Price displaces away from a range, liquidity pool, or key level.</p></div><div class="learn-card"><span class="tag">Condition 3</span><h3>Retracement</h3><p>Price returns into a prior dealing range, FVG, order block, or premium/discount area.</p></div><div class="learn-card"><span class="tag">Condition 4</span><h3>Reversal</h3><p>Price changes delivery direction after a liquidity objective, failed continuation, or MSS.</p></div></div></div><div class="out-card"><div class="out-head"><span>How To Apply</span></div><div class="principles"><div class="principle"><strong>Start</strong><span>Label the traded timeframe and higher timeframe separately.</span></div><div class="principle"><strong>Bias</strong><span>Let the draw on liquidity dictate directional bias.</span></div><div class="principle"><strong>Confirm</strong><span>Use sweep timing, MSS/displacement, and the selected entry model to decide if the setup is actionable.</span></div><div class="principle"><strong>Avoid</strong><span>Do not treat timing as a standalone signal.</span></div></div></div></section>
+  <div class="footer">Framework planner: select instrument → enter up to three DOLs → map the potential sweep time → apply the entry model.<br>Saved slips retain the first-save timestamp and can be updated after loading without overwriting that original timestamp.</div>
 </div>
 
 <script>
 (function(){
-  var STORAGE_KEY = 'ict_slips_v1';
-  var activeSlipId = null;
-  var bias = null;
-  var GAP = 'No canonical source';
-  var MODELS = {
-    '2022':{trig:'Return into the FVG that formed after the sweep + MSS', inval:'No FVG after the sweep and structure shift', tgt:'Next opposing liquidity pool', src:'ep38; MARKET_MAKER_MODELS; immediate_rebalance_notes'},
-    'fvgdrill':{trig:'Limit at the displacement FVG, drilled 15m→1m', inval:'No FVG in the displacement range', tgt:'Internal = partials; external range liquidity = objective', src:'ep06; ep25'},
-    'ifvg':{trig:'Failed FVG returns and acts in the opposite role', inval:'Gap holds its original role', tgt:GAP, src:'INVERSION_FAIR_VALUE_GAP'},
-    'ote':{trig:'Retracement into the 62%-79% OTE zone', inval:'Reference swing high/low fails', tgt:'Old high/low → target ladder', src:'OTE_OPTIMAL_TRADE_ENTRY'},
-    'ob':{trig:'Repricing to the order block', inval:'Protected order-block candle or structure is violated', tgt:'Next liquidity pool', src:'ORDER_BLOCKS_KILL_ZONES'},
-    'breaker':{trig:'Entry at the breaker; mean threshold = 50%', inval:'Intermediate-term rebalance swing exceeded', tgt:'A-to-B std deviation + HTF liquidity', src:'BREAKER_BREAD_AND_BUTTER'},
-    'turtlesoup':{trig:'Reversal after a stop raid of external liquidity', inval:GAP, tgt:'Reversal away from the raided pool', src:'entry-models-reference 1.3'},
-    'silverbullet':{trig:'FVG entry inside the active Silver Bullet time window', inval:GAP, tgt:'Prev day / prev session high or low in the window', src:'silver_bullet.html'}
+  var STORAGE_KEY='ict_slips_v1', activeSlipId=null, bias=null, GAP='No canonical source';
+  var MODELS={
+    '2022':{trig:'Return into the FVG that formed after the sweep + MSS',inval:'No FVG after the sweep and structure shift',tgt:'Next opposing liquidity pool',src:'ep38; MARKET_MAKER_MODELS; immediate_rebalance_notes'},
+    'fvgdrill':{trig:'Limit at the displacement FVG, drilled 15m→1m',inval:'No FVG in the displacement range',tgt:'Internal = partials; external range liquidity = objective',src:'ep06; ep25'},
+    'ifvg':{trig:'Failed FVG returns and acts in the opposite role',inval:'Gap holds its original role',tgt:GAP,src:'INVERSION_FAIR_VALUE_GAP'},
+    'ote':{trig:'Retracement into the 62%-79% OTE zone',inval:'Reference swing high/low fails',tgt:'Old high/low → target ladder',src:'OTE_OPTIMAL_TRADE_ENTRY'},
+    'ob':{trig:'Repricing to the order block',inval:'Protected order-block candle or structure is violated',tgt:'Next liquidity pool',src:'ORDER_BLOCKS_KILL_ZONES'},
+    'breaker':{trig:'Entry at the breaker; mean threshold = 50%',inval:'Intermediate-term rebalance swing exceeded',tgt:'A-to-B std deviation + HTF liquidity',src:'BREAKER_BREAD_AND_BUTTER'},
+    'turtlesoup':{trig:'Reversal after a stop raid of external liquidity',inval:GAP,tgt:'Reversal away from the raided pool',src:'entry-models-reference 1.3'},
+    'silverbullet':{trig:'FVG entry inside the active Silver Bullet time window',inval:GAP,tgt:'Prev day / prev session high or low in the window',src:'silver_bullet.html'}
   };
-  var OBJECTIVE_GROUPS = [
-    { label:'Buy-side (above)', side:'bull', options:[
-      ['Previous day high (PDH)','External buy-side liquidity above price.'],
-      ['Previous week high (PWH)','Higher-timeframe buy-side liquidity above price.'],
-      ['Session high (Asia / London / NY)','Session buy-side liquidity above price.'],
-      ['Relative equal highs (REH)','Clustered buy-side stops above relative equal highs.'],
-      ['Old high / prior swing high','Prior swing high acting as buy-side liquidity.'],
-      ['Buy-side midnight open','Opening-price reference above/near price that can act as buy-side liquidity.']
-    ]},
-    { label:'Sell-side (below)', side:'bear', options:[
-      ['Previous day low (PDL)','External sell-side liquidity below price.'],
-      ['Previous week low (PWL)','Higher-timeframe sell-side liquidity below price.'],
-      ['Session low (Asia / London / NY)','Session sell-side liquidity below price.'],
-      ['Relative equal lows (REL)','Clustered sell-side stops below relative equal lows.'],
-      ['Old low / prior swing low','Prior swing low acting as sell-side liquidity.'],
-      ['Sell-side midnight open','Opening-price reference below/near price that can act as sell-side liquidity.']
-    ]},
-    { label:'Inefficiency / gap', side:'neutral', options:[
-      ['New Week Opening Gap (NWOG)','Carried-forward weekly opening gap / fair-valuation reference.'],
-      ['New Day Opening Gap (NDOG)','Daily opening gap / fair-valuation reference.'],
-      ['Midnight open','Neutral opening-price reference; use side-specific midnight open where possible.'],
-      ['HTF fair value gap (SIBI / BISI)','Higher-timeframe inefficiency that can draw price.'],
-      ['Fair value gap (SIBI / BISI)','Inefficiency that can draw or rebalance price.']
-    ]}
-  ];
-  var HIT_WINDOWS = ['London Killzone','Pre NY','NY AM','NY Lunch','London Close','During Macro','Outside Killzone','Today','Tomorrow','This week','Other / discretionary'];
-  var PHASE_TFS = ['Monthly','Weekly','Daily','4H','1H','15m'];
-  var PHASES = ['Consolidation','Expansion','Retracement','Reversal'];
-  var NEXT_PHASE = {
-    consolidation:'Watch range extremes and the HTF draw; expansion needs liquidity/order-flow support.',
-    expansion:'Displacement is active; next context depends on objective, imbalance, and liquidity.',
-    retracement:'Rebalancing into prior delivery; continuation needs model evidence.',
-    reversal:'Directional delivery may be changing; require objective, liquidity, and structure evidence.'
-  };
-  var FIELD_IDS = [
-    'tradeDate','tradeTime','instrument',
-    'draw1','draw1Level','draw1Confidence','draw1HitTime',
-    'draw2','draw2Level','draw2Confidence','draw2HitTime',
-    'draw3','draw3Level','draw3Confidence','draw3HitTime',
-    'sweepTime','sweepTf','sweepPool','sweepLevel',
-    'model','mssStatus','mssTf','mssLevel','entryNote','riskAmt','profitAmt'
-  ];
-  var steps = [1,2,3,4].map(function(i){ return document.getElementById('s'+i); });
-  var checks = [1,2,3,4].map(function(i){ return document.getElementById('c'+i); });
-  var phaseRows = document.getElementById('phaseRows');
-  var outBody = document.getElementById('outBody');
-  var saveBtn = document.getElementById('saveBtn');
-  var journalList = document.getElementById('journalList');
-
-  function el(id){ return document.getElementById(id); }
-  function val(id){ var x = el(id); return x ? String(x.value || '').trim() : ''; }
-  function setValue(id, v){ var x = el(id); if(x) x.value = v || ''; }
-  function uid(){ return 'slip_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
-  function isNumericLikeId(id){ return /Level$|Amt$/.test(id); }
-  function parseAmount(v){ if(!v || v === '.' || /\.$/.test(v)) return NaN; var n = Number(v); return Number.isFinite(n) ? n : NaN; }
-  function modelLabel(value){ var sel = el('model'); value = value || val('model'); if(!value || !sel) return ''; var opt = Array.prototype.filter.call(sel.options, function(o){ return o.value === value; })[0]; return opt ? opt.text : value; }
-  function selectedOption(id){ var x = el(id); return x && x.selectedIndex >= 0 ? x.options[x.selectedIndex] : null; }
-  function selectedSide(id){ var opt = selectedOption(id); return opt ? opt.getAttribute('data-side') || '' : ''; }
-  function sideForLabel(label){ var side = ''; OBJECTIVE_GROUPS.forEach(function(group){ group.options.forEach(function(pair){ if(pair[0] === label) side = group.side; }); }); return side; }
-  function formatTimestamp(iso){
-    if(!iso) return '—';
-    try{
-      return new Intl.DateTimeFormat('en-GB', { timeZone:'America/New_York', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).format(new Date(iso)) + ' NY';
-    }catch(e){ return iso; }
-  }
-
-  function populateObjectiveSelect(sel, placeholder){
-    sel.textContent = '';
-    var blank = document.createElement('option'); blank.value = ''; blank.textContent = placeholder; sel.appendChild(blank);
-    OBJECTIVE_GROUPS.forEach(function(group){
-      var og = document.createElement('optgroup'); og.label = group.label;
-      group.options.forEach(function(pair){
-        var opt = document.createElement('option'); opt.value = pair[0]; opt.textContent = pair[0];
-        opt.setAttribute('data-side', group.side); opt.setAttribute('data-help', pair[1]); og.appendChild(opt);
-      });
-      sel.appendChild(og);
-    });
-  }
-  function populateTimeSelect(sel){
-    if(!sel) return;
-    var first = sel.options[0] ? sel.options[0].textContent : '— select —';
-    sel.textContent = '';
-    var blank = document.createElement('option'); blank.value = ''; blank.textContent = first; sel.appendChild(blank);
-    HIT_WINDOWS.forEach(function(v){ var o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
-  }
-  function setupSelects(){
-    ['draw1','draw2','draw3'].forEach(function(id){ populateObjectiveSelect(el(id), '— select draw on liquidity —'); });
-    populateObjectiveSelect(el('sweepPool'), '— select opposing pool —');
-    ['draw1HitTime','draw2HitTime','draw3HitTime','sweepTime'].forEach(function(id){ populateTimeSelect(el(id)); });
-  }
-  function updateObjectiveHelp(id, helpId, fallback){
-    var opt = selectedOption(id), help = el(helpId);
-    if(help) help.textContent = opt && opt.value ? opt.getAttribute('data-help') : fallback;
-  }
-  function refreshObjectiveHelps(){
-    updateObjectiveHelp('draw1','draw1Help','Primary draw. This drives the displayed bias when directional.');
-    updateObjectiveHelp('draw2','draw2Help','Optional confluence or next draw.');
-    updateObjectiveHelp('draw3','draw3Help','Optional extended draw.');
-  }
-  function buildPhaseRows(){
-    phaseRows.textContent = '';
-    PHASE_TFS.forEach(function(tf){
-      var tr = document.createElement('tr');
-      var td1 = document.createElement('td'); td1.textContent = tf;
-      var td2 = document.createElement('td');
-      var td3 = document.createElement('td'); td3.className = 'next-cell'; td3.textContent = '—';
-      var sel = document.createElement('select'); sel.setAttribute('aria-label', tf + ' phase');
-      var blank = document.createElement('option'); blank.value = ''; blank.textContent = '—'; sel.appendChild(blank);
-      PHASES.forEach(function(p){ var o = document.createElement('option'); o.value = p.toLowerCase(); o.textContent = p; sel.appendChild(o); });
-      sel.addEventListener('change', function(){ sel.className = sel.value ? 'p-' + sel.value : ''; td3.textContent = sel.value ? NEXT_PHASE[sel.value] : '—'; buildSummary(); update(); });
-      td2.appendChild(sel); tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); phaseRows.appendChild(tr);
-    });
-  }
-  function phaseSummary(){
-    var parts = [];
-    Array.prototype.forEach.call(phaseRows.querySelectorAll('tr'), function(tr){ var tf = tr.querySelector('td').textContent; var v = tr.querySelector('select').value; if(v) parts.push(tf + ':' + v); });
-    return parts.join('  ');
-  }
-  function deriveBiasFromFields(fields){
-    var sides = [1,2,3].map(function(n){ return { n:n, side:sideForLabel(fields['draw'+n] || ''), label:fields['draw'+n] || '' }; }).filter(function(x){ return !!x.label; });
-    var directional = sides.filter(function(x){ return x.side === 'bull' || x.side === 'bear'; });
-    var primary = sides.filter(function(x){ return x.n === 1; })[0];
-    var bullCount = directional.filter(function(x){ return x.side === 'bull'; }).length;
-    var bearCount = directional.filter(function(x){ return x.side === 'bear'; }).length;
-    if(!sides.length) return { bias:null, reason:'No DOL selected yet.' };
-    if(primary && (primary.side === 'bull' || primary.side === 'bear')){
-      if((primary.side === 'bull' && bearCount) || (primary.side === 'bear' && bullCount)) return { bias:null, reason:'Primary draw conflicts with a secondary opposite-side draw. Treat bias as unclear.' };
-      return { bias:primary.side, reason:'Draw 1 is directional and controls the working bias.' };
-    }
-    if(bullCount && !bearCount) return { bias:'bull', reason:'Primary draw is neutral; secondary DOL stack points to buy-side liquidity.' };
-    if(bearCount && !bullCount) return { bias:'bear', reason:'Primary draw is neutral; secondary DOL stack points to sell-side liquidity.' };
-    if(bullCount && bearCount) return { bias:null, reason:'Draws include both buy-side and sell-side liquidity. Bias remains unclear.' };
-    return { bias:null, reason:'Only neutral/inefficiency draws selected. Add directional context before treating bias as clear.' };
-  }
-  function deriveBias(){
-    var fields = {}; FIELD_IDS.forEach(function(id){ fields[id] = val(id); });
-    var derived = deriveBiasFromFields(fields);
-    bias = derived.bias === 'bull' ? 'bull' : derived.bias === 'bear' ? 'bear' : null;
-    var b = el('derivedBias');
-    if(b){ b.textContent = bias === 'bull' ? 'BULLISH' : bias === 'bear' ? 'BEARISH' : '—'; b.className = 'v' + (bias === 'bull' ? ' out-dir-bull' : bias === 'bear' ? ' out-dir-bear' : ''); }
-    var logic = el('biasLogic'); if(logic) logic.textContent = derived.reason;
-    return derived;
-  }
-  function drawTextFromFields(fields, prefix){
-    var out = [];
-    [1,2,3].forEach(function(n){
-      var name = fields[prefix+n] || '';
-      var level = fields[prefix+n+'Level'] || '';
-      var confidence = fields[prefix+n+'Confidence'] || '';
-      var hitTime = fields[prefix+n+'HitTime'] || '';
-      var parts = [name, level ? '@ ' + level : '', confidence ? 'Confidence: ' + confidence : '', hitTime ? 'Hit time: ' + hitTime : ''].filter(Boolean);
-      if(parts.length) out.push(n + '. ' + parts.join(' · '));
-    });
-    return out.join('  ');
-  }
-  function drawText(){ var fields = {}; FIELD_IDS.forEach(function(id){ fields[id] = val(id); }); return drawTextFromFields(fields, 'draw'); }
-  function sweepText(fields){
-    fields = fields || {}; if(!Object.keys(fields).length) FIELD_IDS.forEach(function(id){ fields[id] = val(id); });
-    return [fields.sweepTime ? 'Potential: ' + fields.sweepTime : '', fields.sweepTf, fields.sweepPool, fields.sweepLevel ? '@ ' + fields.sweepLevel : ''].filter(Boolean).join(' · ');
-  }
-  function mssText(fields){
-    fields = fields || {}; if(!Object.keys(fields).length) FIELD_IDS.forEach(function(id){ fields[id] = val(id); });
-    if(fields.mssStatus === 'N/A') return 'N/A';
-    return [fields.mssStatus, fields.mssTf, fields.mssLevel].filter(Boolean).join(' · ');
-  }
-  function makeLine(k, v, cls){
-    var row = document.createElement('div'); row.className = 'out-line';
-    var key = document.createElement('span'); key.className = 'out-k'; key.textContent = k;
-    var value = document.createElement('span'); value.className = 'out-v' + (!v ? ' empty' : (cls ? ' ' + cls : '')); value.textContent = v || '—';
-    row.appendChild(key); row.appendChild(value); return row;
-  }
-  function buildSummary(){
-    var derived = deriveBias();
-    var dir = bias === 'bull' ? 'BULLISH' : bias === 'bear' ? 'BEARISH' : '';
-    var dirCls = bias === 'bull' ? 'out-dir-bull' : bias === 'bear' ? 'out-dir-bear' : '';
-    var riskN = parseAmount(val('riskAmt')), profitN = parseAmount(val('profitAmt'));
-    var rr = (riskN > 0 && profitN > 0) ? (profitN/riskN).toFixed(2) + 'R' : '';
-    var tradeFull = [val('riskAmt') ? 'Risk ' + val('riskAmt') : '', val('profitAmt') ? 'Profit ' + val('profitAmt') : '', rr ? '(' + rr + ')' : ''].filter(Boolean).join('  ');
-    var entryFull = [modelLabel(), val('entryNote')].filter(Boolean).join(' · ');
-    outBody.textContent = '';
-    [
-      makeLine('Date', val('tradeDate')),
-      makeLine('Time', val('tradeTime')),
-      makeLine('Instrument', val('instrument')),
-      makeLine('Bias', dir, dirCls),
-      makeLine('Bias Logic', derived.reason),
-      makeLine('DOL', drawText()),
-      makeLine('Sweep', sweepText()),
-      makeLine('MSS', mssText()),
-      makeLine('Entry', entryFull),
-      makeLine('Market Context', phaseSummary()),
-      makeLine('Trade', tradeFull)
-    ].forEach(function(row){ outBody.appendChild(row); });
-  }
-  function plainSummary(){
-    var lines = [];
-    Array.prototype.forEach.call(outBody.querySelectorAll('.out-line'), function(l){ lines.push(l.querySelector('.out-k').textContent + ': ' + l.querySelector('.out-v').textContent); });
-    return lines.join('\n');
-  }
-  function fallbackCopy(txt){
-    var ta = document.createElement('textarea'); ta.value = txt; ta.setAttribute('readonly',''); ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select();
-    var copied = false; try{ copied = document.execCommand('copy'); }catch(e){} document.body.removeChild(ta); return copied;
-  }
-  function setButtonTemp(btn, text, fallback, ms){ btn.textContent = text; setTimeout(function(){ btn.textContent = fallback; }, ms || 1400); }
-  function copyText(txt, btn, fallback){
-    if(!txt){ setButtonTemp(btn, 'Nothing to copy', fallback, 1400); return; }
-    function ok(){ setButtonTemp(btn, 'Copied', fallback, 1400); }
-    function fail(){ setButtonTemp(btn, 'Copy failed', fallback, 1800); }
-    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(ok).catch(function(){ fallbackCopy(txt) ? ok() : fail(); }); }
-    else { fallbackCopy(txt) ? ok() : fail(); }
-  }
-
-  function collect(existing){
-    var now = new Date().toISOString();
-    var data = existing ? JSON.parse(JSON.stringify(existing)) : {};
-    data.id = data.id || uid();
-    data.firstSavedAt = data.firstSavedAt || data.savedAt || now;
-    data.savedAt = data.firstSavedAt;
-    data.updatedAt = now;
-    data.fields = {};
-    FIELD_IDS.forEach(function(id){ data.fields[id] = val(id); });
-    data.bias = bias;
-    data.phases = [];
-    Array.prototype.forEach.call(phaseRows.querySelectorAll('tr'), function(tr){ data.phases.push(tr.querySelector('select').value); });
-    data.outcome = ['','W','L','B'].indexOf(data.outcome) >= 0 ? data.outcome : '';
-    return data;
-  }
-  function normalizeSlip(d){
-    if(!d || typeof d !== 'object') return null;
-    var inputFields = d.fields && typeof d.fields === 'object' ? d.fields : {};
-    var out = { id: typeof d.id === 'string' ? d.id : uid(), fields:{}, firstSavedAt:'', savedAt:'', updatedAt:'', outcome:'' };
-    out.firstSavedAt = typeof d.firstSavedAt === 'string' && d.firstSavedAt ? d.firstSavedAt : (typeof d.savedAt === 'string' ? d.savedAt : '');
-    out.savedAt = out.firstSavedAt;
-    out.updatedAt = typeof d.updatedAt === 'string' ? d.updatedAt : out.firstSavedAt;
-    FIELD_IDS.forEach(function(id){ out.fields[id] = typeof inputFields[id] === 'string' ? inputFields[id] : ''; });
-    if(!out.fields.draw1 && typeof inputFields.draw === 'string') out.fields.draw1 = inputFields.draw;
-    if(!out.fields.draw1Level && typeof inputFields.drawLevel === 'string') out.fields.draw1Level = inputFields.drawLevel;
-    if(!out.fields.sweepPool && typeof inputFields.opp1 === 'string') out.fields.sweepPool = inputFields.opp1;
-    if(!out.fields.sweepLevel && typeof inputFields.opp1Level === 'string') out.fields.sweepLevel = inputFields.opp1Level;
-    if(!out.fields.sweepTime && typeof inputFields.timingWindow === 'string') out.fields.sweepTime = inputFields.timingWindow;
-    if(!out.fields.instrument && typeof inputFields.instrument === 'string') out.fields.instrument = inputFields.instrument;
-    out.phases = Array.isArray(d.phases) ? d.phases.slice(0, PHASE_TFS.length).map(function(p){ return NEXT_PHASE[p] ? p : ''; }) : [];
-    var derived = deriveBiasFromFields(out.fields);
-    out.bias = derived.bias || (d.bias === 'bull' || d.bias === 'bear' ? d.bias : null);
-    out.outcome = ['','W','L','B'].indexOf(d.outcome) >= 0 ? d.outcome : '';
-    return out;
-  }
-  function loadSlips(){
-    try{ var raw = JSON.parse(localStorage.getItem(STORAGE_KEY)); if(!Array.isArray(raw)) return []; return raw.map(normalizeSlip).filter(Boolean).slice(0,50); }catch(e){ return []; }
-  }
-  function storeSlips(arr){
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr.map(normalizeSlip).filter(Boolean).slice(0,50))); return true; }catch(e){ return false; }
-  }
-  function restore(data){
-    data = normalizeSlip(data); if(!data) return;
-    activeSlipId = data.id;
-    FIELD_IDS.forEach(function(id){ setValue(id, data.fields[id] || ''); });
-    var rows = phaseRows.querySelectorAll('tr');
-    (data.phases || []).forEach(function(v,i){ if(rows[i]){ var s = rows[i].querySelector('select'); s.value = v; s.className = v ? 'p-' + v : ''; rows[i].querySelector('.next-cell').textContent = v ? NEXT_PHASE[v] : '—'; } });
-    checks.forEach(function(ch){ ch.checked = false; });
-    refreshObjectiveHelps(); updateModelInfo(); buildSummary(); update(); saveBtn.textContent = 'Update slip'; window.scrollTo(0,0);
-  }
-  function slipText(d){
-    d = normalizeSlip(d); var f = d.fields; var derived = deriveBiasFromFields(f);
-    var riskN = parseAmount(f.riskAmt), profitN = parseAmount(f.profitAmt);
-    var rr = (riskN > 0 && profitN > 0) ? (profitN/riskN).toFixed(2) + 'R' : '';
-    return [
-      'First saved: ' + formatTimestamp(d.firstSavedAt),
-      'Last updated: ' + formatTimestamp(d.updatedAt),
-      'Date: ' + (f.tradeDate || '—') + '   Time: ' + (f.tradeTime || '—') + '   Instrument: ' + (f.instrument || '—'),
-      'Bias: ' + (derived.bias === 'bull' ? 'BULLISH' : derived.bias === 'bear' ? 'BEARISH' : '—'),
-      'Bias logic: ' + derived.reason,
-      'DOL: ' + (drawTextFromFields(f, 'draw') || '—'),
-      'Sweep: ' + (sweepText(f) || '—'),
-      'MSS: ' + (mssText(f) || '—'),
-      'Entry: ' + ([modelLabel(f.model), f.entryNote].filter(Boolean).join(' · ') || '—'),
-      'Risk: ' + (f.riskAmt || '—') + '   Profit: ' + (f.profitAmt || '—') + (rr ? '   Planned R: ' + rr : ''),
-      'Outcome: ' + (d.outcome || 'open')
-    ].join('\n');
-  }
-  function renderJournal(){
-    var slips = loadSlips(); journalList.textContent = '';
-    if(!slips.length){ var empty = document.createElement('div'); empty.className = 'jempty'; empty.textContent = 'No saved slips yet.'; journalList.appendChild(empty); return; }
-    slips.forEach(function(d, i){
-      var f = d.fields;
-      var row = document.createElement('div'); row.className = 'jrow';
-      var info = document.createElement('div'); info.className = 'jinfo';
-      var dirTxt = d.bias === 'bull' ? 'LONG' : d.bias === 'bear' ? 'SHORT' : '—';
-      info.appendChild(document.createTextNode((f.tradeDate || 'no date') + ' · ' + (f.instrument || '—') + ' · ' + dirTxt));
-      var small = document.createElement('small');
-      small.textContent = 'Saved: ' + formatTimestamp(d.firstSavedAt) + ((f.tradeTime || f.model) ? ' · ' + [f.tradeTime, modelLabel(f.model)].filter(Boolean).join(' · ') : '');
-      info.appendChild(small);
-      var outSel = document.createElement('select'); outSel.className = 'outcome'; outSel.setAttribute('aria-label','Outcome for ' + (f.tradeDate || 'no date') + ' ' + (f.instrument || ''));
-      [['','open'],['W','Win'],['L','Loss'],['B','BE']].forEach(function(o){ var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; outSel.appendChild(op); });
-      outSel.value = d.outcome || '';
-      function paintOutcome(){ outSel.className = 'outcome' + (outSel.value === 'W' ? ' w' : outSel.value === 'L' ? ' l' : outSel.value === 'B' ? ' b' : ''); }
-      paintOutcome();
-      outSel.addEventListener('change', function(){ var s = loadSlips(); if(s[i]){ s[i].outcome = outSel.value; s[i].updatedAt = new Date().toISOString(); storeSlips(s); } paintOutcome(); });
-      var loadB = document.createElement('button'); loadB.className = 'jbtn'; loadB.type = 'button'; loadB.textContent = 'LOAD'; loadB.setAttribute('aria-label','Load slip for ' + (f.tradeDate || 'no date') + ' ' + (f.instrument || '')); loadB.addEventListener('click', function(){ restore(loadSlips()[i]); });
-      var delB = document.createElement('button'); delB.className = 'jbtn del'; delB.type = 'button'; delB.textContent = '×'; delB.setAttribute('aria-label','Delete slip for ' + (f.tradeDate || 'no date') + ' ' + (f.instrument || '')); delB.addEventListener('click', function(){ var s = loadSlips(); s.splice(i,1); storeSlips(s); if(activeSlipId === d.id){ activeSlipId = null; saveBtn.textContent = 'Save slip'; } renderJournal(); });
-      row.appendChild(info); row.appendChild(outSel); row.appendChild(loadB); row.appendChild(delB); journalList.appendChild(row);
-    });
-  }
-
-  function updateModelInfo(){
-    var modelInfo = el('modelInfo'); var m = MODELS[val('model')];
-    function setInfo(id, text){ var x = el(id); if(x){ x.textContent = text; x.classList.toggle('gap', text === GAP); } }
-    if(!modelInfo) return;
-    if(!m){ modelInfo.classList.remove('on'); return; }
-    modelInfo.classList.add('on'); setInfo('miTrig', m.trig); setInfo('miInval', m.inval); setInfo('miTgt', m.tgt); el('miSrc').textContent = m.src;
-  }
-  function stepValid(i){
-    if(i === 1) return !!(val('tradeDate') && val('instrument'));
-    if(i === 2) return !!(val('draw1') && val('draw1Confidence') && val('draw1HitTime'));
-    if(i === 3) return !!val('sweepTime');
-    if(i === 4){ if(!(val('model') && val('mssStatus'))) return false; return val('mssStatus') === 'N/A' || !!(val('mssTf') && val('mssLevel')); }
-    return false;
-  }
-  function missingText(){
-    var missing = [];
-    if(!stepValid(1)) missing.push('date/instrument');
-    if(!stepValid(2)) missing.push('DOL confidence/hit time');
-    if(!stepValid(3)) missing.push('potential sweep time');
-    if(!stepValid(4)) missing.push('entry model/MSS');
-    return missing.join(', ');
-  }
-  function setStepEnabled(step, enabled){
-    Array.prototype.forEach.call(step.querySelectorAll('input,select,button'), function(x){ x.disabled = !enabled; x.setAttribute('aria-disabled', enabled ? 'false' : 'true'); });
-  }
-  function update(){
-    checks.forEach(function(ch,i){ if(ch.checked && !stepValid(i+1)) ch.checked = false; });
-    var done = checks.map(function(ch){ return ch.checked; });
-    checks.forEach(function(ch,i){
-      if(i === 1 && !done[0]){ ch.checked = false; done[i] = false; }
-      if(i === 2 && !done[1]){ ch.checked = false; done[i] = false; }
-      if(i === 3 && !done[2]){ ch.checked = false; done[i] = false; }
-    });
-    steps.forEach(function(step,i){
-      var unlocked = i === 0 || (i === 1 && done[0]) || (i === 2 && done[1]) || (i === 3 && done[2]);
-      step.classList.toggle('locked', !unlocked); step.classList.toggle('done', unlocked && done[i]); setStepEnabled(step, unlocked);
-    });
-    var n = done.filter(Boolean).length, ready = n === 4;
-    el('stateBox').classList.toggle('ready', ready);
-    el('stateVal').textContent = ready ? '4 / 4 — ready' : n + ' / 4 — missing ' + (missingText() || 'checks');
-  }
-  function resetForm(){
-    activeSlipId = null; saveBtn.textContent = 'Save slip'; checks.forEach(function(ch){ ch.checked = false; }); FIELD_IDS.forEach(function(id){ setValue(id, ''); });
-    buildPhaseRows(); refreshObjectiveHelps(); updateModelInfo(); buildSummary(); update(); setDefaultDate();
-  }
-  function setDefaultDate(){
-    if(val('tradeDate')) return;
-    try{ setValue('tradeDate', new Date().toLocaleDateString('en-CA', { timeZone:'America/New_York' })); }catch(e){}
-  }
-  function cleanNumericInput(input){
-    if(/^n\/?a$/i.test(input.value.trim())){ input.value = 'N/A'; return; }
-    var cleaned = input.value.replace(/,/g,'.').replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1');
-    if(cleaned !== input.value) input.value = cleaned;
-  }
-
-  Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function(btn){
-    btn.addEventListener('click', function(){
-      var target = btn.getAttribute('data-page');
-      Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function(b){ b.classList.toggle('active', b === btn); });
-      Array.prototype.forEach.call(document.querySelectorAll('.page'), function(page){ page.classList.toggle('active', page.id === target); });
-    });
-  });
-  setupSelects(); buildPhaseRows(); setDefaultDate(); refreshObjectiveHelps();
-  FIELD_IDS.forEach(function(id){
-    var x = el(id); if(!x) return;
-    x.addEventListener('input', function(){ if(isNumericLikeId(id)) cleanNumericInput(x); buildSummary(); update(); });
-    x.addEventListener('change', function(){ if(/^draw[123]$/.test(id)) refreshObjectiveHelps(); if(id === 'model') updateModelInfo(); buildSummary(); update(); });
-  });
-  checks.forEach(function(ch){ ch.addEventListener('change', update); });
-  el('copyBtn').addEventListener('click', function(){ copyText(plainSummary(), this, 'Copy'); });
-  saveBtn.addEventListener('click', function(){
-    var slips = loadSlips();
-    var existingIndex = activeSlipId ? slips.findIndex(function(s){ return s.id === activeSlipId; }) : -1;
-    var existing = existingIndex >= 0 ? slips[existingIndex] : null;
-    var next = collect(existing);
-    if(existingIndex >= 0) slips[existingIndex] = next; else slips.unshift(next);
-    if(slips.length > 50) slips.length = 50;
-    if(storeSlips(slips)){ activeSlipId = next.id; saveBtn.textContent = existingIndex >= 0 ? 'Updated' : 'Saved'; setTimeout(function(){ saveBtn.textContent = 'Update slip'; }, 1400); renderJournal(); }
-    else { setButtonTemp(saveBtn, 'Storage blocked', activeSlipId ? 'Update slip' : 'Save slip', 2000); }
-  });
-  el('exportBtn').addEventListener('click', function(){ var slips = loadSlips(); if(!slips.length){ setButtonTemp(this, 'Nothing to export', 'Export all', 1400); return; } copyText(slips.map(slipText).join('\n\n---\n\n'), this, 'Export all'); });
-  el('resetBtn').addEventListener('click', resetForm);
-
-  var clockEl = el('nyClock');
-  function tickClock(){
-    try{
-      var s = new Date().toLocaleTimeString('en-US', { timeZone:'America/New_York', hour12:false });
-      clockEl.textContent = ''; clockEl.appendChild(document.createTextNode(s + ' ')); var sp = document.createElement('span'); sp.textContent = 'NY'; clockEl.appendChild(sp);
-    }catch(e){ clockEl.textContent = '--:--:-- NY'; }
-  }
-  tickClock(); setInterval(tickClock, 1000);
-  buildSummary(); update(); renderJournal();
+  var HIT_WINDOWS=['London Killzone','Pre NY','NY AM','NY Lunch','London Close','During Macro','Outside Killzone','Today','Tomorrow','This week','Other / discretionary'];
+  var PHASE_TFS=['Monthly','Weekly','Daily','4H','1H','15m'], PHASES=['Consolidation','Expansion','Retracement','Reversal'];
+  var NEXT_PHASE={consolidation:'Watch range extremes and HTF draw; expansion needs liquidity/order-flow support.',expansion:'Displacement is active; next context depends on objective, imbalance, and liquidity.',retracement:'Rebalancing into prior delivery; continuation needs model evidence.',reversal:'Directional delivery may be changing; require objective, liquidity, and structure evidence.'};
+  var FIELD_IDS=['tradeDate','tradeTime','instrument','draw1','draw1Level','draw1Confidence','draw1HitTime','draw2','draw2Level','draw2Confidence','draw2HitTime','draw3','draw3Level','draw3Confidence','draw3HitTime','sweepTime','sweepTf','sweepPool','sweepLevel','model','mssStatus','mssTf','mssLevel','entryNote','riskAmt','profitAmt'];
+  var steps=[1,2,3,4].map(function(i){return document.getElementById('s'+i);}), checks=[1,2,3,4].map(function(i){return document.getElementById('c'+i);});
+  var phaseRows=document.getElementById('phaseRows'), outBody=document.getElementById('outBody'), saveBtn=document.getElementById('saveBtn'), journalList=document.getElementById('journalList');
+  function el(id){return document.getElementById(id)} function val(id){var x=el(id);return x?String(x.value||'').trim():''} function setValue(id,v){var x=el(id);if(x)x.value=v||''} function uid(){return 'slip_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8)} function isNumericLikeId(id){return /Level$|Amt$/.test(id)} function parseAmount(v){if(!v||v==='.'||/\.$/.test(v))return NaN;var n=Number(v);return Number.isFinite(n)?n:NaN}
+  function modelLabel(value){var sel=el('model');value=value||val('model');if(!value||!sel)return '';var opt=Array.prototype.filter.call(sel.options,function(o){return o.value===value})[0];return opt?opt.text:value}
+  function formatTimestamp(iso){if(!iso)return '—';try{return new Intl.DateTimeFormat('en-GB',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date(iso))+' NY'}catch(e){return iso}}
+  function setupTimeSelects(){['draw1HitTime','draw2HitTime','draw3HitTime','sweepTime'].forEach(function(id){var s=el(id);if(!s)return;var first=s.options[0]?s.options[0].textContent:'— select —';s.textContent='';var blank=document.createElement('option');blank.value='';blank.textContent=first;s.appendChild(blank);HIT_WINDOWS.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o)})})}
+  function buildPhaseRows(){phaseRows.textContent='';PHASE_TFS.forEach(function(tf){var tr=document.createElement('tr'),td1=document.createElement('td'),td2=document.createElement('td'),td3=document.createElement('td'),sel=document.createElement('select');td1.textContent=tf;td3.className='next-cell';td3.textContent='—';sel.setAttribute('aria-label',tf+' phase');var blank=document.createElement('option');blank.value='';blank.textContent='—';sel.appendChild(blank);PHASES.forEach(function(p){var o=document.createElement('option');o.value=p.toLowerCase();o.textContent=p;sel.appendChild(o)});sel.addEventListener('change',function(){sel.className=sel.value?'p-'+sel.value:'';td3.textContent=sel.value?NEXT_PHASE[sel.value]:'—';buildSummary();update()});td2.appendChild(sel);tr.appendChild(td1);tr.appendChild(td2);tr.appendChild(td3);phaseRows.appendChild(tr)})}
+  function phaseSummary(){var parts=[];Array.prototype.forEach.call(phaseRows.querySelectorAll('tr'),function(tr){var tf=tr.querySelector('td').textContent,v=tr.querySelector('select').value;if(v)parts.push(tf+':'+v)});return parts.join('  ')}
+  function drawRow(n,fields){fields=fields||{};var draw=fields['draw'+n]||val('draw'+n),level=fields['draw'+n+'Level']||val('draw'+n+'Level'),conf=fields['draw'+n+'Confidence']||val('draw'+n+'Confidence'),hit=fields['draw'+n+'HitTime']||val('draw'+n+'HitTime');var any=!!(draw||level||conf||hit),complete=!!(draw&&conf&&hit);return{n:n,draw:draw,level:level,confidence:conf,hitTime:hit,any:any,complete:complete}}
+  function drawRows(fields){return [1,2,3].map(function(n){return drawRow(n,fields)})}
+  function completedDrawRows(fields){return drawRows(fields).filter(function(r){return r.complete})}
+  function inferSide(text){var s=String(text||'').toLowerCase();if(/\b(high|pdh|pwh|reh|buy-side|buyside|buy side)\b/.test(s))return 'bull';if(/\b(low|pdl|pwl|rel|sell-side|sellside|sell side)\b/.test(s))return 'bear';return 'neutral'}
+  function deriveBiasFromFields(fields){var rows=completedDrawRows(fields),directional=rows.map(function(r){return{n:r.n,side:inferSide(r.draw),label:r.draw}}).filter(function(x){return x.side==='bull'||x.side==='bear'});if(!rows.length)return{bias:null,reason:'No completed DOL row yet.'};if(!directional.length)return{bias:null,reason:'Completed DOL rows are neutral/inefficiency-based. Add directional context before treating bias as clear.'};var primary=directional[0],conflict=directional.some(function(x){return x.side!==primary.side});if(conflict)return{bias:null,reason:'Completed DOL rows include both buy-side and sell-side liquidity. Bias is unclear until reconciled.'};return{bias:primary.side,reason:'First directional completed DOL controls the working bias.'}}
+  function currentFields(){var f={};FIELD_IDS.forEach(function(id){f[id]=val(id)});return f}
+  function deriveBias(){var derived=deriveBiasFromFields(currentFields());bias=derived.bias==='bull'?'bull':derived.bias==='bear'?'bear':null;var b=el('derivedBias');if(b){b.textContent=bias==='bull'?'BULLISH':bias==='bear'?'BEARISH':'—';b.className='v'+(bias==='bull'?' out-dir-bull':bias==='bear'?' out-dir-bear':'')}var logic=el('biasLogic');if(logic)logic.textContent=derived.reason;return derived}
+  function drawTextFromFields(fields){var out=[];drawRows(fields).forEach(function(r){if(r.any){var parts=[r.draw,r.level?'@ '+r.level:'',r.confidence?'Confidence: '+r.confidence:'',r.hitTime?'Hit time: '+r.hitTime:''].filter(Boolean);out.push(r.n+'. '+parts.join(' · '))}});return out.join('  ')}
+  function sweepText(fields){fields=fields||currentFields();return[fields.sweepTime?'Potential: '+fields.sweepTime:'',fields.sweepTf,fields.sweepPool,fields.sweepLevel?'@ '+fields.sweepLevel:''].filter(Boolean).join(' · ')}
+  function mssText(fields){fields=fields||currentFields();if(fields.mssStatus==='N/A')return'N/A';return[fields.mssStatus,fields.mssTf,fields.mssLevel].filter(Boolean).join(' · ')}
+  function makeLine(k,v,cls){var row=document.createElement('div'),key=document.createElement('span'),value=document.createElement('span');row.className='out-line';key.className='out-k';key.textContent=k;value.className='out-v'+(!v?' empty':cls?' '+cls:'');value.textContent=v||'—';row.appendChild(key);row.appendChild(value);return row}
+  function buildSummary(){var fields=currentFields(),derived=deriveBias(),dir=bias==='bull'?'BULLISH':bias==='bear'?'BEARISH':'',dirCls=bias==='bull'?'out-dir-bull':bias==='bear'?'out-dir-bear':'';var riskN=parseAmount(fields.riskAmt),profitN=parseAmount(fields.profitAmt),rr=riskN>0&&profitN>0?(profitN/riskN).toFixed(2)+'R':'';var tradeFull=[fields.riskAmt?'Risk '+fields.riskAmt:'',fields.profitAmt?'Profit '+fields.profitAmt:'',rr?'('+rr+')':''].filter(Boolean).join('  '),entryFull=[modelLabel(),fields.entryNote].filter(Boolean).join(' · ');outBody.textContent='';[makeLine('Date',fields.tradeDate),makeLine('Time',fields.tradeTime),makeLine('Instrument',fields.instrument),makeLine('Bias',dir,dirCls),makeLine('Bias Logic',derived.reason),makeLine('DOL',drawTextFromFields(fields)),makeLine('Sweep',sweepText(fields)),makeLine('MSS',mssText(fields)),makeLine('Entry',entryFull),makeLine('Market Context',phaseSummary()),makeLine('Trade',tradeFull)].forEach(function(row){outBody.appendChild(row)})}
+  function plainSummary(){var lines=[];Array.prototype.forEach.call(outBody.querySelectorAll('.out-line'),function(l){lines.push(l.querySelector('.out-k').textContent+': '+l.querySelector('.out-v').textContent)});return lines.join('\n')}
+  function fallbackCopy(txt){var ta=document.createElement('textarea');ta.value=txt;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();var copied=false;try{copied=document.execCommand('copy')}catch(e){}document.body.removeChild(ta);return copied}
+  function setButtonTemp(btn,text,fallback,ms){btn.textContent=text;setTimeout(function(){btn.textContent=fallback},ms||1400)}
+  function copyText(txt,btn,fallback){if(!txt){setButtonTemp(btn,'Nothing to copy',fallback,1400);return}function ok(){setButtonTemp(btn,'Copied',fallback,1400)}function fail(){setButtonTemp(btn,'Copy failed',fallback,1800)}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok).catch(function(){fallbackCopy(txt)?ok():fail()})}else{fallbackCopy(txt)?ok():fail()}}
+  function collect(existing){var now=new Date().toISOString(),data=existing?JSON.parse(JSON.stringify(existing)):{};data.id=data.id||uid();data.firstSavedAt=data.firstSavedAt||data.savedAt||now;data.savedAt=data.firstSavedAt;data.updatedAt=now;data.fields=currentFields();data.bias=bias;data.phases=[];Array.prototype.forEach.call(phaseRows.querySelectorAll('tr'),function(tr){data.phases.push(tr.querySelector('select').value)});data.outcome=['','W','L','B'].indexOf(data.outcome)>=0?data.outcome:'';return data}
+  function normalizeSlip(d){if(!d||typeof d!=='object')return null;var input=d.fields&&typeof d.fields==='object'?d.fields:{},out={id:typeof d.id==='string'?d.id:uid(),fields:{},firstSavedAt:'',savedAt:'',updatedAt:'',outcome:''};out.firstSavedAt=typeof d.firstSavedAt==='string'&&d.firstSavedAt?d.firstSavedAt:(typeof d.savedAt==='string'?d.savedAt:'');out.savedAt=out.firstSavedAt;out.updatedAt=typeof d.updatedAt==='string'?d.updatedAt:out.firstSavedAt;FIELD_IDS.forEach(function(id){out.fields[id]=typeof input[id]==='string'?input[id]:''});if(!out.fields.draw1&&typeof input.draw==='string')out.fields.draw1=input.draw;if(!out.fields.draw1Level&&typeof input.drawLevel==='string')out.fields.draw1Level=input.drawLevel;if(!out.fields.sweepPool&&typeof input.opp1==='string')out.fields.sweepPool=input.opp1;if(!out.fields.sweepLevel&&typeof input.opp1Level==='string')out.fields.sweepLevel=input.opp1Level;if(!out.fields.sweepTime&&typeof input.timingWindow==='string')out.fields.sweepTime=input.timingWindow;out.phases=Array.isArray(d.phases)?d.phases.slice(0,PHASE_TFS.length).map(function(p){return NEXT_PHASE[p]?p:''}):[];var derived=deriveBiasFromFields(out.fields);out.bias=derived.bias||(d.bias==='bull'||d.bias==='bear'?d.bias:null);out.outcome=['','W','L','B'].indexOf(d.outcome)>=0?d.outcome:'';return out}
+  function loadSlips(){try{var raw=JSON.parse(localStorage.getItem(STORAGE_KEY));if(!Array.isArray(raw))return[];return raw.map(normalizeSlip).filter(Boolean).slice(0,50)}catch(e){return[]}}
+  function storeSlips(arr){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(arr.map(normalizeSlip).filter(Boolean).slice(0,50)));return true}catch(e){return false}}
+  function restore(data){data=normalizeSlip(data);if(!data)return;activeSlipId=data.id;FIELD_IDS.forEach(function(id){setValue(id,data.fields[id]||'')});var rows=phaseRows.querySelectorAll('tr');(data.phases||[]).forEach(function(v,i){if(rows[i]){var s=rows[i].querySelector('select');s.value=v;s.className=v?'p-'+v:'';rows[i].querySelector('.next-cell').textContent=v?NEXT_PHASE[v]:'—'}});checks.forEach(function(ch){ch.checked=false});updateModelInfo();buildSummary();update();saveBtn.textContent='Update slip';window.scrollTo(0,0)}
+  function slipText(d){d=normalizeSlip(d);var f=d.fields,derived=deriveBiasFromFields(f),riskN=parseAmount(f.riskAmt),profitN=parseAmount(f.profitAmt),rr=riskN>0&&profitN>0?(profitN/riskN).toFixed(2)+'R':'';return['First saved: '+formatTimestamp(d.firstSavedAt),'Last updated: '+formatTimestamp(d.updatedAt),'Date: '+(f.tradeDate||'—')+'   Time: '+(f.tradeTime||'—')+'   Instrument: '+(f.instrument||'—'),'Bias: '+(derived.bias==='bull'?'BULLISH':derived.bias==='bear'?'BEARISH':'—'),'Bias logic: '+derived.reason,'DOL: '+(drawTextFromFields(f)||'—'),'Sweep: '+(sweepText(f)||'—'),'MSS: '+(mssText(f)||'—'),'Entry: '+([modelLabel(f.model),f.entryNote].filter(Boolean).join(' · ')||'—'),'Risk: '+(f.riskAmt||'—')+'   Profit: '+(f.profitAmt||'—')+(rr?'   Planned R: '+rr:''),'Outcome: '+(d.outcome||'open')].join('\n')}
+  function renderJournal(){var slips=loadSlips();journalList.textContent='';if(!slips.length){var empty=document.createElement('div');empty.className='jempty';empty.textContent='No saved slips yet.';journalList.appendChild(empty);return}slips.forEach(function(d,i){var f=d.fields,row=document.createElement('div'),info=document.createElement('div'),small=document.createElement('small'),outSel=document.createElement('select'),loadB=document.createElement('button'),delB=document.createElement('button');row.className='jrow';info.className='jinfo';info.appendChild(document.createTextNode((f.tradeDate||'no date')+' · '+(f.instrument||'—')+' · '+(d.bias==='bull'?'LONG':d.bias==='bear'?'SHORT':'—')));small.textContent='Saved: '+formatTimestamp(d.firstSavedAt)+((f.tradeTime||f.model)?' · '+[f.tradeTime,modelLabel(f.model)].filter(Boolean).join(' · '):'');info.appendChild(small);outSel.className='outcome';outSel.setAttribute('aria-label','Outcome for '+(f.tradeDate||'no date')+' '+(f.instrument||''));[['','open'],['W','Win'],['L','Loss'],['B','BE']].forEach(function(o){var op=document.createElement('option');op.value=o[0];op.textContent=o[1];outSel.appendChild(op)});outSel.value=d.outcome||'';function paintOutcome(){outSel.className='outcome'+(outSel.value==='W'?' w':outSel.value==='L'?' l':outSel.value==='B'?' b':'')}paintOutcome();outSel.addEventListener('change',function(){var s=loadSlips();if(s[i]){s[i].outcome=outSel.value;s[i].updatedAt=new Date().toISOString();storeSlips(s)}paintOutcome()});loadB.className='jbtn';loadB.type='button';loadB.textContent='LOAD';loadB.addEventListener('click',function(){restore(loadSlips()[i])});delB.className='jbtn del';delB.type='button';delB.textContent='×';delB.addEventListener('click',function(){var s=loadSlips();s.splice(i,1);storeSlips(s);if(activeSlipId===d.id){activeSlipId=null;saveBtn.textContent='Save slip'}renderJournal()});row.appendChild(info);row.appendChild(outSel);row.appendChild(loadB);row.appendChild(delB);journalList.appendChild(row)})}
+  function updateModelInfo(){var modelInfo=el('modelInfo'),m=MODELS[val('model')];function setInfo(id,text){var x=el(id);if(x){x.textContent=text;x.classList.toggle('gap',text===GAP)}}if(!modelInfo)return;if(!m){modelInfo.classList.remove('on');return}modelInfo.classList.add('on');setInfo('miTrig',m.trig);setInfo('miInval',m.inval);setInfo('miTgt',m.tgt);el('miSrc').textContent=m.src}
+  function drawValidation(){var rows=drawRows(),complete=rows.filter(function(r){return r.complete}),partial=rows.filter(function(r){return r.any&&!r.complete});return{valid:complete.length>0&&partial.length===0,complete:complete.length,partial:partial.length}}
+  function stepValid(i){if(i===1)return!!(val('tradeDate')&&val('instrument'));if(i===2)return drawValidation().valid;if(i===3)return!!val('sweepTime');if(i===4){if(!(val('model')&&val('mssStatus')))return false;return val('mssStatus')==='N/A'||!!(val('mssTf')&&val('mssLevel'))}return false}
+  function missingText(){var missing=[],dv=drawValidation();if(!stepValid(1))missing.push('date/instrument');if(!dv.valid)missing.push(dv.partial?'complete all started DOL rows':'at least one complete DOL');if(!stepValid(3))missing.push('potential sweep time');if(!stepValid(4))missing.push('entry model/MSS');return missing.join(', ')}
+  function setStepEnabled(step,enabled){Array.prototype.forEach.call(step.querySelectorAll('input,select,button'),function(x){x.disabled=!enabled;x.setAttribute('aria-disabled',enabled?'false':'true')})}
+  function update(){checks.forEach(function(ch,i){if(ch.checked&&!stepValid(i+1))ch.checked=false});var done=checks.map(function(ch){return ch.checked});checks.forEach(function(ch,i){if(i===1&&!done[0]){ch.checked=false;done[i]=false}if(i===2&&!done[1]){ch.checked=false;done[i]=false}if(i===3&&!done[2]){ch.checked=false;done[i]=false}});steps.forEach(function(step,i){var unlocked=i===0||(i===1&&done[0])||(i===2&&done[1])||(i===3&&done[2]);step.classList.toggle('locked',!unlocked);step.classList.toggle('done',unlocked&&done[i]);setStepEnabled(step,unlocked)});var n=done.filter(Boolean).length,ready=n===4;el('stateBox').classList.toggle('ready',ready);el('stateVal').textContent=ready?'4 / 4 — ready':n+' / 4 — missing '+(missingText()||'checks')}
+  function resetForm(){activeSlipId=null;saveBtn.textContent='Save slip';checks.forEach(function(ch){ch.checked=false});FIELD_IDS.forEach(function(id){setValue(id,'')});buildPhaseRows();updateModelInfo();buildSummary();update();setDefaultDate()}
+  function setDefaultDate(){if(val('tradeDate'))return;try{setValue('tradeDate',new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}))}catch(e){}}
+  function cleanNumericInput(input){if(/^n\/?a$/i.test(input.value.trim())){input.value='N/A';return}var cleaned=input.value.replace(/,/g,'.').replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1');if(cleaned!==input.value)input.value=cleaned}
+  Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'),function(btn){btn.addEventListener('click',function(){var target=btn.getAttribute('data-page');Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'),function(b){b.classList.toggle('active',b===btn)});Array.prototype.forEach.call(document.querySelectorAll('.page'),function(page){page.classList.toggle('active',page.id===target)})})});
+  setupTimeSelects();buildPhaseRows();setDefaultDate();FIELD_IDS.forEach(function(id){var x=el(id);if(!x)return;x.addEventListener('input',function(){if(isNumericLikeId(id))cleanNumericInput(x);buildSummary();update()});x.addEventListener('change',function(){if(id==='model')updateModelInfo();buildSummary();update()})});checks.forEach(function(ch){ch.addEventListener('change',update)});el('copyBtn').addEventListener('click',function(){copyText(plainSummary(),this,'Copy')});
+  saveBtn.addEventListener('click',function(){var slips=loadSlips(),existingIndex=activeSlipId?slips.findIndex(function(s){return s.id===activeSlipId}):-1,existing=existingIndex>=0?slips[existingIndex]:null,next=collect(existing);if(existingIndex>=0)slips[existingIndex]=next;else slips.unshift(next);if(slips.length>50)slips.length=50;if(storeSlips(slips)){activeSlipId=next.id;saveBtn.textContent=existingIndex>=0?'Updated':'Saved';setTimeout(function(){saveBtn.textContent='Update slip'},1400);renderJournal()}else setButtonTemp(saveBtn,'Storage blocked',activeSlipId?'Update slip':'Save slip',2000)});
+  el('exportBtn').addEventListener('click',function(){var slips=loadSlips();if(!slips.length){setButtonTemp(this,'Nothing to export','Export all',1400);return}copyText(slips.map(slipText).join('\n\n---\n\n'),this,'Export all')});el('resetBtn').addEventListener('click',resetForm);
+  var clockEl=el('nyClock');function tickClock(){try{var s=new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour12:false});clockEl.textContent='';clockEl.appendChild(document.createTextNode(s+' '));var sp=document.createElement('span');sp.textContent='NY';clockEl.appendChild(sp)}catch(e){clockEl.textContent='--:--:-- NY'}}tickClock();setInterval(tickClock,1000);buildSummary();update();renderJournal();
 })();
 </script>
 </body>
