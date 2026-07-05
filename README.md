@@ -16,7 +16,7 @@ A lightweight browser-based ICT planning tool focused on one job:
 - Build step: none
 - Runtime dependencies: none
 - Data storage: browser `localStorage`
-- Current app version: `v0.5.0`
+- Current app version: `v0.5.1`
 - Main entrypoint: `index.html`
 - Stylesheet: `assets/styles.css`
 - App logic: `assets/app.js`
@@ -33,7 +33,9 @@ This allows the user to go directly to saved cards without going through the pla
 
 ## Page-by-Page Planner
 
-The planner is now a wizard interface. Only one input group is shown at a time:
+The planner is a wizard interface. Only one input group is shown at a time.
+
+Back and Next are navigation controls only. They do not block the user from moving through the pages. Missing inputs are shown as Draft on the review card, and the user can still save the card as a draft.
 
 ### Step 1 — Instrument
 
@@ -42,8 +44,6 @@ Inputs:
 - Date
 - Instrument
 - Session, optional
-
-Next is disabled until an instrument is entered.
 
 ### Step 2 — HTF Draw on Liquidity
 
@@ -66,7 +66,7 @@ Inputs:
 - Sweep time, optional
 - Sweep note
 
-The app warns if the sweep is not opposite the directional HTF draw.
+The app warns if the sweep is not opposite the directional HTF draw, but this warning does not block the user from continuing.
 
 ### Step 4 — Review Focus Card
 
@@ -77,7 +77,7 @@ The final review card shows only:
 - LTF sweep
 - Focus status
 
-The user can go Back or Save card.
+The user can go Back or Save card. Incomplete cards are saved as Draft.
 
 ## Saved Cards
 
