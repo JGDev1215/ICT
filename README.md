@@ -1,14 +1,11 @@
-# ICT Framework
+# ICT DOL Sweep Tracker
 
-A lightweight browser-based ICT setup planner for building a trade thesis around:
+A lightweight browser-based ICT planning tool focused on one job:
 
-1. Higher-timeframe draw on liquidity
-2. Opposing liquidity sweep
-3. Optional timing context
-4. Entry model and MSS confirmation
-5. Setup summary, saved slips, and exportable journal notes
-
-The current app is a single static HTML file: `index.html`.
+1. Choose one instrument.
+2. Define the higher-timeframe draw on liquidity.
+3. Confirm the lower-timeframe sweep.
+4. Save the card for review, notes, marker checks, and outcome tracking.
 
 > Educational tool only. This project does not provide financial advice, investment advice, or trade recommendations.
 
@@ -19,61 +16,66 @@ The current app is a single static HTML file: `index.html`.
 - Runtime dependencies: none
 - Data storage: browser `localStorage`
 - Main file: `index.html`
-- Default branch: `main`
+- Current app version: `v0.2.0`
 
 ## Main Features
 
-### Planner
+### Focus Planner
 
-The planner guides the user through a structured setup workflow:
+The planner intentionally avoids extra execution complexity. The output card only shows:
 
-- **Step 0 — Market Context**  
-  Labels the current condition across key timeframes: Monthly, Weekly, Daily, 4H, 1H, and 15m.
+- instrument
+- higher-timeframe draw on liquidity
+- lower-timeframe sweep
+- focus status
 
-- **Step 1 — HTF Draw on Liquidity**  
-  Records up to three higher-timeframe liquidity objectives and derives a directional bias from the selected draw stack.
+The app validates whether a directional draw has an opposing lower-timeframe sweep.
 
-- **Step 2 — Sweep**  
-  Records the lower-timeframe sweep of liquidity opposite to the higher-timeframe draw.
+### Saved Cards
 
-- **Step 3 — Timing**  
-  Optional section for killzone, macro-window, or session timing context.
+Saved cards can be reviewed without leaving the Saved Cards tab. Each card includes:
 
-- **Step 4 — Market Confluence and Entry Model**  
-  Records MSS context, selected entry model, entry note, risk amount, and profit amount.
+- HTF draw summary
+- LTF sweep summary
+- checklist markers:
+  - Draw respected
+  - LTF sweep confirmed
+  - Plan followed
+- review notes
+- outcome: Open, Hit, Miss, or Breakeven
+- load, copy, and delete actions
 
-### Saved Setups
+### Hit-Rate Data
 
-Saved slips are stored locally in the browser and can be:
+The Saved Cards page shows a local hit-rate summary:
 
-- loaded back into the planner
-- marked as open, win, loss, or breakeven
-- deleted
-- exported as plain text
+- Hit rate
+- Hit/Miss sample size
+- Breakeven count
+- Open count
 
-### Market Phases
+Hit rate uses only closed Hit/Miss records. Breakeven is tracked separately.
 
-The app includes a market-phase education tab covering:
+### Backend-Ready Export
 
-- Consolidation
-- Expansion
-- Retracement
-- Reversal
+The app can export saved card data as JSON using the schema:
+
+```text
+ict_dol_sweep_export_v2
+```
+
+This gives a future backend a clean data payload for collecting hit-rate statistics. No backend is currently included.
 
 ## How to Run Locally
 
 No installation is required.
 
-1. Clone the repository:
+```bash
+git clone https://github.com/JGDev1215/ICT.git
+cd ICT
+```
 
-   ```bash
-   git clone https://github.com/JGDev1215/ICT.git
-   cd ICT
-   ```
-
-2. Open `index.html` in a browser.
-
-You can also serve it locally:
+Open `index.html` in a browser, or serve it locally:
 
 ```bash
 python3 -m http.server 8000
@@ -106,30 +108,26 @@ ICT/
 
 ## Data and Privacy
 
-The app stores saved slips in the browser using `localStorage` under the key:
+The app stores saved cards in the browser using `localStorage` under:
+
+```text
+ict_dol_sweep_cards_v2
+```
+
+It can also migrate older saved slips from:
 
 ```text
 ict_slips_v1
 ```
 
-Data is not sent to a backend server. Clearing browser storage may remove saved slips.
+Data is not sent to a backend server. Clearing browser storage may remove saved cards.
 
 ## Known Limitations
 
+- No hosted backend yet.
 - No automated test suite yet.
-- No import feature for exported slips.
-- No full PWA manifest or service worker yet.
+- JSON export/import is local-browser based.
+- Saved cards are browser-local only and are not synced across devices.
 - The whole app currently lives in one HTML file, which makes future maintenance harder.
-- Saved slips are browser-local only and are not synced across devices.
 
-See `ISSUE_FIX_PLAN.md` for the planned fixes and priorities.
-
-## Development Notes
-
-Recommended next steps:
-
-1. Add a small automated smoke-test suite.
-2. Split JavaScript and CSS into separate files.
-3. Add GitHub Pages deployment notes or workflow.
-4. Improve validation and save-state handling.
-5. Add import/export backup support for saved slips.
+See `ISSUE_FIX_PLAN.md` for planned fixes and future enhancements.
