@@ -639,7 +639,7 @@
 	  var stateBox = document.getElementById('stateBox');
 	  var stateVal = document.getElementById('stateVal');
 	  var phaseRows = document.getElementById('phaseRows');
-	  var PHASE_TFS = ['Daily','4H','1H','15m'];
+	  var PHASE_TFS = ['Monthly','Weekly','Daily','4H','1H','15m'];
 	  var PHASES = ['Consolidation','Expansion','Retracement','Reversal'];
 	  var NEXT_PHASE = {
 	    consolidation: 'Watch the range extremes and HTF draw; expansion needs liquidity/order-flow support.',
@@ -1021,7 +1021,7 @@
     if(!out.fields.mssStatus && out.fields.mssNote) out.fields.mssStatus = 'Confirmed';
     var savedDerived = deriveSavedBias(out.fields);
     out.bias = savedDerived.bias || (d.bias === 'bull' || d.bias === 'bear' ? d.bias : null);
-    out.phases = Array.isArray(d.phases) ? d.phases.slice(0,4).map(function(p){ return NEXT_PHASE[p] ? p : ''; }) : [];
+    out.phases = Array.isArray(d.phases) ? d.phases.slice(0,PHASE_TFS.length).map(function(p){ return NEXT_PHASE[p] ? p : ''; }) : [];
     out.ticks = d.ticks && typeof d.ticks === 'object' ? JSON.parse(JSON.stringify(d.ticks)) : {};
     out.outcome = ['','W','L','B'].indexOf(d.outcome) >= 0 ? d.outcome : '';
     return out;
