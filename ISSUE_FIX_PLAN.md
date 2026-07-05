@@ -4,8 +4,9 @@ This document captures the main fixes and improvements for the ICT DOL Sweep Tra
 
 ## Implementation Status
 
-- **Completed in v0.2.0** — the app has been simplified around one instrument, higher-timeframe draw on liquidity, and lower-timeframe sweep.
-- **Completed in v0.2.0** — saved slips are now saved cards with checklist markers, notes, outcomes, and local hit-rate analytics.
+- **Completed in v0.2.0** — the app was simplified around one instrument, higher-timeframe draw on liquidity, and lower-timeframe sweep.
+- **Completed in v0.2.0** — saved slips became saved cards with checklist markers, notes, outcomes, and local hit-rate analytics.
+- **Completed in v0.3.0** — saved-card persistence now uses stable IDs, autosaved notes, visible save status, verified-analysis markers, and verified hit-rate tracking.
 - **Next pass** — GitHub Pages deployment, automated smoke tests, file split, changelog, and optional backend/PWA work.
 
 ## Completed Fixes
@@ -91,7 +92,8 @@ Each saved card includes:
   - Draw respected
   - LTF sweep confirmed
   - Plan followed
-- notes field
+  - Analysis verified
+- verification notes field
 - outcome selector
 - Load, Copy, Delete actions
 
@@ -102,27 +104,50 @@ Each saved card includes:
 - Notes are saved per card.
 - Existing older saved-slip data can be migrated locally.
 
-### 6. Hit-rate analytics data
+### 6. Production-grade saved-card persistence
 
-**Status:** Completed locally
+**Status:** Completed in v0.3.0
 
-The Saved Cards tab now shows:
+Saved-card edits now use stable card IDs instead of array index position.
 
-- Hit rate
-- Hit/Miss sample size
-- Breakeven count
-- Open count
+**Fixes completed**
 
-Hit rate uses only Hit and Miss records. Breakeven is tracked separately.
+- Added ID-based helpers for get, update, and delete.
+- Checklist, outcome, notes, load, copy, and delete now target `card.id`.
+- Load and copy fetch the latest card before use.
+- Save failures show visible feedback.
+- Notes autosave while typing and save again on blur/change.
+- Card status, draw side, sweep side, and alignment are recalculated during normalisation.
 
 **Acceptance criteria met**
 
-- User can see local prediction hit rate.
+- Deleting or importing cards does not cause later edits to update the wrong card.
+- Notes persist more reliably.
+- User can see when local save succeeds or fails.
+- Imported or migrated cards are rechecked before display.
+
+### 7. Verified hit-rate analytics data
+
+**Status:** Completed locally in v0.3.0
+
+The Saved Cards tab now shows:
+
+- Verified hit rate
+- Verified Hit/Miss sample size
+- Verified Breakeven count
+- Needs verify count
+
+Hit rate uses only cards marked **Analysis verified** with Hit or Miss outcome. Breakeven is tracked separately.
+
+**Acceptance criteria met**
+
+- User can see verified prediction hit rate.
 - Open records are excluded from hit-rate calculation.
+- Unverified closed records do not enter the hit-rate sample.
 - Breakeven is separate.
 - JSON export creates a backend-ready payload.
 
-### 7. Export and import support
+### 8. Export and import support
 
 **Status:** Completed locally
 
@@ -131,22 +156,23 @@ The app now supports:
 - plain-text export
 - JSON export
 - JSON import
+- data verification/normalisation
 
 The JSON export schema is:
 
 ```text
-ict_dol_sweep_export_v2
+ict_dol_sweep_export_v3
 ```
 
 **Acceptance criteria met**
 
 - User can export saved cards.
 - User can import valid exported cards.
-- Export includes analytics and card data for future backend collection.
+- Export includes analytics and verified card data for future backend collection.
 
 ## Remaining Work
 
-### 8. Add GitHub Pages deployment configuration
+### 9. Add GitHub Pages deployment configuration
 
 **Status:** Planned
 
@@ -155,7 +181,7 @@ ict_dol_sweep_export_v2
 - Enable GitHub Pages from `main` branch root, or add a Pages workflow.
 - Add the live URL to the README once available.
 
-### 9. Add automated smoke tests
+### 10. Add automated smoke tests
 
 **Status:** Planned
 
@@ -168,11 +194,13 @@ Add a lightweight browser test suite covering:
 - draw selection
 - sweep validation
 - save/load card
+- notes autosave
+- marker verification
 - outcome update
-- hit-rate calculation
+- verified hit-rate calculation
 - JSON export/import
 
-### 10. Split the single HTML file into smaller files
+### 11. Split the single HTML file into smaller files
 
 **Status:** Planned
 
@@ -188,7 +216,7 @@ ICT/
 └── ISSUE_FIX_PLAN.md
 ```
 
-### 11. Add changelog and formal versioning
+### 12. Add changelog and formal versioning
 
 **Status:** Planned
 
@@ -198,21 +226,21 @@ ICT/
 - Keep visible version number in footer.
 - Update version when storage schema or workflow changes.
 
-### 12. Optional backend collection
+### 13. Optional backend collection
 
 **Status:** Planned
 
 The app currently stores data locally only. A future backend could collect:
 
 - anonymised or account-linked saved cards
-- hit/miss outcomes
+- verified hit/miss outcomes
 - instrument-level hit rate
 - draw type hit rate
 - sweep type hit rate
 
 Any backend should include clear privacy controls before collecting user trading-review data.
 
-### 13. Optional PWA support
+### 14. Optional PWA support
 
 **Status:** Planned
 
