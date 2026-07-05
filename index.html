@@ -458,57 +458,71 @@
           <div class="hint" id="opp3Help">Optional extended or related opposing pool.</div>
         </div>
       </div>
-      <div class="hint">Draws exist on any timeframe — a sweep pool can be a midnight open, PDH/PDL, session H/L, or a gap. The sweep raids the pool <b>opposite</b> your HTF draw; the displacement candle appears on the candle(s) <b>after</b> the sweep, not the sweep candle itself. <span style="color:#6a6a7e">[ep06 | Bearish ICT FVG; Displacement High &amp; Low]</span></div>
+	      <div class="hint">Draws exist on any timeframe — a sweep pool can be a midnight open, PDH/PDL, session H/L, or a gap. The sweep raids the pool <b>opposite</b> your HTF draw; the displacement candle appears on the candle(s) <b>after</b> the sweep, not the sweep candle itself. <span style="color:#6a6a7e">[ep06 | Bearish ICT FVG; Displacement High &amp; Low]</span></div>
 
-      <label class="label" for="macro">Macro timing — raid during or immediately after a macro?</label>
-      <select class="in" id="macro">
-        <option value="">— select macro window (NY time) —</option>
-        <option>9:50–10:10 (the ":50/:10" AM macro)</option>
-        <option>10:50–11:10 (the ":50/:10" late-AM macro)</option>
-        <option>11:30 marker</option>
-        <option>2:50–3:10 PM</option>
-        <option>3:15–3:45 PM</option>
-        <option>Outside a macro window</option>
-        <option>N/A</option>
-      </select>
-      <div class="hint">Use the stated macro windows only; do not invent after-the-hour macro folklore. <span style="color:#6a6a7e">Bible macro windows: 9:50–10:10, 10:50–11:10, 11:30, 2:50–3:10, 3:15–3:45 [MANUAL_INTERVENTION...MACROS | Macro Time Windows].</span></div>
+	    </div>
+	  </div>
 
-      <label class="label" for="mssStatus">Market structure shift</label>
-      <select class="in" id="mssStatus">
-        <option value="">— select MSS status —</option>
-        <option>Confirmed</option>
-        <option>N/A</option>
-      </select>
-      <div class="rp-row">
-        <div>
-          <label class="label" for="mssTf">MSS timeframe</label>
-          <select class="in" id="mssTf">
-            <option value="">— timeframe —</option>
-            <option>4H</option><option>1H</option><option>15m</option><option>5m</option><option>1m</option>
-          </select>
-        </div>
-        <div>
-          <label class="label" for="mssLevel">MSS price level</label>
-          <input class="in" id="mssLevel" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="e.g. 29512">
-        </div>
-      </div>
-      <label class="label" for="mssNote">MSS note</label>
-      <input class="in" id="mssNote" placeholder="optional context — e.g. displacement leg printed">
-      <div class="hint">Intraday MSS names the short-term draw-on-liquidity shift inside the day. <span style="color:#6a6a7e">[ep03 | MSS vs Market Structure Break]</span></div>
-    </div>
-  </div>
+	  <!-- STEP 3 -->
+	  <div class="step locked" id="s3">
+	    <div class="step-head">
+	      <input type="checkbox" class="chk" id="c3" aria-label="Step 3 complete">
+	      <div>
+	        <span class="num">STEP 3 · MACRO TIMING</span>
+	        <div class="title">When do we expect the Step 2 liquidity sweep?</div>
+	        <div class="cite">Optional time-and-price context: macro window, killzone, pre-New York, New York AM, or outside killzone.</div>
+	      </div>
+	    </div>
+	    <div class="body">
+	      <label class="label" for="timingUse">Timing context</label>
+	      <select class="in" id="timingUse">
+	        <option>Off — do not use timing context</option>
+	        <option>On — add timing context to summary</option>
+	      </select>
+	      <label class="label" for="timingWindow">Expected sweep timing</label>
+	      <select class="in" id="timingWindow">
+	        <option value="">— select timing window —</option>
+	        <option>During Macro</option>
+	        <option>During Killzone</option>
+	        <option>Outside Killzone</option>
+	        <option>4am NY</option>
+	        <option>5am NY</option>
+	        <option>Pre NY</option>
+	        <option>NY AM</option>
+	        <option>London Killzone</option>
+	        <option>New York Killzone</option>
+	        <option>London Close</option>
+	        <option>Other / discretionary</option>
+	      </select>
+	      <label class="label" for="macro">Macro window, if applicable</label>
+	      <select class="in" id="macro">
+	        <option value="">— select macro window (NY time) —</option>
+	        <option>9:50-10:10 AM macro</option>
+	        <option>10:50-11:10 late-AM macro</option>
+	        <option>11:30 marker</option>
+	        <option>2:50-3:10 PM</option>
+	        <option>3:15-3:45 PM</option>
+	        <option>Outside a macro window</option>
+	        <option>N/A</option>
+	      </select>
+	      <label class="label" for="timingNote">Timing thesis</label>
+	      <input class="in" id="timingNote" placeholder="e.g. expect sweep of Step 2 pool during NY AM before displacement">
+	      <div class="hint">Use this to connect <b>time</b> to the Step 2 <b>price</b> objective. If timing is switched off, the setup can still be completed from price, liquidity, MSS, and entry-model evidence.</div>
+	      <div class="hint">Bible macro windows: 9:50-10:10, 10:50-11:10, 11:30, 2:50-3:10, 3:15-3:45. Do not treat timing as a standalone trade signal.</div>
+	    </div>
+	  </div>
 
-  <!-- STEP 3 -->
-  <div class="step locked" id="s3">
-    <div class="step-head">
-      <input type="checkbox" class="chk" id="c3" aria-label="Step 3 complete">
-      <div>
-        <span class="num">STEP 3 · ENTRY MODEL</span>
-        <div class="title">Apply the selected entry model</div>
-        <div class="cite">Model 2022 and FVG Drill require the sweep → MSS/displacement → FVG sequence. Other models use their own prerequisites, invalidation, and target logic from the reference.</div>
-      </div>
-    </div>
-    <div class="body">
+	  <!-- STEP 4 -->
+	  <div class="step locked" id="s4">
+	    <div class="step-head">
+	      <input type="checkbox" class="chk" id="c4" aria-label="Step 4 complete">
+	      <div>
+	        <span class="num">STEP 4 · MARKET CONFLUENCE &amp; ENTRY MODEL</span>
+	        <div class="title">Confirm MSS context and apply the entry model</div>
+	        <div class="cite">MSS is part of market confluence. Model 2022 and FVG Drill require the sweep → MSS/displacement → FVG sequence; other models use their own prerequisites.</div>
+	      </div>
+	    </div>
+	    <div class="body">
       <label class="label" for="model">Entry model</label>
       <select class="in" id="model">
         <option value="">— select model —</option>
@@ -522,26 +536,49 @@
         <option value="silverbullet">Silver Bullet (time-windowed FVG)</option>
       </select>
 
-      <div class="model-info" id="modelInfo">
-        <div class="mi"><span class="k">Trigger</span><span class="val" id="miTrig">—</span></div>
-        <div class="mi"><span class="k">Invalidation</span><span class="val" id="miInval">—</span></div>
-        <div class="mi"><span class="k">Target logic</span><span class="val" id="miTgt">—</span></div>
-        <div class="mi-src" id="miSrc">—</div>
-      </div>
+	      <div class="model-info" id="modelInfo">
+	        <div class="mi"><span class="k">Trigger</span><span class="val" id="miTrig">—</span></div>
+	        <div class="mi"><span class="k">Invalidation</span><span class="val" id="miInval">—</span></div>
+	        <div class="mi"><span class="k">Target logic</span><span class="val" id="miTgt">—</span></div>
+	        <div class="mi-src" id="miSrc">—</div>
+	      </div>
 
-      <label class="label" for="entryNote">Execution timeframe &amp; entry note</label>
-      <input class="in" id="entryNote" placeholder="e.g. 1m — limit at FVG after 15m displacement">
+	      <label class="label" for="mssStatus">Market structure shift</label>
+	      <select class="in" id="mssStatus">
+	        <option value="">— select MSS status —</option>
+	        <option>Confirmed</option>
+	        <option>N/A</option>
+	      </select>
+	      <div class="rp-row">
+	        <div>
+	          <label class="label" for="mssTf">MSS timeframe</label>
+	          <select class="in" id="mssTf">
+	            <option value="">— timeframe —</option>
+	            <option>4H</option><option>1H</option><option>15m</option><option>5m</option><option>1m</option>
+	          </select>
+	        </div>
+	        <div>
+	          <label class="label" for="mssLevel">MSS price level</label>
+	          <input class="in" id="mssLevel" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="e.g. 29512 or N/A">
+	        </div>
+	      </div>
+	      <label class="label" for="mssNote">MSS note</label>
+	      <input class="in" id="mssNote" placeholder="optional context or N/A">
+	      <div class="hint">Intraday MSS names the short-term draw-on-liquidity shift inside the day. Select N/A when the chosen model does not require MSS or the context is not applicable. <span style="color:#6a6a7e">[ep03 | MSS vs Market Structure Break]</span></div>
 
-      <div class="rp-row">
-        <div>
-          <label class="label" for="riskAmt">Risk amount</label>
-          <input class="in" id="riskAmt" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="XXX">
-        </div>
-        <div>
-          <label class="label" for="profitAmt">Profit amount</label>
-          <input class="in" id="profitAmt" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="XXX">
-        </div>
-      </div>
+	      <label class="label" for="entryNote">Execution timeframe &amp; entry note</label>
+	      <input class="in" id="entryNote" placeholder="e.g. 1m — limit at FVG after 15m displacement, or N/A">
+
+	      <div class="rp-row">
+	        <div>
+	          <label class="label" for="riskAmt">Risk amount</label>
+	          <input class="in" id="riskAmt" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="XXX or N/A">
+	        </div>
+	        <div>
+	          <label class="label" for="profitAmt">Profit amount</label>
+	          <input class="in" id="profitAmt" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="XXX or N/A">
+	        </div>
+	      </div>
     </div>
   </div>
 
@@ -634,8 +671,8 @@
     'silverbullet':{trig:'FVG entry inside the active Silver Bullet time window', inval:GAP, tgt:'Prev day / prev session high or low in the window', src:'silver_bullet.html'}
   };
 
-  var c = [0,1,2,3].map(function(i){ return document.getElementById('c'+i); });
-  var steps = [0,1,2,3].map(function(i){ return document.getElementById('s'+i); });
+  var c = [0,1,2,3,4].map(function(i){ return document.getElementById('c'+i); });
+  var steps = [0,1,2,3,4].map(function(i){ return document.getElementById('s'+i); });
 	  var stateBox = document.getElementById('stateBox');
 	  var stateVal = document.getElementById('stateVal');
 	  var phaseRows = document.getElementById('phaseRows');
@@ -864,6 +901,36 @@
     if(status === 'N/A') return 'N/A' + (val('mssNote') ? ' · ' + val('mssNote') : '');
     return [status, val('mssTf'), val('mssLevel'), val('mssNote')].filter(Boolean).join(' · ');
   }
+  function timingEnabled(){
+    return val('timingUse').indexOf('On') === 0;
+  }
+  function timingText(){
+    if(!timingEnabled()) return 'Off';
+    var priceContext = objectiveText('opp');
+    var parts = [
+      val('timingWindow'),
+      val('macro'),
+      priceContext ? 'Targets Step 2: ' + priceContext : '',
+      val('timingNote')
+    ].filter(Boolean);
+    return parts.join(' · ');
+  }
+  function syncTimingControls(){
+    var enabled = timingEnabled();
+    ['timingWindow','macro','timingNote'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el){
+        el.disabled = !enabled;
+        el.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+      }
+    });
+    if(!enabled){
+      ['timingWindow','macro','timingNote'].forEach(function(id){
+        var el = document.getElementById(id);
+        if(el) el.value = '';
+      });
+    }
+  }
 
   var outBody = document.getElementById('outBody');
   var ticks = {}; // persist tick state by key across rebuilds
@@ -912,7 +979,7 @@
       makeLine('Bias Logic', derived.reason),
       makeLine('HTF DOL', drawFull, '', 'draw'),
       makeLine('Opposing Pools', sweepFull, '', 'sweep'),
-      makeLine('Macro', val('macro'), '', 'macro'),
+      makeLine('Timing', timingText(), '', 'timing'),
       makeLine('MSS', mssText(), '', 'mss'),
       makeLine('Entry', entryFull, '', 'entry'),
 	      makeLine('Market Context', phaseSummary()),
@@ -955,14 +1022,15 @@
   }
   document.getElementById('copyBtn').addEventListener('click', function(){ copyText(plainSummary(), this, 'Copy'); });
 
-  ['draw1Level','draw2Level','draw3Level','opp1Level','opp2Level','opp3Level','mssLevel','riskAmt','profitAmt'].forEach(function(id){
+  ['draw1Level','draw2Level','draw3Level','opp1Level','opp2Level','opp3Level'].forEach(function(id){
     var el = document.getElementById(id);
     if(el) el.addEventListener('input', function(){
+      if(/^n\/?a$/i.test(el.value.trim())){ el.value = 'N/A'; return; }
       var cleaned = el.value.replace(/,/g,'.').replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1');
       if(cleaned !== el.value) el.value = cleaned;
     });
   });
-  var FIELD_IDS = ['tradeDate','tradeTime','instrument','draw1','draw1Level','draw2','draw2Level','draw3','draw3Level','sweepTf','opp1','opp1Level','opp2','opp2Level','opp3','opp3Level','macro','mssStatus','mssTf','mssLevel','mssNote','model','entryNote','riskAmt','profitAmt'];
+  var FIELD_IDS = ['tradeDate','tradeTime','instrument','draw1','draw1Level','draw2','draw2Level','draw3','draw3Level','sweepTf','opp1','opp1Level','opp2','opp2Level','opp3','opp3Level','timingUse','timingWindow','macro','timingNote','mssStatus','mssTf','mssLevel','mssNote','model','entryNote','riskAmt','profitAmt'];
   FIELD_IDS.forEach(function(id){ var el=document.getElementById(id); if(el){ el.addEventListener('input', buildSummary); el.addEventListener('change', buildSummary); } });
   ['draw1','draw2','draw3','opp1','opp2','opp3'].forEach(function(id){
     var el = document.getElementById(id);
@@ -996,12 +1064,13 @@
       if(rows[i]){ var s=rows[i].querySelector('select'); s.value=v; s.className=v?'p-'+v:''; rows[i].querySelector('.next-cell').textContent = v?NEXT_PHASE[v]:'—'; }
     });
     var m = MODELS[val('model')];
-    if(m){ modelInfo.classList.add('on'); setVal('miTrig',m.trig); setVal('miInval',m.inval); setVal('miTgt',m.tgt); document.getElementById('miSrc').textContent=m.src; }
-    else{ modelInfo.classList.remove('on'); }
-    refreshObjectiveHelps();
-    buildSummary();
-    window.scrollTo(0,0);
-  }
+	    if(m){ modelInfo.classList.add('on'); setVal('miTrig',m.trig); setVal('miInval',m.inval); setVal('miTgt',m.tgt); document.getElementById('miSrc').textContent=m.src; }
+	    else{ modelInfo.classList.remove('on'); }
+	    refreshObjectiveHelps();
+	    syncTimingControls();
+	    buildSummary();
+	    window.scrollTo(0,0);
+	  }
   function loadSlips(){
     try{
       var raw = JSON.parse(localStorage.getItem(JKEY));
@@ -1050,7 +1119,7 @@
       'Bias logic: '+savedBias.reason,
       'HTF DOL: '+(savedObj('draw')||'—'),
       'Opposing Pools: '+([f.sweepTf,savedObj('opp')].filter(Boolean).join(' · ')||'—'),
-      'Macro: '+(f.macro||'—'),
+      'Timing: '+((f.timingUse||'').indexOf('On')===0 ? [f.timingWindow,f.macro,savedObj('opp')?('Targets Step 2: '+savedObj('opp')):'',f.timingNote].filter(Boolean).join(' · ') : 'Off'),
       'MSS: '+(savedMss||'—'),
       'Entry: '+([modelLabel(f.model),f.entryNote].filter(Boolean).join(' · ')||'—'),
       'Risk: '+(f.riskAmt||'—')+'   Profit: '+(f.profitAmt||'—')+(rr?('   Planned R: '+rr):''),
@@ -1171,21 +1240,22 @@
     if(!rows.length) return false;
     return Array.prototype.every.call(rows, function(tr){ return !!tr.querySelector('select').value; });
   }
-	  function stepValid(i){
-	    if(i===0) return true;
-	    if(i===1) return !!(val('draw1') && val('draw1Level'));
-    if(i===2){
-      if(!(val('sweepTf') && val('opp1') && val('opp1Level') && val('macro') && val('mssStatus'))) return false;
-      return val('mssStatus') === 'N/A' || !!(val('mssTf') && val('mssLevel'));
-    }
-    if(i===3) return !!(val('model') && val('entryNote'));
-    return false;
-  }
+		  function stepValid(i){
+		    if(i===0) return true;
+		    if(i===1) return !!(val('draw1') && val('draw1Level'));
+		    if(i===2) return !!(val('sweepTf') && val('opp1') && val('opp1Level'));
+	    if(i===3) return !timingEnabled() || !!val('timingWindow');
+	    if(i===4){
+	      if(!(val('model') && val('mssStatus'))) return false;
+	      return val('mssStatus') === 'N/A' || !!(val('mssTf') && val('mssLevel'));
+	    }
+	    return false;
+	  }
 	  function missingText(){
 	    var missing = [];
 	    if(!(val('draw1') && val('draw1Level'))) missing.push('HTF DOL');
-	    if(!stepValid(2)) missing.push('opposing/MSS');
-	    if(!(val('model') && val('entryNote'))) missing.push('entry');
+		    if(!stepValid(2)) missing.push('opposing sweep');
+		    if(!stepValid(4)) missing.push('entry model/MSS');
     return missing.join(', ');
   }
   function setStepEnabled(step, enabled){
@@ -1194,19 +1264,23 @@
       el.setAttribute('aria-disabled', enabled ? 'false' : 'true');
     });
   }
-	  function update(){
-	    c.forEach(function(x,i){ if(x.checked && !stepValid(i)) x.checked = false; });
-	    var done = c.map(function(x){ return x.checked; });
-	    c.forEach(function(x,i){
-	      if(i>1 && !done[i-1]){ x.checked=false; done[i]=false; }
-	    });
-	    steps.forEach(function(st,i){
-	      var unlocked = i<=1 || done[i-1];
-	      st.classList.toggle('locked', !unlocked);
-	      st.classList.toggle('done', unlocked && done[i]);
-	      setStepEnabled(st, unlocked);
-	    });
-	    var n = [1,2,3].filter(function(i){ return done[i]; }).length;
+		  function update(){
+		    syncTimingControls();
+		    c.forEach(function(x,i){ if(x.checked && !stepValid(i)) x.checked = false; });
+		    var done = c.map(function(x){ return x.checked; });
+		    c.forEach(function(x,i){
+		      if(i===2 && !done[1]){ x.checked=false; done[i]=false; }
+		      if(i===3 && !done[2]){ x.checked=false; done[i]=false; }
+		      if(i===4 && !done[2]){ x.checked=false; done[i]=false; }
+		    });
+		    steps.forEach(function(st,i){
+		      var unlocked = i<=1 || (i===2 && done[1]) || ((i===3 || i===4) && done[2]);
+		      st.classList.toggle('locked', !unlocked);
+		      st.classList.toggle('done', unlocked && done[i]);
+		      setStepEnabled(st, unlocked);
+		    });
+		    syncTimingControls();
+		    var n = [1,2,4].filter(function(i){ return done[i]; }).length;
 	    var ready = n===3;
 	    stateBox.classList.toggle('ready', ready);
 	    stateVal.textContent = ready ? '3 / 3 — ready' : n + ' / 3 — missing ' + (missingText() || 'checks');
