@@ -2,7 +2,7 @@
 
 A lightweight browser-based ICT planning tool focused on one job:
 
-1. Choose one instrument.
+1. Choose one instrument from a fixed dropdown list.
 2. Define the higher-timeframe draw on liquidity.
 3. Confirm the lower-timeframe sweep.
 4. Optionally mark whether there is an FVG in the direction of the sweep.
@@ -17,7 +17,7 @@ A lightweight browser-based ICT planning tool focused on one job:
 - Build step: none
 - Runtime dependencies: none
 - Data storage: browser `localStorage`
-- Current app version: `v0.5.2`
+- Current app version: `v0.5.3`
 - Main entrypoint: `index.html`
 - Stylesheet: `assets/styles.css`
 - App logic: `assets/app.js`
@@ -43,8 +43,25 @@ Back and Next are navigation controls only. They do not block the user from movi
 Inputs:
 
 - Date
-- Instrument
+- Instrument dropdown
 - Session, optional
+
+Instrument is now selected from a dropdown list rather than typed manually.
+
+Current instrument options:
+
+- MNQ
+- NQ
+- MES
+- ES
+- MYM
+- YM
+- MGC
+- GC
+- CL
+- EURUSD
+- GBPUSD
+- BTCUSD
 
 ### Step 2 — HTF Draw on Liquidity
 
