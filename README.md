@@ -5,7 +5,8 @@ A lightweight browser-based ICT planning tool focused on one job:
 1. Choose one instrument.
 2. Define the higher-timeframe draw on liquidity.
 3. Confirm the lower-timeframe sweep.
-4. Save the card for review, marker checks, outcome tracking, and final verification.
+4. Review the focus card.
+5. Save, verify, and final-save the analysis.
 
 > Educational tool only. This project does not provide financial advice, investment advice, or trade recommendations.
 
@@ -15,54 +16,103 @@ A lightweight browser-based ICT planning tool focused on one job:
 - Build step: none
 - Runtime dependencies: none
 - Data storage: browser `localStorage`
-- Main file: `index.html`
-- Current app version: `v0.4.0`
+- Current app version: `v0.5.0`
+- Main entrypoint: `index.html`
+- Stylesheet: `assets/styles.css`
+- App logic: `assets/app.js`
 
-## Main Features
+## Main Page
 
-### Focus Planner
+The main page gives the user three clear actions:
 
-The planner intentionally avoids extra execution complexity. The output card only shows:
+- **Start new analysis**
+- **Saved cards**
+- **Liquidity notes**
 
-- instrument
-- higher-timeframe draw on liquidity
-- lower-timeframe sweep
-- focus status
+This allows the user to go directly to saved cards without going through the planner.
 
-The app validates whether a directional draw has an opposing lower-timeframe sweep.
+## Page-by-Page Planner
 
-### Saved Cards
+The planner is now a wizard interface. Only one input group is shown at a time:
 
-Saved cards can be reviewed without leaving the Saved Cards tab. Each card includes:
+### Step 1 — Instrument
 
-- HTF draw summary
-- LTF sweep summary
-- checklist markers:
+Inputs:
+
+- Date
+- Instrument
+- Session, optional
+
+Next is disabled until an instrument is entered.
+
+### Step 2 — HTF Draw on Liquidity
+
+Inputs:
+
+- HTF timeframe
+- Draw on liquidity
+- Draw level
+- Draw note
+
+The bias read updates from the selected draw.
+
+### Step 3 — LTF Sweep
+
+Inputs:
+
+- LTF sweep timeframe
+- Liquidity swept
+- Sweep level
+- Sweep time, optional
+- Sweep note
+
+The app warns if the sweep is not opposite the directional HTF draw.
+
+### Step 4 — Review Focus Card
+
+The final review card shows only:
+
+- Instrument
+- HTF draw
+- LTF sweep
+- Focus status
+
+The user can go Back or Save card.
+
+## Saved Cards
+
+Saved cards are accessible from the main page. Each saved card opens into its own review page.
+
+Each review page includes:
+
+- Card summary
+- Verification markers:
   - Draw respected
   - LTF sweep confirmed
   - Plan followed
-- verification notes
-- outcome: Open, Hit, Miss, or Breakeven
-- load, copy, save changes, final save, and delete actions
-- visible save state, such as Saved locally, Unsaved changes, or Save failed
+- Outcome:
+  - Open
+  - Hit
+  - Miss
+  - Breakeven
+- Verification notes
+- Load to planner
+- Copy
+- Save changes
+- Final save
+- Delete
 
-### Save Changes vs Final Save
+## Save Changes vs Final Save
 
 Saved-card edits are staged first.
 
-Use **Save changes** to store card edits locally without including the card in the verified hit-rate sample.
+Use **Save changes** to store card edits locally without including the card in the final hit-rate sample.
 
 Use **Final save** after selecting an outcome to mark the analysis as final. Only final-saved Hit/Miss cards enter the hit-rate calculation.
 
 If a final-saved card is edited again and **Save changes** is used, the card returns to a non-final state until **Final save** is pressed again.
 
-### Production Save Behaviour
-
-Saved-card edits use stable card IDs rather than list position. This protects the wrong card from being updated after deletion, import, or re-render.
-
-Load and copy actions fetch the latest saved card by ID before use. Save failures are shown to the user.
-
-### Final Hit-Rate Data
+## Final Hit-Rate Data
 
 The Saved Cards page shows a local accuracy summary:
 
@@ -73,9 +123,9 @@ The Saved Cards page shows a local accuracy summary:
 
 Hit rate uses only cards that have been final-saved with a Hit or Miss outcome. Breakeven is tracked separately.
 
-### Data Verification and Backup
+## Data Verification and Backup
 
-The Saved Cards tab includes:
+The Saved Cards page includes:
 
 - Verify data
 - Export text
@@ -85,7 +135,7 @@ The Saved Cards tab includes:
 The JSON export schema is:
 
 ```text
-ict_dol_sweep_export_v4
+ict_dol_sweep_export_v5
 ```
 
 This gives a future backend a clean data payload for collecting final-saved hit-rate statistics. No hosted backend is currently included.
@@ -126,6 +176,9 @@ Recommended GitHub Pages settings:
 ```text
 ICT/
 ├── index.html
+├── assets/
+│   ├── app.js
+│   └── styles.css
 ├── README.md
 └── ISSUE_FIX_PLAN.md
 ```
@@ -152,6 +205,5 @@ Data is not sent to a backend server. Clearing browser storage may remove saved 
 - No automated test suite yet.
 - JSON export/import is local-browser based.
 - Saved cards are browser-local only and are not synced across devices.
-- The whole app currently lives in one HTML file, which makes future maintenance harder.
 
 See `ISSUE_FIX_PLAN.md` for planned fixes and future enhancements.
