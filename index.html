@@ -79,11 +79,23 @@
   .dir-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   .dir-btn.sel-bull{background:rgba(46,213,115,.14);border-color:var(--bull);color:var(--bull)}
   .dir-btn.sel-bear{background:rgba(255,71,87,.14);border-color:var(--bear);color:var(--bear)}
-  .hint{font-size:13px;color:var(--sub);margin-top:8px;line-height:1.5;overflow-wrap:anywhere}
-  .hint b{color:var(--text);font-weight:600}
+	  .hint{font-size:13px;color:var(--sub);margin-top:8px;line-height:1.5;overflow-wrap:anywhere}
+	  .hint b{color:var(--text);font-weight:600}
+	  .tabs{
+	    display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 18px;
+	  }
+	  .tab-btn{
+	    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;
+	    background:var(--inset);border:1px solid var(--border);color:var(--sub);
+	    border-radius:8px;padding:10px 8px;cursor:pointer;transition:all .15s;
+	  }
+	  .tab-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(255,165,2,.08)}
+	  .tab-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+	  .page{display:none}
+	  .page.active{display:block}
 
-  .model-info{margin-top:12px;background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:11px 13px;display:none}
-  .model-info.on{display:block}
+	  .model-info{margin-top:12px;background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:11px 13px;display:none}
+	  .model-info.on{display:block}
   .mi{display:flex;justify-content:space-between;gap:12px;font-family:'JetBrains Mono',monospace;font-size:12px;padding:3px 0}
   .mi .k{color:var(--sub);flex:0 0 auto}
   .mi .val{text-align:right;min-width:0;overflow-wrap:anywhere}
@@ -153,8 +165,27 @@
   .out-v.empty{color:#5a5a6e;font-style:italic}
   .out-dir-bull{color:var(--bull);font-weight:700}
   .out-dir-bear{color:var(--bear);font-weight:700}
-  .phase-tbl td.next-cell{font-family:'Space Grotesk',sans-serif;font-size:11.5px;color:var(--sub);line-height:1.4}
-  .jlist{display:flex;flex-direction:column;gap:8px}
+	  .phase-tbl td.next-cell{font-family:'Space Grotesk',sans-serif;font-size:11.5px;color:var(--sub);line-height:1.4}
+	  .learn-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+	  .learn-card{
+	    background:var(--inset);border:1px solid var(--border);border-radius:8px;
+	    padding:13px 14px;min-width:0;
+	  }
+	  .learn-card h3{
+	    font-size:15px;font-weight:700;margin-bottom:5px;color:var(--text);overflow-wrap:anywhere;
+	  }
+	  .learn-card p{font-size:13px;color:var(--sub);line-height:1.55;overflow-wrap:anywhere}
+	  .learn-card .tag{
+	    display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.08em;
+	    color:var(--gold);text-transform:uppercase;margin-bottom:5px;
+	  }
+	  .principles{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+	  .principle{
+	    display:flex;gap:10px;background:var(--inset);border:1px solid var(--border);
+	    border-radius:8px;padding:10px 12px;font-size:13px;color:var(--sub);
+	  }
+	  .principle strong{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);flex:0 0 82px;text-transform:uppercase}
+	  .jlist{display:flex;flex-direction:column;gap:8px}
   .jempty{font-family:'JetBrains Mono',monospace;font-size:12px;color:#5a5a6e;font-style:italic}
   .jrow{
     display:flex;align-items:center;gap:10px;background:var(--inset);
@@ -186,9 +217,10 @@
   @media (max-width:720px){
     body{padding:24px 14px 56px}
     .wrap{max-width:100%}
-    .meta-row,.meta-row.three,.rp-row{grid-template-columns:1fr}
-    .obj-grid{grid-template-columns:1fr}
-    .in,.copy-btn,.reset,.jrow .jbtn{min-height:44px}
+	    .meta-row,.meta-row.three,.rp-row{grid-template-columns:1fr}
+	    .obj-grid{grid-template-columns:1fr}
+	    .learn-grid{grid-template-columns:1fr}
+	    .in,.copy-btn,.reset,.jrow .jbtn{min-height:44px}
     .chk{flex-basis:24px;width:24px;height:24px}
     .chk:checked::after{left:6px;top:2px}
     .phase-tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -211,8 +243,10 @@
       border-color:rgba(255,165,2,.35);box-shadow:0 8px 18px rgba(0,0,0,.28);
     }
     .state span:first-child{display:none}
-    .state .v{font-size:11px;letter-spacing:.02em;overflow-wrap:anywhere}
-    .step{padding:14px 12px;border-radius:8px;margin-bottom:12px}
+	    .state .v{font-size:11px;letter-spacing:.02em;overflow-wrap:anywhere}
+	    .tabs{grid-template-columns:1fr;gap:6px;margin-bottom:14px}
+	    .tab-btn{min-height:42px}
+	    .step{padding:14px 12px;border-radius:8px;margin-bottom:12px}
     .step-head{gap:9px}
     .title{font-size:15.5px}
     .num{font-size:10px;letter-spacing:.08em}
@@ -233,8 +267,10 @@
     .out-k{flex-basis:auto;font-size:10px;padding-top:0}
     .out-v{font-size:13px}
     .out-head{gap:10px}
-    .out-head span{font-size:11px}
-    .footer{font-size:10px}
+	    .out-head span{font-size:11px}
+	    .principle{display:block}
+	    .principle strong{display:block;margin-bottom:4px}
+	    .footer{font-size:10px}
   }
   @media (max-width:380px){
     body{padding-left:8px;padding-right:8px}
@@ -270,10 +306,17 @@
   <div class="clock-row">
     <h1>Draw · Sweep · Entry</h1>
     <div class="nyclock" id="nyClock" aria-live="off">--:--:-- <span>NY</span></div>
-  </div>
-  <p class="sub">ICT setup planner: define context, identify draw/liquidity, then apply the selected model's own entry rules. Concepts cited to the ICT Bible.</p>
+	  </div>
+	  <p class="sub">ICT setup planner: define context, identify draw/liquidity, then apply the selected model's own entry rules. Concepts cited to the ICT Bible.</p>
 
-  <div class="meta-row three">
+	  <nav class="tabs" aria-label="App sections">
+	    <button class="tab-btn active" type="button" data-page="plannerPage">Planner</button>
+	    <button class="tab-btn" type="button" data-page="savedPage">Saved Setups</button>
+	    <button class="tab-btn" type="button" data-page="phasesPage">Market Phases</button>
+	  </nav>
+
+	  <section class="page active" id="plannerPage">
+	  <div class="meta-row three">
     <div>
       <label class="label" for="tradeDate">Date</label>
       <input class="in" id="tradeDate" type="date">
@@ -299,30 +342,30 @@
     </div>
   </div>
 
-  <div class="state" id="stateBox">
-    <span>Setup</span><span class="v" id="stateVal">0 / 4 — not ready</span>
-  </div>
+	  <div class="state" id="stateBox">
+	    <span>Setup</span><span class="v" id="stateVal">0 / 3 — not ready</span>
+	  </div>
 
-  <!-- STEP 0 · PHASE GATE -->
-  <div class="step done" id="s0">
-    <div class="step-head">
-      <input type="checkbox" class="chk" id="c0" aria-label="Step 0 complete">
-      <div>
-        <span class="num">STEP 0 · MARKET PHASE</span>
-        <div class="title">What phase is price in now?</div>
-        <div class="cite">External planning filter: Consolidation → Expansion → Retracement → Continuation / Reversal. "Likely next" follows this external cycle. [LUMI Traders — external, non-Bible]</div>
-      </div>
-    </div>
-    <div class="body">
-      <table class="phase-tbl" aria-label="Market phase per timeframe">
-        <thead>
-          <tr><th>Timeframe</th><th>Phase now</th><th>Likely next</th></tr>
-        </thead>
-        <tbody id="phaseRows"></tbody>
-      </table>
-      <div class="hint" id="phaseHint">Mark the phase you see on each timeframe. This is a planning filter, not a universal canonical gate for every ICT model. Only take a setup when the timeframe you are trading is <b>out</b> of consolidation. <span style="color:#6a6a7e">[LUMI Traders — external, non-Bible; Bible corroborates displacement=expansion (ep06) and retracement=FVG rebalance (ep06)]</span></div>
-    </div>
-  </div>
+	  <!-- STEP 0 · MARKET CONTEXT -->
+	  <div class="step done" id="s0">
+	    <div class="step-head">
+	      <input type="checkbox" class="chk" id="c0" aria-label="Step 0 complete">
+	      <div>
+	        <span class="num">STEP 0 · MARKET CONTEXT</span>
+	        <div class="title">What market condition is price in now?</div>
+	        <div class="cite">ICT Bible-supported conditions: Consolidation, Expansion, Retracement, Reversal. Transition paths are context-dependent, not a hard entry rule.</div>
+	      </div>
+	    </div>
+	    <div class="body">
+	      <table class="phase-tbl" aria-label="Market phase per timeframe">
+	        <thead>
+	          <tr><th>Timeframe</th><th>Condition now</th><th>Context note</th></tr>
+	        </thead>
+	        <tbody id="phaseRows"></tbody>
+	      </table>
+	      <div class="hint" id="phaseHint">Mark the condition you see on each timeframe. This is a planning aid only; final trade readiness comes from HTF draw, opposing liquidity/MSS, timing, and the selected entry model. <span style="color:#6a6a7e">[ICT Bible: four market conditions; exact transitions are context-dependent.]</span></div>
+	    </div>
+	  </div>
 
   <!-- STEP 1 -->
   <div class="step locked" id="s1">
@@ -502,7 +545,7 @@
     </div>
   </div>
 
-  <div class="out-card" id="outCard">
+	  <div class="out-card" id="outCard">
     <div class="out-head">
       <span id="outTitle">Setup summary</span>
       <div class="out-btns">
@@ -511,22 +554,68 @@
       </div>
     </div>
     <div class="out-body" id="outBody"></div>
-  </div>
+	  </div>
+	  <button class="reset" id="resetBtn" type="button">Reset</button>
+	  </section>
 
-  <div class="out-card" id="journalCard">
-    <div class="out-head">
-      <span>Saved slips</span>
-      <button class="copy-btn" id="exportBtn" type="button">Export all</button>
-    </div>
-    <div id="journalList" class="jlist"><div class="jempty">No saved slips yet.</div></div>
-  </div>
+	  <section class="page" id="savedPage">
+	  <div class="out-card" id="journalCard">
+	    <div class="out-head">
+	      <span>Saved slips</span>
+	      <button class="copy-btn" id="exportBtn" type="button">Export all</button>
+	    </div>
+	    <div id="journalList" class="jlist"><div class="jempty">No saved slips yet.</div></div>
+	  </div>
+	  </section>
 
-  <button class="reset" id="resetBtn" type="button">Reset</button>
+	  <section class="page" id="phasesPage">
+	    <div class="out-card">
+	      <div class="out-head">
+	        <span>Market Phases</span>
+	      </div>
+	      <div class="hint">Use these as context labels, not mechanical predictions. ICT framing still begins with the higher-timeframe draw on liquidity and the current dealing range.</div>
+	      <div class="learn-grid">
+	        <div class="learn-card">
+	          <span class="tag">Condition 1</span>
+	          <h3>Consolidation</h3>
+	          <p>Price is contained inside a range, often building liquidity on both sides. The task is to identify the range, its midpoint, and the external liquidity likely to matter when price leaves balance.</p>
+	        </div>
+	        <div class="learn-card">
+	          <span class="tag">Condition 2</span>
+	          <h3>Expansion</h3>
+	          <p>Price displaces away from a range, liquidity pool, or key level. Expansion matters most when it aligns with the higher-timeframe draw and leaves clear imbalance or displacement evidence.</p>
+	        </div>
+	        <div class="learn-card">
+	          <span class="tag">Condition 3</span>
+	          <h3>Retracement</h3>
+	          <p>Price returns into a prior dealing range, fair value gap, order block, premium/discount area, or other rebalancing reference. Retracement is not automatically weakness; it can prepare the next delivery leg.</p>
+	        </div>
+	        <div class="learn-card">
+	          <span class="tag">Condition 4</span>
+	          <h3>Reversal</h3>
+	          <p>Price changes delivery direction after a liquidity objective, failed continuation, market structure shift, or other evidence that the prior directional idea is no longer clean.</p>
+	        </div>
+	      </div>
+	    </div>
 
-  <div class="footer">
-    Framework planner: identify HTF draw on liquidity → derive bias from the draw → check opposing sweep/timing context where relevant → apply the selected entry model.<br>
-    Step 0 phase cycle is from LUMI Traders (external, non-Bible), corroborated by the Bible on displacement and FVG rebalance. Model cards are condensed from ict-entry-models-reference v1.0.0; "No canonical source" = [NO CANONICAL SOURCE FOUND] in the Bible, not omitted.
-  </div>
+	    <div class="out-card">
+	      <div class="out-head">
+	        <span>How To Apply</span>
+	      </div>
+	      <div class="principles">
+	        <div class="principle"><strong>Start</strong><span>Label the condition on the traded timeframe and the higher timeframe separately. Do not force every timeframe to agree.</span></div>
+	        <div class="principle"><strong>Bias</strong><span>Let the HTF draw on liquidity dictate directional bias. The phase label only describes the current delivery condition.</span></div>
+	        <div class="principle"><strong>Confirm</strong><span>Use opposing liquidity, timing, MSS/displacement, and the selected entry model to decide whether a setup is actionable.</span></div>
+	        <div class="principle"><strong>Avoid</strong><span>Do not treat continuation as a fifth market phase. Continuation is a possible path after context and model evidence line up.</span></div>
+	      </div>
+	      <div class="hint">Practical reading: consolidation can lead to expansion; after expansion, price may retrace, reverse, or later consolidate depending on liquidity and order-flow context.</div>
+	    </div>
+	  </section>
+
+	  <div class="footer">
+	    Framework planner: identify HTF draw on liquidity → derive bias from the draw → check opposing sweep/timing context where relevant → apply the selected entry model.<br>
+	    Step 0 uses the ICT Bible-supported market conditions as context only. Model cards are condensed from ict-entry-models-reference v1.0.0; "No canonical source" = [NO CANONICAL SOURCE FOUND] in the Bible, not omitted.
+	  </div>
 </div>
 
 <script>
@@ -547,17 +636,17 @@
 
   var c = [0,1,2,3].map(function(i){ return document.getElementById('c'+i); });
   var steps = [0,1,2,3].map(function(i){ return document.getElementById('s'+i); });
-  var stateBox = document.getElementById('stateBox');
-  var stateVal = document.getElementById('stateVal');
-  var phaseRows = document.getElementById('phaseRows');
-  var PHASE_TFS = ['Daily','4H','1H','15m'];
-  var PHASES = ['Consolidation','Expansion','Retracement','Reversal'];
-  var NEXT_PHASE = {
-    consolidation: 'Expansion — after liquidity taken + displacement out of range',
-    expansion: 'Retracement or Consolidation',
-    retracement: 'Continuation (most likely); Reversal only if objective + liquidity + fail-to-continue',
-    reversal: 'New expansion / new structure'
-  };
+	  var stateBox = document.getElementById('stateBox');
+	  var stateVal = document.getElementById('stateVal');
+	  var phaseRows = document.getElementById('phaseRows');
+	  var PHASE_TFS = ['Daily','4H','1H','15m'];
+	  var PHASES = ['Consolidation','Expansion','Retracement','Reversal'];
+	  var NEXT_PHASE = {
+	    consolidation: 'Watch the range extremes and HTF draw; expansion needs liquidity/order-flow support.',
+	    expansion: 'Displacement is active; next context depends on objective, imbalance, and liquidity.',
+	    retracement: 'Rebalancing into prior delivery; continuation needs model evidence, reversal needs failure evidence.',
+	    reversal: 'Directional delivery may be changing; require objective, liquidity, and structure evidence.'
+	  };
   var OBJECTIVE_GROUPS = [
     { label:'Buy-side (above)', side:'bull', options:[
       ['Previous day high (PDH)','External buy-side liquidity above price.'],
@@ -655,9 +744,21 @@
       td2.appendChild(sel); tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); phaseRows.appendChild(tr);
     });
   }
-  buildPhaseRows();
-  setupObjectiveSelects();
-  refreshObjectiveHelps();
+	  buildPhaseRows();
+	  setupObjectiveSelects();
+	  refreshObjectiveHelps();
+
+	  Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function(btn){
+	    btn.addEventListener('click', function(){
+	      var target = btn.getAttribute('data-page');
+	      Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function(b){
+	        b.classList.toggle('active', b === btn);
+	      });
+	      Array.prototype.forEach.call(document.querySelectorAll('.page'), function(page){
+	        page.classList.toggle('active', page.id === target);
+	      });
+	    });
+	  });
 
   function phaseSummary(){
     var parts = [];
@@ -814,7 +915,7 @@
       makeLine('Macro', val('macro'), '', 'macro'),
       makeLine('MSS', mssText(), '', 'mss'),
       makeLine('Entry', entryFull, '', 'entry'),
-      makeLine('Phase', phaseSummary()),
+	      makeLine('Market Context', phaseSummary()),
       makeLine('Trade', tradeFull)
     ].forEach(function(row){ outBody.appendChild(row); });
   }
@@ -1070,9 +1171,9 @@
     if(!rows.length) return false;
     return Array.prototype.every.call(rows, function(tr){ return !!tr.querySelector('select').value; });
   }
-  function stepValid(i){
-    if(i===0) return phasesComplete();
-    if(i===1) return !!(val('draw1') && val('draw1Level'));
+	  function stepValid(i){
+	    if(i===0) return true;
+	    if(i===1) return !!(val('draw1') && val('draw1Level'));
     if(i===2){
       if(!(val('sweepTf') && val('opp1') && val('opp1Level') && val('macro') && val('mssStatus'))) return false;
       return val('mssStatus') === 'N/A' || !!(val('mssTf') && val('mssLevel'));
@@ -1080,12 +1181,11 @@
     if(i===3) return !!(val('model') && val('entryNote'));
     return false;
   }
-  function missingText(){
-    var missing = [];
-    if(!phasesComplete()) missing.push('phase');
-    if(!(val('draw1') && val('draw1Level'))) missing.push('HTF DOL');
-    if(!stepValid(2)) missing.push('opposing/MSS');
-    if(!(val('model') && val('entryNote'))) missing.push('entry');
+	  function missingText(){
+	    var missing = [];
+	    if(!(val('draw1') && val('draw1Level'))) missing.push('HTF DOL');
+	    if(!stepValid(2)) missing.push('opposing/MSS');
+	    if(!(val('model') && val('entryNote'))) missing.push('entry');
     return missing.join(', ');
   }
   function setStepEnabled(step, enabled){
@@ -1094,23 +1194,23 @@
       el.setAttribute('aria-disabled', enabled ? 'false' : 'true');
     });
   }
-  function update(){
-    c.forEach(function(x,i){ if(x.checked && !stepValid(i)) x.checked = false; });
-    var done = c.map(function(x){ return x.checked; });
-    c.forEach(function(x,i){
-      if(i>0 && !done[i-1]){ x.checked=false; done[i]=false; }
-    });
-    steps.forEach(function(st,i){
-      var unlocked = i===0 || done[i-1];
-      st.classList.toggle('locked', !unlocked);
-      st.classList.toggle('done', unlocked && done[i]);
-      setStepEnabled(st, unlocked);
-    });
-    var n = done.filter(Boolean).length;
-    var ready = n===4;
-    stateBox.classList.toggle('ready', ready);
-    stateVal.textContent = ready ? '4 / 4 — ready' : n + ' / 4 — missing ' + (missingText() || 'checks');
-  }
+	  function update(){
+	    c.forEach(function(x,i){ if(x.checked && !stepValid(i)) x.checked = false; });
+	    var done = c.map(function(x){ return x.checked; });
+	    c.forEach(function(x,i){
+	      if(i>1 && !done[i-1]){ x.checked=false; done[i]=false; }
+	    });
+	    steps.forEach(function(st,i){
+	      var unlocked = i<=1 || done[i-1];
+	      st.classList.toggle('locked', !unlocked);
+	      st.classList.toggle('done', unlocked && done[i]);
+	      setStepEnabled(st, unlocked);
+	    });
+	    var n = [1,2,3].filter(function(i){ return done[i]; }).length;
+	    var ready = n===3;
+	    stateBox.classList.toggle('ready', ready);
+	    stateVal.textContent = ready ? '3 / 3 — ready' : n + ' / 3 — missing ' + (missingText() || 'checks');
+	  }
   c.forEach(function(x){ x.addEventListener('change', update); });
   FIELD_IDS.forEach(function(id){ var el=document.getElementById(id); if(el){ el.addEventListener('input', update); el.addEventListener('change', update); } });
 
