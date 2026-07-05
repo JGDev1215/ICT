@@ -25,7 +25,7 @@
   .clock span{font-size:11px;color:var(--sub)}
   .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0}
   .tab,.btn,.small-btn{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.06em;border:1px solid var(--border);border-radius:8px;background:var(--inset);color:var(--sub);padding:10px 9px;cursor:pointer}
-  .tab.active,.btn.primary{border-color:var(--gold);color:var(--gold);background:rgba(255,165,2,.08)}
+  .tab.active,.btn.primary,.small-btn.primary{border-color:var(--gold);color:var(--gold);background:rgba(255,165,2,.08)}
   .btn:hover,.small-btn:hover{border-color:var(--gold);color:var(--gold)}
   button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   .page{display:none}
@@ -87,14 +87,7 @@
   .learn{background:var(--inset);border:1px solid var(--border);border-radius:9px;padding:13px}
   .learn h3{font-size:15px;margin-bottom:5px}
   .learn p{font-size:13px;color:var(--sub)}
-  @media(max-width:720px){
-    body{padding:22px 12px 52px}
-    .grid,.grid.three,.review-grid,.learn-grid,.analytics-grid{grid-template-columns:1fr}
-    .tabs{grid-template-columns:1fr}
-    .line{grid-template-columns:1fr;gap:2px}
-    .state{position:sticky;top:0;z-index:10}
-    .btn,.tab,.small-btn,.in{min-height:44px}
-  }
+  @media(max-width:720px){body{padding:22px 12px 52px}.grid,.grid.three,.review-grid,.learn-grid,.analytics-grid{grid-template-columns:1fr}.tabs{grid-template-columns:1fr}.line{grid-template-columns:1fr;gap:2px}.state{position:sticky;top:0;z-index:10}.btn,.tab,.small-btn,.in{min-height:44px}}
 </style>
 </head>
 <body>
@@ -179,7 +172,7 @@
         <button class="btn ghost" id="importBtn" type="button">Import JSON</button>
         <input class="file-input" id="importFile" type="file" accept="application/json">
       </div>
-      <div class="hint">Hit rate uses verified Hit/Miss records only. Breakeven is tracked separately. Data stays local until a backend is added.</div>
+      <div class="hint">Card edits are staged first. Use <b>Save changes</b> to store edits, then <b>Final save</b> to verify the analysis and include it in the accuracy sample.</div>
     </div>
     <div id="savedList"></div>
   </section>
@@ -191,12 +184,12 @@
         <div class="learn"><h3>1. Instrument</h3><p>Pick one instrument. Do not mix levels across unrelated markets.</p></div>
         <div class="learn"><h3>2. HTF draw</h3><p>Identify the draw on liquidity first. Above price usually points to buy-side draw; below price usually points to sell-side draw.</p></div>
         <div class="learn"><h3>3. LTF sweep</h3><p>Wait for the lower timeframe to sweep the opposing pool before treating the idea as focused.</p></div>
-        <div class="learn"><h3>4. Verify</h3><p>Save the card, tick the markers, add notes, select outcome, then mark the analysis verified before it enters the hit-rate sample.</p></div>
+        <div class="learn"><h3>4. Final save</h3><p>Edit the saved card, save changes, then final save after selecting an outcome. Only final-saved Hit/Miss cards enter the hit-rate sample.</p></div>
       </div>
     </div>
   </section>
 
-  <div class="footer">ICT DOL Sweep Tracker v0.3.0 · Educational planning tool only. Not financial advice.</div>
+  <div class="footer">ICT DOL Sweep Tracker v0.4.0 · Educational planning tool only. Not financial advice.</div>
 </div>
 
 <script>
@@ -204,8 +197,8 @@
   var STORE_KEY = 'ict_dol_sweep_cards_v2';
   var OLD_KEY = 'ict_slips_v1';
   var MAX_CARDS = 50;
-  var CARD_SCHEMA = 'ict_dol_sweep_card_v3';
-  var EXPORT_SCHEMA = 'ict_dol_sweep_export_v3';
+  var CARD_SCHEMA = 'ict_dol_sweep_card_v4';
+  var EXPORT_SCHEMA = 'ict_dol_sweep_export_v4';
   var pools = [
     {group:'Buy-side liquidity above price', side:'bull', items:['Previous day high (PDH)','Previous week high (PWH)','Session high','Relative equal highs (REH)','Old high / prior swing high','Buy-side midnight open']},
     {group:'Sell-side liquidity below price', side:'bear', items:['Previous day low (PDL)','Previous week low (PWL)','Session low','Relative equal lows (REL)','Old low / prior swing low','Sell-side midnight open']},
@@ -249,11 +242,7 @@
 
   function poolSide(label){
     var found='';
-    pools.forEach(function(g){
-      g.items.forEach(function(item){
-        if(item===label) found=g.side;
-      });
-    });
+    pools.forEach(function(g){g.items.forEach(function(item){if(item===label) found=g.side;});});
     return found;
   }
   function sideOfSelect(id){
@@ -273,11 +262,7 @@
   document.querySelectorAll('.numeric').forEach(function(x){x.addEventListener('input',function(){cleanNumber(x);});});
   ids.forEach(function(id){var x=el(id);if(x){x.addEventListener('input',update);x.addEventListener('change',update);}});
 
-  function formFields(){
-    var f={};
-    ids.forEach(function(id){f[id]=val(id);});
-    return f;
-  }
+  function formFields(){var f={};ids.forEach(function(id){f[id]=val(id);});return f;}
   function statusFromFields(f){
     f=f||{};
     var missing=[];
@@ -293,17 +278,12 @@
   }
   function drawComplete(){return statusFromFields(formFields()).missing.indexOf('HTF draw')<0&&!!val('instrument');}
   function sweepComplete(){return statusFromFields(formFields()).missing.indexOf('LTF sweep')<0;}
-  function line(k,v,cls){
-    return '<div class="line"><div class="k">'+escapeHtml(k)+'</div><div class="v '+(cls||'')+'">'+(v?escapeHtml(v):'<span class="empty">—</span>')+'</div></div>';
-  }
+  function line(k,v,cls){return '<div class="line"><div class="k">'+escapeHtml(k)+'</div><div class="v '+(cls||'')+'">'+(v?escapeHtml(v):'<span class="empty">—</span>')+'</div></div>';}
   function focusSummary(){
     var f=formFields();
     var st=statusFromFields(f);
     var dirCls=st.drawSide==='bull'?'bull':st.drawSide==='bear'?'bear':'';
-    return line('Instrument',f.instrument)+
-      line('HTF draw',[f.drawTf,f.drawPool,f.drawLevel].filter(Boolean).join(' · '),dirCls)+
-      line('LTF sweep',[f.sweepTf,f.sweepPool,f.sweepLevel,f.sweepTime].filter(Boolean).join(' · '))+
-      line('Focus status',st.ready?'READY — draw and sweep aligned':'DRAFT — '+(st.missing.join(', ')||'sweep side needs review'));
+    return line('Instrument',f.instrument)+line('HTF draw',[f.drawTf,f.drawPool,f.drawLevel].filter(Boolean).join(' · '),dirCls)+line('LTF sweep',[f.sweepTf,f.sweepPool,f.sweepLevel,f.sweepTime].filter(Boolean).join(' · '))+line('Focus status',st.ready?'READY — draw and sweep aligned':'DRAFT — '+(st.missing.join(', ')||'sweep side needs review'));
   }
   function update(){
     var f=formFields();
@@ -325,27 +305,11 @@
     el('saveHint').textContent=st.ready?'Complete card will be saved for review and verification.':'Draft can be saved, but it will be marked incomplete.';
   }
 
-  function newId(){
-    return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
-  }
+  function newId(){return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);}
   function collect(){
     var f=formFields();
     var st=statusFromFields(f);
-    return normalize({
-      id:newId(),
-      schema:CARD_SCHEMA,
-      savedAt:new Date().toISOString(),
-      updatedAt:new Date().toISOString(),
-      fields:f,
-      review:{draw:false,sweep:false,followed:false,verified:false},
-      outcome:'open',
-      notes:'',
-      verifiedAt:'',
-      status:st.status,
-      drawSide:st.drawSide,
-      sweepSide:st.sweepSide,
-      aligned:st.aligned
-    });
+    return normalize({id:newId(),schema:CARD_SCHEMA,savedAt:new Date().toISOString(),updatedAt:new Date().toISOString(),fields:f,review:{draw:false,sweep:false,followed:false,verified:false},outcome:'open',notes:'',verifiedAt:'',finalSavedAt:'',status:st.status,drawSide:st.drawSide,sweepSide:st.sweepSide,aligned:st.aligned});
   }
   function normalize(card){
     if(!card||typeof card!=='object') return null;
@@ -362,65 +326,21 @@
     var review=card.review&&typeof card.review==='object'?card.review:(card.ticks&&typeof card.ticks==='object'?card.ticks:{});
     var outcome=['open','hit','miss','be'].indexOf(card.outcome)>=0?card.outcome:(card.outcome==='W'?'hit':card.outcome==='L'?'miss':card.outcome==='B'?'be':'open');
     var verified=!!review.verified && outcome!=='open';
-    return {
-      id:typeof card.id==='string'&&card.id?card.id:newId(),
-      schema:CARD_SCHEMA,
-      savedAt:typeof card.savedAt==='string'&&card.savedAt?card.savedAt:new Date().toISOString(),
-      updatedAt:typeof card.updatedAt==='string'&&card.updatedAt?card.updatedAt:'',
-      status:st.status,
-      fields:fields,
-      review:{
-        draw:!!review.draw,
-        sweep:!!review.sweep,
-        followed:!!review.followed,
-        verified:verified
-      },
-      outcome:outcome,
-      notes:typeof card.notes==='string'?card.notes:'',
-      verifiedAt:verified?(typeof card.verifiedAt==='string'&&card.verifiedAt?card.verifiedAt:new Date().toISOString()):'',
-      drawSide:st.drawSide,
-      sweepSide:st.sweepSide,
-      aligned:st.aligned
-    };
+    return {id:typeof card.id==='string'&&card.id?card.id:newId(),schema:CARD_SCHEMA,savedAt:typeof card.savedAt==='string'&&card.savedAt?card.savedAt:new Date().toISOString(),updatedAt:typeof card.updatedAt==='string'&&card.updatedAt?card.updatedAt:'',status:st.status,fields:fields,review:{draw:!!review.draw,sweep:!!review.sweep,followed:!!review.followed,verified:verified},outcome:outcome,notes:typeof card.notes==='string'?card.notes:'',verifiedAt:verified?(typeof card.verifiedAt==='string'&&card.verifiedAt?card.verifiedAt:new Date().toISOString()):'',finalSavedAt:verified?(typeof card.finalSavedAt==='string'&&card.finalSavedAt?card.finalSavedAt:(typeof card.verifiedAt==='string'?card.verifiedAt:'')):'',drawSide:st.drawSide,sweepSide:st.sweepSide,aligned:st.aligned};
   }
   function load(){
-    try{
-      var raw=JSON.parse(localStorage.getItem(STORE_KEY));
-      if(Array.isArray(raw)) return raw.map(normalize).filter(Boolean).slice(0,MAX_CARDS);
-    }catch(e){}
-    try{
-      var old=JSON.parse(localStorage.getItem(OLD_KEY));
-      if(Array.isArray(old)){
-        var migrated=old.map(normalize).filter(Boolean).slice(0,MAX_CARDS);
-        if(migrated.length) saveAll(migrated);
-        return migrated;
-      }
-    }catch(e){}
+    try{var raw=JSON.parse(localStorage.getItem(STORE_KEY));if(Array.isArray(raw)) return raw.map(normalize).filter(Boolean).slice(0,MAX_CARDS);}catch(e){}
+    try{var old=JSON.parse(localStorage.getItem(OLD_KEY));if(Array.isArray(old)){var migrated=old.map(normalize).filter(Boolean).slice(0,MAX_CARDS);if(migrated.length) saveAll(migrated);return migrated;}}catch(e){}
     return [];
   }
   function dedupe(cards){
     var seen={};
     var out=[];
-    cards.forEach(function(card){
-      var c=normalize(card);
-      if(c&&!seen[c.id]){
-        seen[c.id]=true;
-        out.push(c);
-      }
-    });
+    cards.forEach(function(card){var c=normalize(card);if(c&&!seen[c.id]){seen[c.id]=true;out.push(c);}});
     return out.slice(0,MAX_CARDS);
   }
-  function saveAll(cards){
-    try{
-      localStorage.setItem(STORE_KEY,JSON.stringify(dedupe(cards)));
-      return true;
-    }catch(e){
-      return false;
-    }
-  }
-  function getCardById(id){
-    return load().filter(function(c){return c.id===id;})[0]||null;
-  }
+  function saveAll(cards){try{localStorage.setItem(STORE_KEY,JSON.stringify(dedupe(cards)));return true;}catch(e){return false;}}
+  function getCardById(id){return load().filter(function(c){return c.id===id;})[0]||null;}
   function updateCardById(id, updater){
     var cards=load();
     var idx=-1;
@@ -431,128 +351,95 @@
     cards[idx]=normalize(cards[idx]);
     return saveAll(cards);
   }
-  function deleteCardById(id){
-    return saveAll(load().filter(function(c){return c.id!==id;}));
-  }
+  function deleteCardById(id){return saveAll(load().filter(function(c){return c.id!==id;}));}
   function saveCard(){
     var cards=load();
     cards.unshift(collect());
     if(cards.length>MAX_CARDS) cards.length=MAX_CARDS;
-    if(saveAll(cards)){
-      buttonFlash(el('saveBtn'),'Saved','Save card');
-      renderSaved();
-      activate('saved');
-    }else{
-      buttonFlash(el('saveBtn'),'Storage blocked','Save card',1800);
-    }
+    if(saveAll(cards)){buttonFlash(el('saveBtn'),'Saved','Save card');renderSaved();activate('saved');}else{buttonFlash(el('saveBtn'),'Storage blocked','Save card',1800);}
   }
-  function restore(card){
-    if(!card) return;
-    ids.forEach(function(id){set(id,card.fields[id]||'');});
-    update();
-    activate('planner');
-    window.scrollTo(0,0);
-  }
+  function restore(card){if(!card) return;ids.forEach(function(id){set(id,card.fields[id]||'');});update();activate('planner');window.scrollTo(0,0);}
   function cardText(card){
     card=normalize(card);
     var f=card.fields;
-    return [
-      'Instrument: '+(f.instrument||'—'),
-      'HTF draw: '+([f.drawTf,f.drawPool,f.drawLevel].filter(Boolean).join(' · ')||'—'),
-      'LTF sweep: '+([f.sweepTf,f.sweepPool,f.sweepLevel,f.sweepTime].filter(Boolean).join(' · ')||'—'),
-      'Status: '+card.status,
-      'Markers: Draw '+(card.review.draw?'yes':'no')+', Sweep '+(card.review.sweep?'yes':'no')+', Plan followed '+(card.review.followed?'yes':'no'),
-      'Outcome: '+card.outcome,
-      'Verified: '+(card.review.verified?'yes'+(card.verifiedAt?' · '+card.verifiedAt:''):'no'),
-      'Notes: '+(card.notes||'—')
-    ].join('\n');
+    return ['Instrument: '+(f.instrument||'—'),'HTF draw: '+([f.drawTf,f.drawPool,f.drawLevel].filter(Boolean).join(' · ')||'—'),'LTF sweep: '+([f.sweepTf,f.sweepPool,f.sweepLevel,f.sweepTime].filter(Boolean).join(' · ')||'—'),'Status: '+card.status,'Markers: Draw '+(card.review.draw?'yes':'no')+', Sweep '+(card.review.sweep?'yes':'no')+', Plan followed '+(card.review.followed?'yes':'no'),'Outcome: '+card.outcome,'Final saved: '+(card.review.verified?'yes'+(card.finalSavedAt?' · '+card.finalSavedAt:''):'no'),'Notes: '+(card.notes||'—')].join('\n');
   }
   function analytics(cards){
     var verifiedClosed=cards.filter(function(c){return c.review.verified&&(c.outcome==='hit'||c.outcome==='miss');});
     var hit=verifiedClosed.filter(function(c){return c.outcome==='hit';}).length;
     var miss=verifiedClosed.filter(function(c){return c.outcome==='miss';}).length;
     var be=cards.filter(function(c){return c.review.verified&&c.outcome==='be';}).length;
-    var open=cards.filter(function(c){return c.outcome==='open';}).length;
     var unverifiedClosed=cards.filter(function(c){return !c.review.verified&&(c.outcome==='hit'||c.outcome==='miss'||c.outcome==='be');}).length;
     var closed=hit+miss;
     var rate=closed?Math.round((hit/closed)*100):0;
-    return {hit:hit,miss:miss,be:be,open:open,unverifiedClosed:unverifiedClosed,closed:closed,rate:rate,total:cards.length};
+    return {hit:hit,miss:miss,be:be,unverifiedClosed:unverifiedClosed,closed:closed,rate:rate,total:cards.length};
   }
   function renderAnalytics(cards){
     var a=analytics(cards);
     el('countPill').textContent=a.total+' / '+MAX_CARDS;
     el('countPill').className='pill '+(a.total>=45?'warn':'info');
-    el('analyticsGrid').innerHTML=
-      metric(a.rate+'%','Verified hit rate')+
-      metric(a.closed,'Verified Hit/Miss')+
-      metric(a.be,'Verified BE')+
-      metric(a.unverifiedClosed,'Needs verify');
+    el('analyticsGrid').innerHTML=metric(a.rate+'%','Final hit rate')+metric(a.closed,'Final Hit/Miss')+metric(a.be,'Final BE')+metric(a.unverifiedClosed,'Needs final save');
   }
-  function metric(v,l){
-    return '<div class="metric"><div class="m">'+escapeHtml(String(v))+'</div><div class="l">'+escapeHtml(String(l))+'</div></div>';
-  }
+  function metric(v,l){return '<div class="metric"><div class="m">'+escapeHtml(String(v))+'</div><div class="l">'+escapeHtml(String(l))+'</div></div>';}
   function renderSaved(){
     var cards=load();
     renderAnalytics(cards);
     var list=el('savedList');
     list.textContent='';
-    if(!cards.length){
-      var empty=document.createElement('div');
-      empty.className='saved';
-      empty.innerHTML='<div class="hint">No saved cards yet. Save one focused draw/sweep analysis from the Planner tab.</div>';
-      list.appendChild(empty);
-      return;
-    }
+    if(!cards.length){var empty=document.createElement('div');empty.className='saved';empty.innerHTML='<div class="hint">No saved cards yet. Save one focused draw/sweep analysis from the Planner tab.</div>';list.appendChild(empty);return;}
     cards.forEach(function(card){
       var f=card.fields;
+      var staged={review:{draw:!!card.review.draw,sweep:!!card.review.sweep,followed:!!card.review.followed},outcome:card.outcome,notes:card.notes||''};
+      var dirty=false;
       var box=document.createElement('div');
       box.className='saved';
       box.setAttribute('data-card-id',card.id);
       var statusPill=card.status==='complete'?'<span class="pill ok">Complete</span>':'<span class="pill warn">Draft</span>';
-      var verifiedPill=card.review.verified?'<span class="pill ok">Verified</span>':'<span class="pill warn">Unverified</span>';
-      box.innerHTML=
-        '<div class="saved-head"><div class="saved-title">'+escapeHtml(f.instrument||'No instrument')+
-        '<small>'+escapeHtml((f.tradeDate||'no date')+' · '+(f.session||'no session'))+'</small></div><div class="btn-row" style="margin-top:0">'+statusPill+verifiedPill+'</div></div>'+
-        '<div class="focus-output">'+
-        line('HTF draw',[f.drawTf,f.drawPool,f.drawLevel].filter(Boolean).join(' · '),card.drawSide==='bull'?'bull':card.drawSide==='bear'?'bear':'')+
-        line('LTF sweep',[f.sweepTf,f.sweepPool,f.sweepLevel,f.sweepTime].filter(Boolean).join(' · '))+
-        line('Outcome',card.outcome)+
-        line('Verified at',card.verifiedAt||'')+
-        '</div>';
+      var verifiedPill=card.review.verified?'<span class="pill ok">Final saved</span>':'<span class="pill warn">Needs final save</span>';
+      box.innerHTML='<div class="saved-head"><div class="saved-title">'+escapeHtml(f.instrument||'No instrument')+'<small>'+escapeHtml((f.tradeDate||'no date')+' · '+(f.session||'no session'))+'</small></div><div class="btn-row" style="margin-top:0">'+statusPill+verifiedPill+'</div></div><div class="focus-output">'+line('HTF draw',[f.drawTf,f.drawPool,f.drawLevel].filter(Boolean).join(' · '),card.drawSide==='bull'?'bull':card.drawSide==='bear'?'bear':'')+line('LTF sweep',[f.sweepTf,f.sweepPool,f.sweepLevel,f.sweepTime].filter(Boolean).join(' · '))+line('Outcome',card.outcome)+line('Final saved at',card.finalSavedAt||'')+'</div>';
 
       var saveState=document.createElement('div');
       saveState.className='save-state good';
       saveState.textContent='Saved locally';
       box.appendChild(saveState);
 
+      function markDirty(){dirty=true;setSaveState(saveState,'Unsaved changes — click Save changes or Final save','warn');}
+      function applyStaged(c, finalise){
+        c.review.draw=!!staged.review.draw;
+        c.review.sweep=!!staged.review.sweep;
+        c.review.followed=!!staged.review.followed;
+        c.outcome=staged.outcome;
+        c.notes=staged.notes;
+        if(finalise){
+          c.review.verified=true;
+          c.verifiedAt=new Date().toISOString();
+          c.finalSavedAt=c.verifiedAt;
+        }else{
+          c.review.verified=false;
+          c.verifiedAt='';
+          c.finalSavedAt='';
+        }
+      }
+      function saveStaged(finalise){
+        if(finalise&&staged.outcome==='open'){
+          setSaveState(saveState,'Select Hit, Miss or Breakeven before Final save','bad');
+          return false;
+        }
+        setSaveState(saveState,'Saving…','warn');
+        var ok=updateCardById(card.id,function(c){applyStaged(c,finalise);});
+        if(ok){dirty=false;setSaveState(saveState,finalise?'Final saved':'Changes saved — final save needed',finalise?'good':'warn');renderSaved();}else{setSaveState(saveState,'Save failed','bad');}
+        return ok;
+      }
+
       var checks=document.createElement('div');
       checks.className='review-grid';
-      [
-        ['draw','Draw respected'],
-        ['sweep','LTF sweep confirmed'],
-        ['followed','Plan followed'],
-        ['verified','Analysis verified']
-      ].forEach(function(pair){
+      [['draw','Draw respected'],['sweep','LTF sweep confirmed'],['followed','Plan followed']].forEach(function(pair){
         var row=document.createElement('label');
         row.className='check-row';
         var cb=document.createElement('input');
         cb.type='checkbox';
-        cb.checked=!!card.review[pair[0]];
-        cb.addEventListener('change',function(){
-          var latest=getCardById(card.id);
-          if(!latest){setSaveState(saveState,'Card not found','bad');return;}
-          if(pair[0]==='verified'&&cb.checked&&latest.outcome==='open'){
-            cb.checked=false;
-            setSaveState(saveState,'Select outcome before verifying','bad');
-            return;
-          }
-          setSaveState(saveState,'Saving…','warn');
-          var ok=updateCardById(card.id,function(c){
-            c.review[pair[0]]=cb.checked;
-            if(pair[0]==='verified') c.verifiedAt=cb.checked?new Date().toISOString():'';
-          });
-          if(ok){setSaveState(saveState,'Saved locally','good');renderSaved();}else{setSaveState(saveState,'Save failed','bad');}
-        });
+        cb.checked=!!staged.review[pair[0]];
+        cb.addEventListener('change',function(){staged.review[pair[0]]=cb.checked;markDirty();});
         row.appendChild(cb);
         row.appendChild(document.createTextNode(pair[1]));
         checks.appendChild(row);
@@ -562,57 +449,30 @@
       var outcome=document.createElement('select');
       outcome.className='in';
       outcome.innerHTML='<option value="open">Open</option><option value="hit">Hit</option><option value="miss">Miss</option><option value="be">Breakeven</option>';
-      outcome.value=card.outcome;
-      outcome.addEventListener('change',function(){
-        setSaveState(saveState,'Saving…','warn');
-        var ok=updateCardById(card.id,function(c){
-          c.outcome=outcome.value;
-          if(outcome.value==='open'){
-            c.review.verified=false;
-            c.verifiedAt='';
-          }
-        });
-        if(ok){setSaveState(saveState,'Saved locally','good');renderSaved();}else{setSaveState(saveState,'Save failed','bad');}
-      });
+      outcome.value=staged.outcome;
+      outcome.addEventListener('change',function(){staged.outcome=outcome.value;markDirty();});
 
       var notes=document.createElement('textarea');
       notes.className='in';
       notes.placeholder='Verification notes for this analysis';
-      notes.value=card.notes||'';
-      var saveNotesNow=function(){
-        setSaveState(saveState,'Saving…','warn');
-        var ok=updateCardById(card.id,function(c){c.notes=notes.value;});
-        setSaveState(saveState,ok?'Saved locally':'Save failed',ok?'good':'bad');
-      };
-      var debouncedSaveNotes=debounce(saveNotesNow,350);
-      notes.addEventListener('input',function(){setSaveState(saveState,'Saving…','warn');debouncedSaveNotes();});
-      notes.addEventListener('change',saveNotesNow);
-      notes.addEventListener('blur',saveNotesNow);
+      notes.value=staged.notes;
+      notes.addEventListener('input',function(){staged.notes=notes.value;markDirty();});
+      notes.addEventListener('change',function(){staged.notes=notes.value;markDirty();});
 
       var tools=document.createElement('div');
       tools.className='btn-row';
-      tools.innerHTML='<button class="small-btn" type="button">Load</button><button class="small-btn" type="button">Copy</button><button class="small-btn danger" type="button">Delete</button>';
-      tools.children[0].addEventListener('click',function(){
-        var latest=getCardById(card.id);
-        if(latest) restore(latest);
-        else setSaveState(saveState,'Card not found','bad');
-      });
-      tools.children[1].addEventListener('click',function(){
-        var latest=getCardById(card.id);
-        if(latest) copy(cardText(latest),tools.children[1],'Copy');
-        else setSaveState(saveState,'Card not found','bad');
-      });
-      tools.children[2].addEventListener('click',function(){
-        if(deleteCardById(card.id)) renderSaved();
-        else setSaveState(saveState,'Delete failed','bad');
-      });
+      tools.innerHTML='<button class="small-btn" type="button">Load</button><button class="small-btn" type="button">Copy</button><button class="small-btn primary" type="button">Save changes</button><button class="small-btn primary" type="button">Final save</button><button class="small-btn danger" type="button">Delete</button>';
+      tools.children[0].addEventListener('click',function(){var latest=getCardById(card.id);if(latest) restore(latest);else setSaveState(saveState,'Card not found','bad');});
+      tools.children[1].addEventListener('click',function(){var latest=getCardById(card.id);if(latest) copy(cardText(latest),tools.children[1],'Copy');else setSaveState(saveState,'Card not found','bad');});
+      tools.children[2].addEventListener('click',function(){saveStaged(false);});
+      tools.children[3].addEventListener('click',function(){saveStaged(true);});
+      tools.children[4].addEventListener('click',function(){if(deleteCardById(card.id)) renderSaved();else setSaveState(saveState,'Delete failed','bad');});
 
       var lab=document.createElement('label');
       lab.className='label';
       lab.textContent='Outcome';
       box.appendChild(lab);
       box.appendChild(outcome);
-
       var nlab=document.createElement('label');
       nlab.className='label';
       nlab.textContent='Verification notes';
@@ -629,104 +489,30 @@
     renderSaved();
     if(!ok){buttonFlash(el('verifyDataBtn'),'Verify failed','Verify data',1800);return;}
     var issues=0;
-    cleaned.forEach(function(c){
-      if(c.review.verified&&c.outcome==='open') issues++;
-      if(!c.id||!c.fields) issues++;
-    });
+    cleaned.forEach(function(c){if(c.review.verified&&c.outcome==='open') issues++;if(!c.id||!c.fields) issues++;});
     buttonFlash(el('verifyDataBtn'),issues?issues+' issue(s) fixed':'Data OK','Verify data',1800);
   }
-  function exportPayload(){
-    var cards=load();
-    return {schema:EXPORT_SCHEMA,exportedAt:new Date().toISOString(),analytics:analytics(cards),cards:cards};
-  }
-  function exportText(){
-    var cards=load();
-    if(!cards.length){buttonFlash(el('exportTxtBtn'),'Nothing','Export text');return;}
-    copy(cards.map(cardText).join('\n\n---\n\n'),el('exportTxtBtn'),'Export text');
-  }
-  function exportJson(){
-    var txt=JSON.stringify(exportPayload(),null,2);
-    copy(txt,el('exportJsonBtn'),'Export JSON');
-  }
+  function exportPayload(){var cards=load();return {schema:EXPORT_SCHEMA,exportedAt:new Date().toISOString(),analytics:analytics(cards),cards:cards};}
+  function exportText(){var cards=load();if(!cards.length){buttonFlash(el('exportTxtBtn'),'Nothing','Export text');return;}copy(cards.map(cardText).join('\n\n---\n\n'),el('exportTxtBtn'),'Export text');}
+  function exportJson(){var txt=JSON.stringify(exportPayload(),null,2);copy(txt,el('exportJsonBtn'),'Export JSON');}
   function importJson(file){
     var reader=new FileReader();
     reader.onload=function(){
-      try{
-        var data=JSON.parse(reader.result);
-        var incoming=Array.isArray(data)?data:data.cards;
-        if(!Array.isArray(incoming)) throw new Error('No cards array');
-        var merged=dedupe(incoming.concat(load()));
-        if(!merged.length) throw new Error('No valid cards');
-        if(!saveAll(merged)) throw new Error('Storage blocked');
-        renderSaved();
-        buttonFlash(el('importBtn'),'Imported','Import JSON');
-      }catch(e){
-        buttonFlash(el('importBtn'),'Import failed','Import JSON',1800);
-      }
+      try{var data=JSON.parse(reader.result);var incoming=Array.isArray(data)?data:data.cards;if(!Array.isArray(incoming)) throw new Error('No cards array');var merged=dedupe(incoming.concat(load()));if(!merged.length) throw new Error('No valid cards');if(!saveAll(merged)) throw new Error('Storage blocked');renderSaved();buttonFlash(el('importBtn'),'Imported','Import JSON');}catch(e){buttonFlash(el('importBtn'),'Import failed','Import JSON',1800);}
     };
     reader.readAsText(file);
   }
   function copy(txt,btn,fallback){
-    if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(txt).then(function(){buttonFlash(btn,'Copied',fallback);}).catch(function(){fallbackCopy(txt)?buttonFlash(btn,'Copied',fallback):buttonFlash(btn,'Copy failed',fallback,1800);});
-    }else{
-      fallbackCopy(txt)?buttonFlash(btn,'Copied',fallback):buttonFlash(btn,'Copy failed',fallback,1800);
-    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){buttonFlash(btn,'Copied',fallback);}).catch(function(){fallbackCopy(txt)?buttonFlash(btn,'Copied',fallback):buttonFlash(btn,'Copy failed',fallback,1800);});}
+    else{fallbackCopy(txt)?buttonFlash(btn,'Copied',fallback):buttonFlash(btn,'Copy failed',fallback,1800);}
   }
-  function fallbackCopy(txt){
-    var ta=document.createElement('textarea');
-    ta.value=txt;
-    ta.setAttribute('readonly','');
-    ta.style.position='fixed';
-    ta.style.left='-9999px';
-    document.body.appendChild(ta);
-    ta.select();
-    var ok=false;
-    try{ok=document.execCommand('copy');}catch(e){}
-    document.body.removeChild(ta);
-    return ok;
-  }
-  function buttonFlash(btn,text,fallback,ms){
-    if(!btn) return;
-    btn.textContent=text;
-    setTimeout(function(){btn.textContent=fallback;},ms||1400);
-  }
-  function setSaveState(node,text,kind){
-    if(!node) return;
-    node.className='save-state '+(kind||'');
-    node.textContent=text;
-  }
-  function debounce(fn,wait){
-    var t;
-    return function(){
-      clearTimeout(t);
-      t=setTimeout(fn,wait);
-    };
-  }
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
-  }
-  function reset(){
-    ids.forEach(function(id){set(id,'');});
-    setDefaultDate();
-    update();
-  }
-  function setDefaultDate(){
-    var d=el('tradeDate');
-    if(d&&!d.value){
-      try{d.value=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});}
-      catch(e){d.value=new Date().toISOString().slice(0,10);}
-    }
-  }
-  function tickClock(){
-    var c=el('nyClock');
-    try{
-      var s=new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour12:false});
-      c.innerHTML=escapeHtml(s)+' <span>NY</span>';
-    }catch(e){
-      c.innerHTML='--:--:-- <span>NY</span>';
-    }
-  }
+  function fallbackCopy(txt){var ta=document.createElement('textarea');ta.value=txt;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();var ok=false;try{ok=document.execCommand('copy');}catch(e){}document.body.removeChild(ta);return ok;}
+  function buttonFlash(btn,text,fallback,ms){if(!btn) return;btn.textContent=text;setTimeout(function(){btn.textContent=fallback;},ms||1400);}
+  function setSaveState(node,text,kind){if(!node) return;node.className='save-state '+(kind||'');node.textContent=text;}
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function reset(){ids.forEach(function(id){set(id,'');});setDefaultDate();update();}
+  function setDefaultDate(){var d=el('tradeDate');if(d&&!d.value){try{d.value=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});}catch(e){d.value=new Date().toISOString().slice(0,10);}}}
+  function tickClock(){var c=el('nyClock');try{var s=new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour12:false});c.innerHTML=escapeHtml(s)+' <span>NY</span>';}catch(e){c.innerHTML='--:--:-- <span>NY</span>';}}
 
   el('saveBtn').addEventListener('click',saveCard);
   el('copyBtn').addEventListener('click',function(){copy(el('summary').innerText,this,'Copy focus');});
