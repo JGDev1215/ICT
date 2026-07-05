@@ -468,12 +468,17 @@
 	    <div class="step-head">
 	      <input type="checkbox" class="chk" id="c3" aria-label="Step 3 complete">
 	      <div>
-	        <span class="num">STEP 3 · MACRO TIMING</span>
+	        <span class="num">STEP 3 · TIMING</span>
 	        <div class="title">When do we expect the Step 2 liquidity sweep?</div>
 	        <div class="cite">Optional time-and-price context: macro window, killzone, pre-New York, New York AM, or outside killzone.</div>
 	      </div>
 	    </div>
 	    <div class="body">
+	      <div class="derived-box">
+	        <span class="k">Linked price objective from Step 2</span>
+	        <span class="v" id="timingPriceObjective">—</span>
+	        <div class="hint">This timing section only frames when the Step 2 opposing liquidity pool may be swept.</div>
+	      </div>
 	      <label class="label" for="timingUse">Timing context</label>
 	      <select class="in" id="timingUse">
 	        <option>Off — do not use timing context</option>
@@ -904,19 +909,24 @@
   function timingEnabled(){
     return val('timingUse').indexOf('On') === 0;
   }
-  function timingText(){
-    if(!timingEnabled()) return 'Off';
-    var priceContext = objectiveText('opp');
+	  function timingText(){
+	    if(!timingEnabled()) return 'Off';
+	    var priceContext = objectiveText('opp');
     var parts = [
       val('timingWindow'),
       val('macro'),
       priceContext ? 'Targets Step 2: ' + priceContext : '',
       val('timingNote')
     ].filter(Boolean);
-    return parts.join(' · ');
-  }
-  function syncTimingControls(){
-    var enabled = timingEnabled();
+	    return parts.join(' · ');
+	  }
+	  function syncTimingPriceObjective(){
+	    var el = document.getElementById('timingPriceObjective');
+	    if(el) el.textContent = objectiveText('opp') || '—';
+	  }
+	  function syncTimingControls(){
+	    syncTimingPriceObjective();
+	    var enabled = timingEnabled();
     ['timingWindow','macro','timingNote'].forEach(function(id){
       var el = document.getElementById(id);
       if(el){
