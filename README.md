@@ -5,8 +5,9 @@ A lightweight browser-based ICT planning tool focused on one job:
 1. Choose one instrument.
 2. Define the higher-timeframe draw on liquidity.
 3. Confirm the lower-timeframe sweep.
-4. Review the focus card.
-5. Save, verify, and final-save the analysis.
+4. Optionally mark whether there is an FVG in the direction of the sweep.
+5. Review the focus card.
+6. Save, verify, and final-save the analysis.
 
 > Educational tool only. This project does not provide financial advice, investment advice, or trade recommendations.
 
@@ -16,7 +17,7 @@ A lightweight browser-based ICT planning tool focused on one job:
 - Build step: none
 - Runtime dependencies: none
 - Data storage: browser `localStorage`
-- Current app version: `v0.5.1`
+- Current app version: `v0.5.2`
 - Main entrypoint: `index.html`
 - Stylesheet: `assets/styles.css`
 - App logic: `assets/app.js`
@@ -64,9 +65,13 @@ Inputs:
 - Liquidity swept
 - Sweep level
 - Sweep time, optional
-- Sweep note
+- Sweep note, optional
+- FVG in the direction of the sweep, optional checkbox
+- FVG timeframe, optional
 
 The app warns if the sweep is not opposite the directional HTF draw, but this warning does not block the user from continuing.
+
+The FVG checkbox is intentionally optional. It records whether the user observed a fair value gap in the direction of the sweep without turning the framework into a full entry model.
 
 ### Step 4 — Review Focus Card
 
@@ -75,6 +80,7 @@ The final review card shows only:
 - Instrument
 - HTF draw
 - LTF sweep
+- FVG confirmation
 - Focus status
 
 The user can go Back or Save card. Incomplete cards are saved as Draft.
