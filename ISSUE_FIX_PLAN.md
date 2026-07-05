@@ -2,6 +2,12 @@
 
 This document captures the main fixes and improvements to make the ICT Framework easier to use, safer to maintain, and ready for deployment.
 
+## Implementation Status
+
+- **In progress** — P0 fixes are being implemented first in `index.html`.
+- **Current pass** — Step 0 readiness clarity, incomplete-slip status, numeric validation, saved-slip capacity visibility, and import/export backup support.
+- **Next pass** — deployment workflow, automated tests, file split, versioning, and PWA support.
+
 ## Priority Guide
 
 - **P0** — must fix before wider use
@@ -11,6 +17,8 @@ This document captures the main fixes and improvements to make the ICT Framework
 ## P0 — Core Workflow and Readiness
 
 ### 1. Clarify Step 0 completion logic
+
+**Status:** In progress
 
 **Problem**  
 Step 0 captures market context, but the final readiness state mainly depends on the HTF draw, opposing sweep, entry model/MSS, and optional timing. This can make the market-context step appear important but not actually block readiness.
@@ -30,6 +38,8 @@ Step 0 captures market context, but the final readiness state mainly depends on 
 
 ### 2. Prevent incomplete or accidental saved slips
 
+**Status:** In progress
+
 **Problem**  
 The app can save a slip before the setup is fully ready. This is useful for notes, but it risks saving incomplete records without warning.
 
@@ -46,6 +56,8 @@ The app can save a slip before the setup is fully ready. This is useful for note
 - User is not surprised by saved partial records.
 
 ### 3. Improve input validation for trade fields
+
+**Status:** In progress
 
 **Problem**  
 Some price-level fields are sanitised, but other numeric fields such as risk, profit, and MSS level rely mainly on input pattern hints. This can lead to inconsistent R-multiple calculations.
@@ -67,6 +79,8 @@ Some price-level fields are sanitised, but other numeric fields such as risk, pr
 
 ### 4. Add import support for exported slips
 
+**Status:** In progress
+
 **Problem**  
 Saved slips can be exported as text, but there is no import or restore flow.
 
@@ -84,6 +98,8 @@ Saved slips can be exported as text, but there is no import or restore flow.
 
 ### 5. Add empty-state and storage-limit handling
 
+**Status:** In progress
+
 **Problem**  
 The app stores up to 50 slips in localStorage. Storage failure is handled, but the user has limited visibility into storage limits or older slip removal.
 
@@ -99,6 +115,8 @@ The app stores up to 50 slips in localStorage. Storage failure is handled, but t
 - User understands what happens after 50 saved slips.
 
 ### 6. Improve mobile workflow clarity
+
+**Status:** Planned
 
 **Problem**  
 The app is designed for mobile, but long forms can still feel dense on small screens.
@@ -118,6 +136,8 @@ The app is designed for mobile, but long forms can still feel dense on small scr
 
 ### 7. Add GitHub Pages deployment configuration
 
+**Status:** Planned
+
 **Problem**  
 The app is static and suitable for GitHub Pages, but there is no deployment documentation or workflow yet.
 
@@ -134,6 +154,8 @@ The app is static and suitable for GitHub Pages, but there is no deployment docu
 - Deployment steps are repeatable.
 
 ### 8. Add automated smoke tests
+
+**Status:** Planned
 
 **Problem**  
 There are no automated tests. A small JavaScript change could break planner state, saving, copying, or tab navigation.
@@ -159,6 +181,8 @@ There are no automated tests. A small JavaScript change could break planner stat
 ## P2 — Maintainability
 
 ### 9. Split the single HTML file into smaller files
+
+**Status:** Planned
 
 **Problem**  
 The app currently keeps HTML, CSS, and JavaScript in one file. This is simple for deployment but harder to maintain as the app grows.
@@ -188,6 +212,8 @@ ICT/
 
 ### 10. Move model-card data into structured data
 
+**Status:** Planned
+
 **Problem**  
 Entry-model definitions are embedded directly inside the JavaScript. This makes updates harder and increases the chance of editing mistakes.
 
@@ -203,6 +229,8 @@ Entry-model definitions are embedded directly inside the JavaScript. This makes 
 - Missing source information is clearly marked.
 
 ### 11. Add versioning
+
+**Status:** Planned
 
 **Problem**  
 The app has no visible version number or changelog.
@@ -221,6 +249,8 @@ The app has no visible version number or changelog.
 ## P2 — PWA and Offline Use
 
 ### 12. Add proper PWA support
+
+**Status:** Planned
 
 **Problem**  
 The app includes some mobile/PWA-style meta tags, but no full manifest or service worker.
