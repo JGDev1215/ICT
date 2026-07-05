@@ -5,7 +5,7 @@ This document captures the main fixes and improvements to make the ICT Framework
 ## Implementation Status
 
 - **In progress** — P0 fixes are being implemented first in `index.html`.
-- **Current pass** — Step 0 readiness clarity, incomplete-slip status, numeric validation, saved-slip capacity visibility, and import/export backup support.
+- **Current pass** — Step 0 readiness clarity, incomplete-slip status, numeric validation, saved-slip capacity visibility, richer saved-slip review cards, notes/checklist markers, and hit-rate analytics data.
 - **Next pass** — deployment workflow, automated tests, file split, versioning, and PWA support.
 
 ## Priority Guide
@@ -114,7 +114,48 @@ The app stores up to 50 slips in localStorage. Storage failure is handled, but t
 - User can see saved-slip capacity.
 - User understands what happens after 50 saved slips.
 
-### 6. Improve mobile workflow clarity
+### 6. Improve saved-slip review cards
+
+**Status:** In progress
+
+**Problem**  
+Saved slips currently load back into the planner, but the saved area does not yet provide a rich review card for ticking off markers or adding post-trade notes directly inside the saved record.
+
+**Fix**
+
+- Render each saved slip as an expandable card.
+- Add checklist markers for bias, HTF draw, opposing sweep, timing, MSS, and entry model.
+- Add a notes field saved inside each slip record.
+- Keep the existing ability to load the slip back into the planner.
+
+**Acceptance criteria**
+
+- User can review a saved slip without leaving the Saved Setups tab.
+- Checklist marker state is saved per slip.
+- Notes are saved per slip.
+- Existing slips remain backward compatible.
+
+### 7. Add hit-rate analytics data
+
+**Status:** In progress
+
+**Problem**  
+Outcome values exist, but the app does not summarise prediction accuracy or expose hit-rate data.
+
+**Fix**
+
+- Track completed outcomes: win, loss, and breakeven.
+- Show hit rate from completed win/loss results.
+- Show completed sample size and open-trade count.
+- Preserve data locally first; backend sync can be added later if a backend is introduced.
+
+**Acceptance criteria**
+
+- Saved Setups shows hit rate percentage.
+- Hit rate excludes open records and treats breakeven separately.
+- The data model is ready for future backend collection.
+
+### 8. Improve mobile workflow clarity
 
 **Status:** Planned
 
@@ -134,7 +175,7 @@ The app is designed for mobile, but long forms can still feel dense on small scr
 
 ## P1 — Deployment and Quality
 
-### 7. Add GitHub Pages deployment configuration
+### 9. Add GitHub Pages deployment configuration
 
 **Status:** Planned
 
@@ -153,7 +194,7 @@ The app is static and suitable for GitHub Pages, but there is no deployment docu
 - README includes the production URL.
 - Deployment steps are repeatable.
 
-### 8. Add automated smoke tests
+### 10. Add automated smoke tests
 
 **Status:** Planned
 
@@ -180,7 +221,7 @@ There are no automated tests. A small JavaScript change could break planner stat
 
 ## P2 — Maintainability
 
-### 9. Split the single HTML file into smaller files
+### 11. Split the single HTML file into smaller files
 
 **Status:** Planned
 
@@ -210,7 +251,7 @@ ICT/
 - Entry-model reference data is isolated from UI logic.
 - App still runs as a static site.
 
-### 10. Move model-card data into structured data
+### 12. Move model-card data into structured data
 
 **Status:** Planned
 
@@ -228,7 +269,7 @@ Entry-model definitions are embedded directly inside the JavaScript. This makes 
 - Model definitions can be edited without touching workflow logic.
 - Missing source information is clearly marked.
 
-### 11. Add versioning
+### 13. Add versioning
 
 **Status:** Planned
 
@@ -248,7 +289,7 @@ The app has no visible version number or changelog.
 
 ## P2 — PWA and Offline Use
 
-### 12. Add proper PWA support
+### 14. Add proper PWA support
 
 **Status:** Planned
 
@@ -272,12 +313,14 @@ The app includes some mobile/PWA-style meta tags, but no full manifest or servic
 1. Clarify Step 0 readiness logic.
 2. Add incomplete-slip warning/status.
 3. Improve numeric validation.
-4. Add GitHub Pages deployment.
-5. Add smoke tests.
-6. Add import/export backup support.
-7. Split CSS/JS into separate files.
-8. Add versioning and changelog.
-9. Add full PWA support.
+4. Add saved-slip review cards with notes/checklist markers.
+5. Add hit-rate analytics.
+6. Add GitHub Pages deployment.
+7. Add smoke tests.
+8. Add import/export backup support.
+9. Split CSS/JS into separate files.
+10. Add versioning and changelog.
+11. Add full PWA support.
 
 ## Definition of Done
 
