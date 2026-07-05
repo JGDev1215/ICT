@@ -5,7 +5,7 @@ A lightweight browser-based ICT planning tool focused on one job:
 1. Choose one instrument.
 2. Define the higher-timeframe draw on liquidity.
 3. Confirm the lower-timeframe sweep.
-4. Save the card for review, notes, marker checks, outcome tracking, and verification.
+4. Save the card for review, marker checks, outcome tracking, and final verification.
 
 > Educational tool only. This project does not provide financial advice, investment advice, or trade recommendations.
 
@@ -16,7 +16,7 @@ A lightweight browser-based ICT planning tool focused on one job:
 - Runtime dependencies: none
 - Data storage: browser `localStorage`
 - Main file: `index.html`
-- Current app version: `v0.3.0`
+- Current app version: `v0.4.0`
 
 ## Main Features
 
@@ -41,28 +41,37 @@ Saved cards can be reviewed without leaving the Saved Cards tab. Each card inclu
   - Draw respected
   - LTF sweep confirmed
   - Plan followed
-  - Analysis verified
-- verification notes with autosave
+- verification notes
 - outcome: Open, Hit, Miss, or Breakeven
-- load, copy, and delete actions
-- visible local save state, such as Saved locally or Save failed
+- load, copy, save changes, final save, and delete actions
+- visible save state, such as Saved locally, Unsaved changes, or Save failed
+
+### Save Changes vs Final Save
+
+Saved-card edits are staged first.
+
+Use **Save changes** to store card edits locally without including the card in the verified hit-rate sample.
+
+Use **Final save** after selecting an outcome to mark the analysis as final. Only final-saved Hit/Miss cards enter the hit-rate calculation.
+
+If a final-saved card is edited again and **Save changes** is used, the card returns to a non-final state until **Final save** is pressed again.
 
 ### Production Save Behaviour
 
 Saved-card edits use stable card IDs rather than list position. This protects the wrong card from being updated after deletion, import, or re-render.
 
-Notes autosave while typing and also save on blur/change. Outcome, checklist markers, verification status, and delete actions all write through the same ID-based persistence layer.
+Load and copy actions fetch the latest saved card by ID before use. Save failures are shown to the user.
 
-### Verified Hit-Rate Data
+### Final Hit-Rate Data
 
 The Saved Cards page shows a local accuracy summary:
 
-- Verified hit rate
-- Verified Hit/Miss sample size
-- Verified Breakeven count
-- Needs verify count
+- Final hit rate
+- Final Hit/Miss sample size
+- Final Breakeven count
+- Needs final save count
 
-Hit rate uses only cards marked **Analysis verified** with a Hit or Miss outcome. Breakeven is tracked separately.
+Hit rate uses only cards that have been final-saved with a Hit or Miss outcome. Breakeven is tracked separately.
 
 ### Data Verification and Backup
 
@@ -76,10 +85,10 @@ The Saved Cards tab includes:
 The JSON export schema is:
 
 ```text
-ict_dol_sweep_export_v3
+ict_dol_sweep_export_v4
 ```
 
-This gives a future backend a clean data payload for collecting verified hit-rate statistics. No hosted backend is currently included.
+This gives a future backend a clean data payload for collecting final-saved hit-rate statistics. No hosted backend is currently included.
 
 ## How to Run Locally
 
