@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="ICT Framework">
 <meta name="mobile-web-app-capable" content="yes">
 <title>ICT Framework — Draw · Sweep · Entry</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a0f'/%3E%3Cpath d='M8 21h16M8 16h10M8 11h16' stroke='%23ffa502' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -790,17 +791,17 @@
 	  setupObjectiveSelects();
 	  refreshObjectiveHelps();
 
-	  Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function(btn){
-	    btn.addEventListener('click', function(){
-	      var target = btn.getAttribute('data-page');
-	      Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function(b){
-	        b.classList.toggle('active', b === btn);
-	      });
-	      Array.prototype.forEach.call(document.querySelectorAll('.page'), function(page){
-	        page.classList.toggle('active', page.id === target);
-	      });
-	    });
-	  });
+		  function activatePage(target){
+		    Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function(b){
+		      b.classList.toggle('active', b.getAttribute('data-page') === target);
+		    });
+		    Array.prototype.forEach.call(document.querySelectorAll('.page'), function(page){
+		      page.classList.toggle('active', page.id === target);
+		    });
+		  }
+		  Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function(btn){
+		    btn.addEventListener('click', function(){ activatePage(btn.getAttribute('data-page')); });
+		  });
 
   function phaseSummary(){
     var parts = [];
@@ -906,9 +907,19 @@
     if(status === 'N/A') return 'N/A' + (val('mssNote') ? ' · ' + val('mssNote') : '');
     return [status, val('mssTf'), val('mssLevel'), val('mssNote')].filter(Boolean).join(' · ');
   }
-  function timingEnabled(){
-    return val('timingUse').indexOf('On') === 0;
-  }
+	  function timingEnabled(){
+	    return val('timingUse').indexOf('On') === 0;
+	  }
+	  function modelRequiresMss(){
+	    return ['2022','fvgdrill'].indexOf(val('model')) >= 0;
+	  }
+	  function opposingSweepValid(){
+	    if(!(val('sweepTf') && val('opp1') && val('opp1Level'))) return false;
+	    var derived = deriveBias();
+	    if(!(derived.bias === 'bull' || derived.bias === 'bear')) return false;
+	    var expectedSide = derived.bias === 'bull' ? 'bear' : 'bull';
+	    return (selectedSide('opp1') || sideForLabel(val('opp1'))) === expectedSide;
+	  }
 	  function timingText(){
 	    if(!timingEnabled()) return 'Off';
 	    var priceContext = objectiveText('opp');
@@ -1078,7 +1089,14 @@
 	    else{ modelInfo.classList.remove('on'); }
 	    refreshObjectiveHelps();
 	    syncTimingControls();
+	    c[0].checked = !!phaseSummary();
+	    c[1].checked = stepValid(1);
+	    c[2].checked = stepValid(2);
+	    c[3].checked = timingEnabled() && stepValid(3);
+	    c[4].checked = stepValid(4);
 	    buildSummary();
+	    update();
+	    activatePage('plannerPage');
 	    window.scrollTo(0,0);
 	  }
   function loadSlips(){
@@ -1128,11 +1146,12 @@
       'Bias: '+(savedBias.bias==='bull'?'BULLISH':savedBias.bias==='bear'?'BEARISH':'—'),
       'Bias logic: '+savedBias.reason,
       'HTF DOL: '+(savedObj('draw')||'—'),
-      'Opposing Pools: '+([f.sweepTf,savedObj('opp')].filter(Boolean).join(' · ')||'—'),
-      'Timing: '+((f.timingUse||'').indexOf('On')===0 ? [f.timingWindow,f.macro,savedObj('opp')?('Targets Step 2: '+savedObj('opp')):'',f.timingNote].filter(Boolean).join(' · ') : 'Off'),
-      'MSS: '+(savedMss||'—'),
-      'Entry: '+([modelLabel(f.model),f.entryNote].filter(Boolean).join(' · ')||'—'),
-      'Risk: '+(f.riskAmt||'—')+'   Profit: '+(f.profitAmt||'—')+(rr?('   Planned R: '+rr):''),
+	      'Opposing Pools: '+([f.sweepTf,savedObj('opp')].filter(Boolean).join(' · ')||'—'),
+	      'Timing: '+((f.timingUse||'').indexOf('On')===0 ? [f.timingWindow,f.macro,savedObj('opp')?('Targets Step 2: '+savedObj('opp')):'',f.timingNote].filter(Boolean).join(' · ') : 'Off'),
+	      'MSS: '+(savedMss||'—'),
+	      'Entry: '+([modelLabel(f.model),f.entryNote].filter(Boolean).join(' · ')||'—'),
+	      'Market Context: '+((d.phases||[]).map(function(p,i){ return p ? PHASE_TFS[i]+':'+p : ''; }).filter(Boolean).join('  ')||'—'),
+	      'Risk: '+(f.riskAmt||'—')+'   Profit: '+(f.profitAmt||'—')+(rr?('   Planned R: '+rr):''),
       'Outcome: '+(d.outcome||'open')
     ];
     return lines.join('\n');
@@ -1253,19 +1272,21 @@
 		  function stepValid(i){
 		    if(i===0) return true;
 		    if(i===1) return !!(val('draw1') && val('draw1Level'));
-		    if(i===2) return !!(val('sweepTf') && val('opp1') && val('opp1Level'));
+		    if(i===2) return opposingSweepValid();
 	    if(i===3) return !timingEnabled() || !!val('timingWindow');
 	    if(i===4){
-	      if(!(val('model') && val('mssStatus'))) return false;
+	      if(!(val('model') && val('mssStatus') && val('entryNote'))) return false;
+	      if(modelRequiresMss()) return val('mssStatus') === 'Confirmed' && !!(val('mssTf') && val('mssLevel'));
 	      return val('mssStatus') === 'N/A' || !!(val('mssTf') && val('mssLevel'));
 	    }
 	    return false;
 	  }
 	  function missingText(){
 	    var missing = [];
-	    if(!(val('draw1') && val('draw1Level'))) missing.push('HTF DOL');
-		    if(!stepValid(2)) missing.push('opposing sweep');
-		    if(!stepValid(4)) missing.push('entry model/MSS');
+		    if(!(val('draw1') && val('draw1Level'))) missing.push('HTF DOL');
+			    if(!stepValid(2)) missing.push('opposing sweep');
+			    if(timingEnabled() && !stepValid(3)) missing.push('timing');
+			    if(!stepValid(4)) missing.push('entry model/MSS');
     return missing.join(', ');
   }
   function setStepEnabled(step, enabled){
@@ -1291,17 +1312,19 @@
 		    });
 		    syncTimingControls();
 		    var n = [1,2,4].filter(function(i){ return done[i]; }).length;
-	    var ready = n===3;
+		    var ready = n===3 && stepValid(3);
 	    stateBox.classList.toggle('ready', ready);
 	    stateVal.textContent = ready ? '3 / 3 — ready' : n + ' / 3 — missing ' + (missingText() || 'checks');
 	  }
   c.forEach(function(x){ x.addEventListener('change', update); });
   FIELD_IDS.forEach(function(id){ var el=document.getElementById(id); if(el){ el.addEventListener('input', update); el.addEventListener('change', update); } });
 
-  document.getElementById('resetBtn').addEventListener('click', function(){
-    c.forEach(function(x){ x.checked=false; });
-    FIELD_IDS.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-    setBias(null);
+	  document.getElementById('resetBtn').addEventListener('click', function(){
+	    c.forEach(function(x){ x.checked=false; });
+	    FIELD_IDS.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+	    var timingUse = document.getElementById('timingUse');
+	    if(timingUse) timingUse.selectedIndex = 0;
+	    setBias(null);
     ticks = {};
     buildPhaseRows();
     refreshObjectiveHelps();
