@@ -7,8 +7,9 @@ This document captures the main fixes and improvements for the ICT DOL Sweep Tra
 - **Completed in v0.2.0** — the app was simplified around one instrument, higher-timeframe draw on liquidity, and lower-timeframe sweep.
 - **Completed in v0.2.0** — saved slips became saved cards with checklist markers, notes, outcomes, and local hit-rate analytics.
 - **Completed in v0.3.0** — saved-card persistence was hardened with stable IDs, visible save status, verified-analysis markers, and verified hit-rate tracking.
-- **Completed in v0.4.0** — saved cards now have explicit **Save changes** and **Final save** buttons so users can separate draft edits from final verified analyses.
-- **Next pass** — GitHub Pages deployment, automated smoke tests, file split, changelog, and optional backend/PWA work.
+- **Completed in v0.4.0** — saved cards gained explicit **Save changes** and **Final save** buttons so users can separate draft edits from final verified analyses.
+- **Completed in v0.5.0** — the planner was converted into a page-by-page wizard interface with simple Back/Next navigation, and Saved Cards are accessible directly from the main page.
+- **Next pass** — GitHub Pages deployment, automated smoke tests, changelog, and optional backend/PWA work.
 
 ## Completed Fixes
 
@@ -29,7 +30,29 @@ The previous workflow included market phases, timing, MSS, and entry models. The
 - Output card only shows instrument, HTF draw, LTF sweep, and focus status.
 - Optional notes stay secondary and do not complicate the output.
 
-### 2. Clarify readiness logic
+### 2. Page-by-page wizard interface
+
+**Status:** Completed in v0.5.0
+
+The planner now renders one screen at a time:
+
+1. Main page
+2. Instrument
+3. HTF Draw on Liquidity
+4. LTF Sweep
+5. Review Focus Card
+6. Saved Cards
+7. Individual Saved Card Review
+
+**Acceptance criteria met**
+
+- User no longer needs to scroll through one long form.
+- Back and Next navigation controls guide the planner flow.
+- Each page focuses on one input group only.
+- Saved Cards can be opened directly from the main page.
+- Each saved card opens into its own review page.
+
+### 3. Clarify readiness logic
 
 **Status:** Completed
 
@@ -46,7 +69,7 @@ Readiness now depends on:
 - Market-context complexity has been removed from the main planner.
 - The app clearly marks Draft vs Complete.
 
-### 3. Prevent incomplete or accidental saved slips
+### 4. Prevent incomplete or accidental saved slips
 
 **Status:** Completed
 
@@ -63,7 +86,7 @@ Drafts can still be saved, but they are clearly labelled.
 - Complete cards are labelled Complete.
 - Save hint explains what is missing.
 
-### 4. Improve numeric validation
+### 5. Improve numeric validation
 
 **Status:** Completed
 
@@ -79,13 +102,13 @@ Price-level fields now share consistent numeric sanitisation:
 - Draw level and sweep level behave consistently.
 - Invalid numeric characters are cleaned before save.
 
-### 5. Saved card review flow
+### 6. Saved card review flow
 
 **Status:** Completed
 
-Saved cards now allow review without leaving the Saved Cards tab.
+Saved cards now allow review without returning to the planner.
 
-Each saved card includes:
+Each saved card review page includes:
 
 - HTF draw summary
 - LTF sweep summary
@@ -104,7 +127,7 @@ Each saved card includes:
 - Notes are saved per card after Save changes or Final save.
 - Existing older saved-slip data can be migrated locally.
 
-### 6. Production-grade saved-card persistence
+### 7. Production-grade saved-card persistence
 
 **Status:** Completed in v0.3.0
 
@@ -124,11 +147,11 @@ Saved-card edits use stable card IDs instead of array index position.
 - User can see when local save succeeds or fails.
 - Imported or migrated cards are rechecked before display.
 
-### 7. Save changes and Final save workflow
+### 8. Save changes and Final save workflow
 
 **Status:** Completed in v0.4.0
 
-Saved-card edits are staged first. The user must now click one of two buttons:
+Saved-card edits are staged first. The user must click one of two buttons:
 
 - **Save changes** — stores edits locally but keeps the card out of the final hit-rate sample.
 - **Final save** — stores edits, marks the card as final-saved, and allows the outcome to count in the accuracy sample.
@@ -141,11 +164,11 @@ Saved-card edits are staged first. The user must now click one of two buttons:
 - Final save requires an outcome other than Open.
 - Editing a final-saved card and pressing Save changes returns it to a non-final state until Final save is pressed again.
 
-### 8. Final hit-rate analytics data
+### 9. Final hit-rate analytics data
 
-**Status:** Completed locally in v0.4.0
+**Status:** Completed locally in v0.5.0
 
-The Saved Cards tab now shows:
+The Saved Cards page shows:
 
 - Final hit rate
 - Final Hit/Miss sample size
@@ -162,7 +185,30 @@ Hit rate uses only final-saved cards with Hit or Miss outcome. Breakeven is trac
 - Breakeven is separate.
 - JSON export creates a backend-ready payload.
 
-### 9. Export and import support
+### 10. Modular file structure
+
+**Status:** Completed in v0.5.0
+
+The app was split into:
+
+```text
+ICT/
+├── index.html
+├── assets/
+│   ├── app.js
+│   └── styles.css
+├── README.md
+└── ISSUE_FIX_PLAN.md
+```
+
+**Acceptance criteria met**
+
+- `index.html` is now a small entry point.
+- Styling lives in `assets/styles.css`.
+- App logic lives in `assets/app.js`.
+- The app remains static-site compatible.
+
+### 11. Export and import support
 
 **Status:** Completed locally
 
@@ -176,7 +222,7 @@ The app supports:
 The JSON export schema is:
 
 ```text
-ict_dol_sweep_export_v4
+ict_dol_sweep_export_v5
 ```
 
 **Acceptance criteria met**
@@ -187,7 +233,7 @@ ict_dol_sweep_export_v4
 
 ## Remaining Work
 
-### 10. Add GitHub Pages deployment configuration
+### 12. Add GitHub Pages deployment configuration
 
 **Status:** Planned
 
@@ -196,7 +242,7 @@ ict_dol_sweep_export_v4
 - Enable GitHub Pages from `main` branch root, or add a Pages workflow.
 - Add the live URL to the README once available.
 
-### 11. Add automated smoke tests
+### 13. Add automated smoke tests
 
 **Status:** Planned
 
@@ -205,7 +251,8 @@ ict_dol_sweep_export_v4
 Add a lightweight browser test suite covering:
 
 - page load
-- tab switching
+- main page saved-card navigation
+- Back/Next wizard navigation
 - draw selection
 - sweep validation
 - save/load card
@@ -215,23 +262,7 @@ Add a lightweight browser test suite covering:
 - final hit-rate calculation
 - JSON export/import
 
-### 12. Split the single HTML file into smaller files
-
-**Status:** Planned
-
-Suggested structure:
-
-```text
-ICT/
-├── index.html
-├── assets/
-│   ├── styles.css
-│   └── app.js
-├── README.md
-└── ISSUE_FIX_PLAN.md
-```
-
-### 13. Add changelog and formal versioning
+### 14. Add changelog and formal versioning
 
 **Status:** Planned
 
@@ -241,7 +272,7 @@ ICT/
 - Keep visible version number in footer.
 - Update version when storage schema or workflow changes.
 
-### 14. Optional backend collection
+### 15. Optional backend collection
 
 **Status:** Planned
 
@@ -255,7 +286,7 @@ The app currently stores data locally only. A future backend could collect:
 
 Any backend should include clear privacy controls before collecting user trading-review data.
 
-### 15. Optional PWA support
+### 16. Optional PWA support
 
 **Status:** Planned
 
