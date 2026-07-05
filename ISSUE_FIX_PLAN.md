@@ -6,7 +6,8 @@ This document captures the main fixes and improvements for the ICT DOL Sweep Tra
 
 - **Completed in v0.2.0** — the app was simplified around one instrument, higher-timeframe draw on liquidity, and lower-timeframe sweep.
 - **Completed in v0.2.0** — saved slips became saved cards with checklist markers, notes, outcomes, and local hit-rate analytics.
-- **Completed in v0.3.0** — saved-card persistence now uses stable IDs, autosaved notes, visible save status, verified-analysis markers, and verified hit-rate tracking.
+- **Completed in v0.3.0** — saved-card persistence was hardened with stable IDs, visible save status, verified-analysis markers, and verified hit-rate tracking.
+- **Completed in v0.4.0** — saved cards now have explicit **Save changes** and **Final save** buttons so users can separate draft edits from final verified analyses.
 - **Next pass** — GitHub Pages deployment, automated smoke tests, file split, changelog, and optional backend/PWA work.
 
 ## Completed Fixes
@@ -92,66 +93,80 @@ Each saved card includes:
   - Draw respected
   - LTF sweep confirmed
   - Plan followed
-  - Analysis verified
 - verification notes field
 - outcome selector
-- Load, Copy, Delete actions
+- Load, Copy, Save changes, Final save, Delete actions
 
 **Acceptance criteria met**
 
 - User can review the saved card directly.
-- Marker tick-state is saved per card.
-- Notes are saved per card.
+- Marker tick-state is saved per card after Save changes or Final save.
+- Notes are saved per card after Save changes or Final save.
 - Existing older saved-slip data can be migrated locally.
 
 ### 6. Production-grade saved-card persistence
 
 **Status:** Completed in v0.3.0
 
-Saved-card edits now use stable card IDs instead of array index position.
+Saved-card edits use stable card IDs instead of array index position.
 
 **Fixes completed**
 
 - Added ID-based helpers for get, update, and delete.
-- Checklist, outcome, notes, load, copy, and delete now target `card.id`.
+- Checklist, outcome, notes, load, copy, and delete target `card.id`.
 - Load and copy fetch the latest card before use.
 - Save failures show visible feedback.
-- Notes autosave while typing and save again on blur/change.
 - Card status, draw side, sweep side, and alignment are recalculated during normalisation.
 
 **Acceptance criteria met**
 
 - Deleting or importing cards does not cause later edits to update the wrong card.
-- Notes persist more reliably.
 - User can see when local save succeeds or fails.
 - Imported or migrated cards are rechecked before display.
 
-### 7. Verified hit-rate analytics data
+### 7. Save changes and Final save workflow
 
-**Status:** Completed locally in v0.3.0
+**Status:** Completed in v0.4.0
 
-The Saved Cards tab now shows:
+Saved-card edits are staged first. The user must now click one of two buttons:
 
-- Verified hit rate
-- Verified Hit/Miss sample size
-- Verified Breakeven count
-- Needs verify count
-
-Hit rate uses only cards marked **Analysis verified** with Hit or Miss outcome. Breakeven is tracked separately.
+- **Save changes** — stores edits locally but keeps the card out of the final hit-rate sample.
+- **Final save** — stores edits, marks the card as final-saved, and allows the outcome to count in the accuracy sample.
 
 **Acceptance criteria met**
 
-- User can see verified prediction hit rate.
+- Every saved card has a Save changes button.
+- Every saved card has a Final save button.
+- Unsaved edits are clearly shown with an Unsaved changes message.
+- Final save requires an outcome other than Open.
+- Editing a final-saved card and pressing Save changes returns it to a non-final state until Final save is pressed again.
+
+### 8. Final hit-rate analytics data
+
+**Status:** Completed locally in v0.4.0
+
+The Saved Cards tab now shows:
+
+- Final hit rate
+- Final Hit/Miss sample size
+- Final Breakeven count
+- Needs final save count
+
+Hit rate uses only final-saved cards with Hit or Miss outcome. Breakeven is tracked separately.
+
+**Acceptance criteria met**
+
+- User can see final-saved prediction hit rate.
 - Open records are excluded from hit-rate calculation.
-- Unverified closed records do not enter the hit-rate sample.
+- Non-final records do not enter the hit-rate sample.
 - Breakeven is separate.
 - JSON export creates a backend-ready payload.
 
-### 8. Export and import support
+### 9. Export and import support
 
 **Status:** Completed locally
 
-The app now supports:
+The app supports:
 
 - plain-text export
 - JSON export
@@ -161,18 +176,18 @@ The app now supports:
 The JSON export schema is:
 
 ```text
-ict_dol_sweep_export_v3
+ict_dol_sweep_export_v4
 ```
 
 **Acceptance criteria met**
 
 - User can export saved cards.
 - User can import valid exported cards.
-- Export includes analytics and verified card data for future backend collection.
+- Export includes analytics and final-saved card data for future backend collection.
 
 ## Remaining Work
 
-### 9. Add GitHub Pages deployment configuration
+### 10. Add GitHub Pages deployment configuration
 
 **Status:** Planned
 
@@ -181,7 +196,7 @@ ict_dol_sweep_export_v3
 - Enable GitHub Pages from `main` branch root, or add a Pages workflow.
 - Add the live URL to the README once available.
 
-### 10. Add automated smoke tests
+### 11. Add automated smoke tests
 
 **Status:** Planned
 
@@ -194,13 +209,13 @@ Add a lightweight browser test suite covering:
 - draw selection
 - sweep validation
 - save/load card
-- notes autosave
-- marker verification
+- Save changes button
+- Final save button
 - outcome update
-- verified hit-rate calculation
+- final hit-rate calculation
 - JSON export/import
 
-### 11. Split the single HTML file into smaller files
+### 12. Split the single HTML file into smaller files
 
 **Status:** Planned
 
@@ -216,7 +231,7 @@ ICT/
 └── ISSUE_FIX_PLAN.md
 ```
 
-### 12. Add changelog and formal versioning
+### 13. Add changelog and formal versioning
 
 **Status:** Planned
 
@@ -226,21 +241,21 @@ ICT/
 - Keep visible version number in footer.
 - Update version when storage schema or workflow changes.
 
-### 13. Optional backend collection
+### 14. Optional backend collection
 
 **Status:** Planned
 
 The app currently stores data locally only. A future backend could collect:
 
 - anonymised or account-linked saved cards
-- verified hit/miss outcomes
+- final-saved hit/miss outcomes
 - instrument-level hit rate
 - draw type hit rate
 - sweep type hit rate
 
 Any backend should include clear privacy controls before collecting user trading-review data.
 
-### 14. Optional PWA support
+### 15. Optional PWA support
 
 **Status:** Planned
 
