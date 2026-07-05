@@ -108,6 +108,15 @@
   .meta-row.three{grid-template-columns:1fr 1fr 1fr}
   @media (max-width:520px){.meta-row.three{grid-template-columns:1fr}}
   .rp-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+  .obj-list{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+  .obj-row{background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:11px 12px}
+  .obj-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}
+  .obj-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--gold);text-transform:uppercase}
+  .obj-tag{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--sub);border:1px solid var(--border);border-radius:999px;padding:2px 7px}
+  .obj-grid{display:grid;grid-template-columns:1.5fr .8fr;gap:8px}
+  .derived-box{margin-top:12px;background:var(--inset);border:1px solid var(--border);border-radius:8px;padding:11px 13px}
+  .derived-box .k{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:3px}
+  .derived-box .v{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--text)}
   .out-btns{display:flex;gap:8px}
   .out-line.tick{cursor:default}
   .out-line input.tick-box{
@@ -170,6 +179,7 @@
   .footer{font-family:'JetBrains Mono',monospace;font-size:11px;color:#5a5a6e;margin-top:26px;line-height:1.6}
   @media (max-width:520px){
     .rp-row{grid-template-columns:1fr}
+    .obj-grid{grid-template-columns:1fr}
     .out-head,.jrow{align-items:flex-start;flex-wrap:wrap}
     .out-k{flex-basis:82px}
   }
@@ -240,46 +250,44 @@
     <div class="step-head">
       <input type="checkbox" class="chk" id="c1" aria-label="Step 1 complete">
       <div>
-        <span class="num">STEP 1 · BIAS + DRAW</span>
-        <div class="title">HTF bias &amp; draw on liquidity</div>
-        <div class="cite">Draw on liquidity = the sole purpose of price delivery: price moves for buy-side, sell-side, or inefficiency. [ONE_SETUP_FOR_LIFE | Draw on Liquidity]</div>
+        <span class="num">STEP 1 · HTF DRAW ON LIQUIDITY</span>
+        <div class="title">HTF draw first, bias derived from the draw</div>
+        <div class="cite">Draw on liquidity = the sole purpose of price delivery: price moves for buy-side, sell-side, or inefficiency. The HTF DOL dictates directional bias. [ONE_SETUP_FOR_LIFE | Draw on Liquidity]</div>
       </div>
     </div>
     <div class="body">
-      <span class="label">HTF bias direction</span>
-      <div class="dir" role="group" aria-label="Bias direction">
-        <button class="dir-btn" id="biasBull" type="button">BULLISH</button>
-        <button class="dir-btn" id="biasBear" type="button">BEARISH</button>
+      <div class="obj-list">
+        <div class="obj-row">
+          <div class="obj-head"><span class="obj-title">Objective 1</span><span class="obj-tag">Primary</span></div>
+          <div class="obj-grid">
+            <select class="in dol-select" id="draw1" aria-label="HTF DOL Objective 1"></select>
+            <input class="in" id="draw1Level" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="price level">
+          </div>
+          <div class="hint" id="draw1Help">Primary HTF objective. This draw dictates the displayed bias direction.</div>
+        </div>
+        <div class="obj-row">
+          <div class="obj-head"><span class="obj-title">Objective 2</span><span class="obj-tag">Secondary</span></div>
+          <div class="obj-grid">
+            <select class="in dol-select" id="draw2" aria-label="HTF DOL Objective 2"></select>
+            <input class="in" id="draw2Level" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="price level">
+          </div>
+          <div class="hint" id="draw2Help">Optional confluence or next HTF objective.</div>
+        </div>
+        <div class="obj-row">
+          <div class="obj-head"><span class="obj-title">Objective 3</span><span class="obj-tag">Secondary</span></div>
+          <div class="obj-grid">
+            <select class="in dol-select" id="draw3" aria-label="HTF DOL Objective 3"></select>
+            <input class="in" id="draw3Level" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="price level">
+          </div>
+          <div class="hint" id="draw3Help">Optional confluence or extended objective.</div>
+        </div>
       </div>
-
-      <label class="label" for="draw">Draw on liquidity — the objective price is reaching for</label>
-      <select class="in" id="draw">
-        <option value="">— select draw —</option>
-        <optgroup label="Buy-side (above)">
-          <option>Previous day high (PDH)</option>
-          <option>Previous week high (PWH)</option>
-          <option>Session high (Asia / London / NY)</option>
-          <option>Relative equal highs (REH)</option>
-          <option>Old high / prior swing high</option>
-        </optgroup>
-        <optgroup label="Sell-side (below)">
-          <option>Previous day low (PDL)</option>
-          <option>Previous week low (PWL)</option>
-          <option>Session low (Asia / London / NY)</option>
-          <option>Relative equal lows (REL)</option>
-          <option>Old low / prior swing low</option>
-        </optgroup>
-        <optgroup label="Inefficiency / gap">
-          <option>New Week Opening Gap (NWOG)</option>
-          <option>New Day Opening Gap (NDOG)</option>
-          <option>HTF fair value gap (SIBI / BISI)</option>
-        </optgroup>
-      </select>
+      <div class="derived-box">
+        <span class="k">Derived bias from Objective 1</span>
+        <span class="v" id="derivedBias">—</span>
+      </div>
       <div class="hint">External-range liquidity is the real objective; internal-range liquidity is where partials come off. Determine the draw before the entry. <span style="color:#6a6a7e">[ep06 | Internal vs External Range Liquidity; silver_bullet.html]</span></div>
       <div class="hint">Pool quality matters: perfect equal highs/lows and data highs/lows are highest quality; NWOG/NDOG, relative equal highs/lows, and previous session highs/lows are useful B-tier references; standalone order blocks are hit-or-miss as draw liquidity. Combining pools can improve the draw. <span style="color:#6a6a7e">[Liquidity Pools Tier List]</span></div>
-
-      <label class="label" for="drawLevel">Price level</label>
-      <input class="in" id="drawLevel" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="e.g. 29182">
     </div>
   </div>
 
@@ -300,32 +308,33 @@
         <option>4H</option><option>1H</option><option>15m</option><option>5m</option><option>1m</option>
       </select>
 
-      <label class="label" for="sweepPool">Opposing pool swept (opposite side to your draw)</label>
-      <select class="in" id="sweepPool">
-        <option value="">— select pool —</option>
-        <optgroup label="Buy-side (above)">
-          <option>Previous day high (PDH)</option>
-          <option>Previous week high (PWH)</option>
-          <option>Session high (Asia / London / NY)</option>
-          <option>Midnight open</option>
-          <option>Relative equal highs (REH)</option>
-          <option>Old high / prior swing high</option>
-        </optgroup>
-        <optgroup label="Sell-side (below)">
-          <option>Previous day low (PDL)</option>
-          <option>Previous week low (PWL)</option>
-          <option>Session low (Asia / London / NY)</option>
-          <option>Midnight open</option>
-          <option>Relative equal lows (REL)</option>
-          <option>Old low / prior swing low</option>
-        </optgroup>
-        <optgroup label="Inefficiency / gap">
-          <option>New Week Opening Gap (NWOG)</option>
-          <option>New Day Opening Gap (NDOG)</option>
-          <option>Fair value gap (SIBI / BISI)</option>
-        </optgroup>
-      </select>
-      <input class="in" id="sweep" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="price swept — e.g. 29545" style="margin-top:8px">
+      <span class="label">Opposing pool swept (opposite side to your draw)</span>
+      <div class="obj-list">
+        <div class="obj-row">
+          <div class="obj-head"><span class="obj-title">Opposing objective 1</span><span class="obj-tag">Primary</span></div>
+          <div class="obj-grid">
+            <select class="in opp-select" id="opp1" aria-label="Opposing pool Objective 1"></select>
+            <input class="in" id="opp1Level" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="price level swept">
+          </div>
+          <div class="hint" id="opp1Help">Primary opposing pool raided before the entry model.</div>
+        </div>
+        <div class="obj-row">
+          <div class="obj-head"><span class="obj-title">Opposing objective 2</span><span class="obj-tag">Secondary</span></div>
+          <div class="obj-grid">
+            <select class="in opp-select" id="opp2" aria-label="Opposing pool Objective 2"></select>
+            <input class="in" id="opp2Level" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="price level swept">
+          </div>
+          <div class="hint" id="opp2Help">Optional secondary opposing pool.</div>
+        </div>
+        <div class="obj-row">
+          <div class="obj-head"><span class="obj-title">Opposing objective 3</span><span class="obj-tag">Secondary</span></div>
+          <div class="obj-grid">
+            <select class="in opp-select" id="opp3" aria-label="Opposing pool Objective 3"></select>
+            <input class="in" id="opp3Level" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="price level swept">
+          </div>
+          <div class="hint" id="opp3Help">Optional extended or related opposing pool.</div>
+        </div>
+      </div>
       <div class="hint">Draws exist on any timeframe — a sweep pool can be a midnight open, PDH/PDL, session H/L, or a gap. The sweep raids the pool <b>opposite</b> your HTF draw; the displacement candle appears on the candle(s) <b>after</b> the sweep, not the sweep candle itself. <span style="color:#6a6a7e">[ep06 | Bearish ICT FVG; Displacement High &amp; Low]</span></div>
 
       <label class="label" for="macro">Macro timing — raid during or immediately after a macro?</label>
@@ -337,11 +346,31 @@
         <option>2:50–3:10 PM</option>
         <option>3:15–3:45 PM</option>
         <option>Outside a macro window</option>
+        <option>N/A</option>
       </select>
       <div class="hint">Use the stated macro windows only; do not invent after-the-hour macro folklore. <span style="color:#6a6a7e">Bible macro windows: 9:50–10:10, 10:50–11:10, 11:30, 2:50–3:10, 3:15–3:45 [MANUAL_INTERVENTION...MACROS | Macro Time Windows].</span></div>
 
-      <label class="label" for="mss">Market structure shift confirmed?</label>
-      <input class="in" id="mss" placeholder="e.g. MSS down after buy-side raid — displacement leg printed">
+      <label class="label" for="mssStatus">Market structure shift</label>
+      <select class="in" id="mssStatus">
+        <option value="">— select MSS status —</option>
+        <option>Confirmed</option>
+        <option>N/A</option>
+      </select>
+      <div class="rp-row">
+        <div>
+          <label class="label" for="mssTf">MSS timeframe</label>
+          <select class="in" id="mssTf">
+            <option value="">— timeframe —</option>
+            <option>4H</option><option>1H</option><option>15m</option><option>5m</option><option>1m</option>
+          </select>
+        </div>
+        <div>
+          <label class="label" for="mssLevel">MSS price level</label>
+          <input class="in" id="mssLevel" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="e.g. 29512">
+        </div>
+      </div>
+      <label class="label" for="mssNote">MSS note</label>
+      <input class="in" id="mssNote" placeholder="optional context — e.g. displacement leg printed">
       <div class="hint">Intraday MSS names the short-term draw-on-liquidity shift inside the day. <span style="color:#6a6a7e">[ep03 | MSS vs Market Structure Break]</span></div>
     </div>
   </div>
@@ -415,7 +444,7 @@
   <button class="reset" id="resetBtn" type="button">Reset</button>
 
   <div class="footer">
-    Framework planner: determine HTF bias → locate draw on liquidity → check sweep/timing context where relevant → apply the selected entry model.<br>
+    Framework planner: identify HTF draw on liquidity → derive bias from the draw → check opposing sweep/timing context where relevant → apply the selected entry model.<br>
     Step 0 phase cycle is from LUMI Traders (external, non-Bible), corroborated by the Bible on displacement and FVG rebalance. Model cards are condensed from ict-entry-models-reference v1.0.0; "No canonical source" = [NO CANONICAL SOURCE FOUND] in the Bible, not omitted.
   </div>
 </div>
@@ -449,6 +478,82 @@
     retracement: 'Continuation (most likely); Reversal only if objective + liquidity + fail-to-continue',
     reversal: 'New expansion / new structure'
   };
+  var OBJECTIVE_GROUPS = [
+    { label:'Buy-side (above)', side:'bull', options:[
+      ['Previous day high (PDH)','External buy-side liquidity above price.'],
+      ['Previous week high (PWH)','Higher-timeframe buy-side liquidity above price.'],
+      ['Session high (Asia / London / NY)','Session buy-side liquidity above price.'],
+      ['Relative equal highs (REH)','Clustered buy-side stops above relative equal highs.'],
+      ['Old high / prior swing high','Prior swing high acting as buy-side liquidity.'],
+      ['Buy-side midnight open','Opening-price reference above/near price that can act as buy-side liquidity.']
+    ]},
+    { label:'Sell-side (below)', side:'bear', options:[
+      ['Previous day low (PDL)','External sell-side liquidity below price.'],
+      ['Previous week low (PWL)','Higher-timeframe sell-side liquidity below price.'],
+      ['Session low (Asia / London / NY)','Session sell-side liquidity below price.'],
+      ['Relative equal lows (REL)','Clustered sell-side stops below relative equal lows.'],
+      ['Old low / prior swing low','Prior swing low acting as sell-side liquidity.'],
+      ['Sell-side midnight open','Opening-price reference below/near price that can act as sell-side liquidity.']
+    ]},
+    { label:'Inefficiency / gap', side:'neutral', options:[
+      ['New Week Opening Gap (NWOG)','Carried-forward weekly opening gap / fair-valuation reference.'],
+      ['New Day Opening Gap (NDOG)','Daily opening gap / fair-valuation reference.'],
+      ['Midnight open','Legacy neutral opening-price reference; use side-specific midnight open for new records.'],
+      ['HTF fair value gap (SIBI / BISI)','Higher-timeframe inefficiency that can draw price.'],
+      ['Fair value gap (SIBI / BISI)','Inefficiency that can draw or rebalance price.']
+    ]}
+  ];
+  function populateObjectiveSelect(sel, placeholder){
+    sel.textContent = '';
+    var blank = document.createElement('option'); blank.value=''; blank.textContent=placeholder; sel.appendChild(blank);
+    OBJECTIVE_GROUPS.forEach(function(group){
+      var og = document.createElement('optgroup'); og.label = group.label;
+      group.options.forEach(function(pair){
+        var opt = document.createElement('option');
+        opt.value = pair[0]; opt.textContent = pair[0];
+        opt.setAttribute('data-side', group.side);
+        opt.setAttribute('data-help', pair[1]);
+        og.appendChild(opt);
+      });
+      sel.appendChild(og);
+    });
+  }
+  function selectedOption(id){
+    var el = document.getElementById(id);
+    return el && el.selectedIndex >= 0 ? el.options[el.selectedIndex] : null;
+  }
+  function selectedSide(id){
+    var opt = selectedOption(id);
+    return opt ? opt.getAttribute('data-side') || '' : '';
+  }
+  function sideForLabel(label){
+    var side = '';
+    OBJECTIVE_GROUPS.forEach(function(group){
+      group.options.forEach(function(pair){ if(pair[0] === label) side = group.side; });
+    });
+    return side;
+  }
+  function updateObjectiveHelp(id, helpId, fallback){
+    var opt = selectedOption(id);
+    var help = document.getElementById(helpId);
+    if(help) help.textContent = opt && opt.value ? opt.getAttribute('data-help') : fallback;
+  }
+  function setupObjectiveSelects(){
+    ['draw1','draw2','draw3'].forEach(function(id){
+      var el = document.getElementById(id); if(el) populateObjectiveSelect(el, '— select HTF draw —');
+    });
+    ['opp1','opp2','opp3'].forEach(function(id){
+      var el = document.getElementById(id); if(el) populateObjectiveSelect(el, '— select opposing pool —');
+    });
+  }
+  function refreshObjectiveHelps(){
+    updateObjectiveHelp('draw1','draw1Help','Primary HTF objective. This draw dictates the displayed bias direction.');
+    updateObjectiveHelp('draw2','draw2Help','Optional confluence or next HTF objective.');
+    updateObjectiveHelp('draw3','draw3Help','Optional confluence or extended objective.');
+    updateObjectiveHelp('opp1','opp1Help','Primary opposing pool raided before the entry model.');
+    updateObjectiveHelp('opp2','opp2Help','Optional secondary opposing pool.');
+    updateObjectiveHelp('opp3','opp3Help','Optional extended or related opposing pool.');
+  }
   function buildPhaseRows(){
     phaseRows.textContent = '';
     PHASE_TFS.forEach(function(tf){
@@ -471,6 +576,8 @@
     });
   }
   buildPhaseRows();
+  setupObjectiveSelects();
+  refreshObjectiveHelps();
 
   function phaseSummary(){
     var parts = [];
@@ -493,6 +600,29 @@
     if(!v || v === '.' || /\.$/.test(v)) return NaN;
     var n = Number(v);
     return Number.isFinite(n) ? n : NaN;
+  }
+  function syncDerivedBias(){
+    var side = selectedSide('draw1') || sideForLabel(val('draw1'));
+    bias = side === 'bull' ? 'bull' : side === 'bear' ? 'bear' : null;
+    var el = document.getElementById('derivedBias');
+    if(el){
+      el.textContent = bias === 'bull' ? 'BULLISH' : bias === 'bear' ? 'BEARISH' : '—';
+      el.className = 'v' + (bias === 'bull' ? ' out-dir-bull' : bias === 'bear' ? ' out-dir-bear' : '');
+    }
+  }
+  function objectiveText(prefix){
+    var out = [];
+    [1,2,3].forEach(function(n){
+      var name = val(prefix+n);
+      var level = val(prefix+n+'Level');
+      if(name || level) out.push(n + '. ' + [name, level].filter(Boolean).join(' · '));
+    });
+    return out.join('  ');
+  }
+  function mssText(){
+    var status = val('mssStatus');
+    if(status === 'N/A') return 'N/A' + (val('mssNote') ? ' · ' + val('mssNote') : '');
+    return [status, val('mssTf'), val('mssLevel'), val('mssNote')].filter(Boolean).join(' · ');
   }
 
   var outBody = document.getElementById('outBody');
@@ -522,10 +652,11 @@
     return row;
   }
   function buildSummary(){
+    syncDerivedBias();
     var dir = bias==='bull' ? 'BULLISH' : bias==='bear' ? 'BEARISH' : '';
     var dirCls = bias==='bull' ? 'out-dir-bull' : bias==='bear' ? 'out-dir-bear' : '';
-    var sweepFull = [val('sweepTf'), val('sweepPool'), val('sweep')].filter(Boolean).join(' · ');
-    var drawFull = [val('draw'), val('drawLevel')].filter(Boolean).join(' · ');
+    var sweepFull = [val('sweepTf'), objectiveText('opp')].filter(Boolean).join(' · ');
+    var drawFull = objectiveText('draw');
     var modelTxt = modelLabel();
     var entryFull = [modelTxt, val('entryNote')].filter(Boolean).join(' · ');
     var risk = val('riskAmt'), profit = val('profitAmt');
@@ -538,10 +669,10 @@
       makeLine('Time', val('tradeTime')),
       makeLine('Instrument', val('instrument')),
       makeLine('Bias', dir, dirCls, 'bias'),
-      makeLine('Draw', drawFull, '', 'draw'),
-      makeLine('Sweep', sweepFull, '', 'sweep'),
+      makeLine('HTF DOL', drawFull, '', 'draw'),
+      makeLine('Opposing Pools', sweepFull, '', 'sweep'),
       makeLine('Macro', val('macro'), '', 'macro'),
-      makeLine('MSS', val('mss'), '', 'mss'),
+      makeLine('MSS', mssText(), '', 'mss'),
       makeLine('Entry', entryFull, '', 'entry'),
       makeLine('Phase', phaseSummary()),
       makeLine('Trade', tradeFull)
@@ -583,22 +714,28 @@
   }
   document.getElementById('copyBtn').addEventListener('click', function(){ copyText(plainSummary(), this, 'Copy'); });
 
-  ['drawLevel','sweep','riskAmt','profitAmt'].forEach(function(id){
+  ['draw1Level','draw2Level','draw3Level','opp1Level','opp2Level','opp3Level','mssLevel','riskAmt','profitAmt'].forEach(function(id){
     var el = document.getElementById(id);
     if(el) el.addEventListener('input', function(){
       var cleaned = el.value.replace(/,/g,'.').replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1');
       if(cleaned !== el.value) el.value = cleaned;
     });
   });
-  ['tradeDate','tradeTime','instrument','draw','drawLevel','sweepTf','sweepPool','sweep','macro','mss','model','entryNote','riskAmt','profitAmt']
-    .forEach(function(id){ var el=document.getElementById(id); if(el){ el.addEventListener('input', buildSummary); el.addEventListener('change', buildSummary); } });
+  var FIELD_IDS = ['tradeDate','tradeTime','instrument','draw1','draw1Level','draw2','draw2Level','draw3','draw3Level','sweepTf','opp1','opp1Level','opp2','opp2Level','opp3','opp3Level','macro','mssStatus','mssTf','mssLevel','mssNote','model','entryNote','riskAmt','profitAmt'];
+  FIELD_IDS.forEach(function(id){ var el=document.getElementById(id); if(el){ el.addEventListener('input', buildSummary); el.addEventListener('change', buildSummary); } });
+  ['draw1','draw2','draw3','opp1','opp2','opp3'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.addEventListener('change', function(){
+      refreshObjectiveHelps();
+    });
+  });
 
   // Journal: multiple saved slips with outcome tracking
   var saveBtn = document.getElementById('saveBtn');
   var journalList = document.getElementById('journalList');
   var JKEY = 'ict_slips_v1';
-  var FIELD_IDS = ['tradeDate','tradeTime','instrument','draw','drawLevel','sweepTf','sweepPool','sweep','macro','mss','model','entryNote','riskAmt','profitAmt'];
   function collect(){
+    syncDerivedBias();
     var data = { ticks: JSON.parse(JSON.stringify(ticks)), fields: {}, savedAt: new Date().toISOString(), outcome:'' };
     FIELD_IDS.forEach(function(id){ data.fields[id] = val(id); });
     data.bias = bias;
@@ -611,7 +748,7 @@
   function restore(data){
     if(!data) return;
     Object.keys(data.fields||{}).forEach(function(id){ var el=document.getElementById(id); if(el) el.value=data.fields[id]; });
-    setBias(data.bias||null);
+    syncDerivedBias();
     ticks = data.ticks || {};
     var rows = phaseRows.querySelectorAll('tr');
     (data.phases||[]).forEach(function(v,i){
@@ -620,6 +757,7 @@
     var m = MODELS[val('model')];
     if(m){ modelInfo.classList.add('on'); setVal('miTrig',m.trig); setVal('miInval',m.inval); setVal('miTgt',m.tgt); document.getElementById('miSrc').textContent=m.src; }
     else{ modelInfo.classList.remove('on'); }
+    refreshObjectiveHelps();
     buildSummary();
     window.scrollTo(0,0);
   }
@@ -634,7 +772,14 @@
     if(!d || typeof d !== 'object' || !d.fields || typeof d.fields !== 'object') return null;
     var out = { fields:{}, ticks:{}, savedAt: typeof d.savedAt === 'string' ? d.savedAt : '', outcome:'' };
     FIELD_IDS.forEach(function(id){ out.fields[id] = typeof d.fields[id] === 'string' ? d.fields[id] : ''; });
-    out.bias = d.bias === 'bull' || d.bias === 'bear' ? d.bias : null;
+    if(!out.fields.draw1 && typeof d.fields.draw === 'string') out.fields.draw1 = d.fields.draw;
+    if(!out.fields.draw1Level && typeof d.fields.drawLevel === 'string') out.fields.draw1Level = d.fields.drawLevel;
+    if(!out.fields.opp1 && typeof d.fields.sweepPool === 'string') out.fields.opp1 = d.fields.sweepPool;
+    if(!out.fields.opp1Level && typeof d.fields.sweep === 'string') out.fields.opp1Level = d.fields.sweep;
+    if(!out.fields.mssNote && typeof d.fields.mss === 'string') out.fields.mssNote = d.fields.mss;
+    if(!out.fields.mssStatus && out.fields.mssNote) out.fields.mssStatus = 'Confirmed';
+    var derivedSide = sideForLabel(out.fields.draw1);
+    out.bias = d.bias === 'bull' || d.bias === 'bear' ? d.bias : derivedSide === 'bull' ? 'bull' : derivedSide === 'bear' ? 'bear' : null;
     out.phases = Array.isArray(d.phases) ? d.phases.slice(0,4).map(function(p){ return NEXT_PHASE[p] ? p : ''; }) : [];
     out.ticks = d.ticks && typeof d.ticks === 'object' ? JSON.parse(JSON.stringify(d.ticks)) : {};
     out.outcome = ['','W','L','B'].indexOf(d.outcome) >= 0 ? d.outcome : '';
@@ -645,15 +790,27 @@
   }
   function slipText(d){
     var f = d.fields;
+    function savedObj(prefix){
+      var parts = [];
+      [1,2,3].forEach(function(n){
+        var name = f[prefix+n] || '';
+        var level = f[prefix+n+'Level'] || '';
+        if(name || level) parts.push(n + '. ' + [name, level].filter(Boolean).join(' · '));
+      });
+      return parts.join('  ');
+    }
+    var savedMss = f.mssStatus === 'N/A' ? 'N/A' : [f.mssStatus,f.mssTf,f.mssLevel,f.mssNote].filter(Boolean).join(' · ');
+    var riskN = parseAmount(f.riskAmt), profitN = parseAmount(f.profitAmt);
+    var rr = (riskN > 0 && profitN > 0) ? (profitN/riskN).toFixed(2)+'R' : '';
     var lines = [
       'Date: '+(f.tradeDate||'—')+'   Time: '+(f.tradeTime||'—')+'   Instrument: '+(f.instrument||'—'),
       'Bias: '+(d.bias==='bull'?'BULLISH':d.bias==='bear'?'BEARISH':'—'),
-      'Draw: '+([f.draw,f.drawLevel].filter(Boolean).join(' · ')||'—'),
-      'Sweep: '+([f.sweepTf,f.sweepPool,f.sweep].filter(Boolean).join(' · ')||'—'),
+      'HTF DOL: '+(savedObj('draw')||'—'),
+      'Opposing Pools: '+([f.sweepTf,savedObj('opp')].filter(Boolean).join(' · ')||'—'),
       'Macro: '+(f.macro||'—'),
-      'MSS: '+(f.mss||'—'),
+      'MSS: '+(savedMss||'—'),
       'Entry: '+([modelLabel(f.model),f.entryNote].filter(Boolean).join(' · ')||'—'),
-      'Risk: '+(f.riskAmt||'—')+'   Profit: '+(f.profitAmt||'—'),
+      'Risk: '+(f.riskAmt||'—')+'   Profit: '+(f.profitAmt||'—')+(rr?('   Planned R: '+rr):''),
       'Outcome: '+(d.outcome||'open')
     ];
     return lines.join('\n');
@@ -748,13 +905,12 @@
 
   function setBias(b){
     bias = b;
-    document.getElementById('biasBull').classList.toggle('sel-bull', b==='bull');
-    document.getElementById('biasBear').classList.toggle('sel-bear', b==='bear');
-    document.getElementById('biasBull').setAttribute('aria-pressed', b==='bull');
-    document.getElementById('biasBear').setAttribute('aria-pressed', b==='bear');
+    var el = document.getElementById('derivedBias');
+    if(el){
+      el.textContent = b === 'bull' ? 'BULLISH' : b === 'bear' ? 'BEARISH' : '—';
+      el.className = 'v' + (b === 'bull' ? ' out-dir-bull' : b === 'bear' ? ' out-dir-bear' : '');
+    }
   }
-  document.getElementById('biasBull').addEventListener('click', function(){ setBias(bias==='bull'?null:'bull'); buildSummary(); update(); });
-  document.getElementById('biasBear').addEventListener('click', function(){ setBias(bias==='bear'?null:'bear'); buildSummary(); update(); });
 
   var modelSel = document.getElementById('model');
   var modelInfo = document.getElementById('modelInfo');
@@ -774,16 +930,19 @@
   }
   function stepValid(i){
     if(i===0) return phasesComplete();
-    if(i===1) return !!(bias && val('draw') && val('drawLevel'));
-    if(i===2) return !!(val('sweepTf') && val('sweepPool') && val('sweep') && val('macro') && val('mss'));
+    if(i===1) return !!(val('draw1') && val('draw1Level'));
+    if(i===2){
+      if(!(val('sweepTf') && val('opp1') && val('opp1Level') && val('macro') && val('mssStatus'))) return false;
+      return val('mssStatus') === 'N/A' || !!(val('mssTf') && val('mssLevel'));
+    }
     if(i===3) return !!(val('model') && val('entryNote'));
     return false;
   }
   function missingText(){
     var missing = [];
     if(!phasesComplete()) missing.push('phase');
-    if(!(bias && val('draw') && val('drawLevel'))) missing.push('bias/draw');
-    if(!(val('sweepTf') && val('sweepPool') && val('sweep') && val('macro') && val('mss'))) missing.push('sweep');
+    if(!(val('draw1') && val('draw1Level'))) missing.push('HTF DOL');
+    if(!stepValid(2)) missing.push('opposing/MSS');
     if(!(val('model') && val('entryNote'))) missing.push('entry');
     return missing.join(', ');
   }
@@ -811,15 +970,15 @@
     stateVal.textContent = ready ? '4 / 4 — ready' : n + ' / 4 — missing ' + (missingText() || 'checks');
   }
   c.forEach(function(x){ x.addEventListener('change', update); });
-  ['tradeDate','tradeTime','instrument','draw','drawLevel','sweepTf','sweepPool','sweep','macro','mss','model','entryNote','riskAmt','profitAmt']
-    .forEach(function(id){ var el=document.getElementById(id); if(el){ el.addEventListener('input', update); el.addEventListener('change', update); } });
+  FIELD_IDS.forEach(function(id){ var el=document.getElementById(id); if(el){ el.addEventListener('input', update); el.addEventListener('change', update); } });
 
   document.getElementById('resetBtn').addEventListener('click', function(){
     c.forEach(function(x){ x.checked=false; });
-    ['tradeDate','tradeTime','instrument','draw','drawLevel','sweepTf','sweepPool','sweep','macro','mss','model','entryNote','riskAmt','profitAmt'].forEach(function(id){ document.getElementById(id).value=''; });
+    FIELD_IDS.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
     setBias(null);
     ticks = {};
     buildPhaseRows();
+    refreshObjectiveHelps();
     modelInfo.classList.remove('on');
     buildSummary();
     update();
