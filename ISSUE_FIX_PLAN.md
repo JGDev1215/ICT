@@ -1,234 +1,180 @@
 # Issue Fix Plan
 
-This document captures the main fixes and improvements to make the ICT Framework easier to use, safer to maintain, and ready for deployment.
+This document captures the main fixes and improvements for the ICT DOL Sweep Tracker.
 
 ## Implementation Status
 
-- **In progress** — P0 fixes are being implemented first in `index.html`.
-- **Current pass** — Step 0 readiness clarity, incomplete-slip status, numeric validation, saved-slip capacity visibility, richer saved-slip review cards, notes/checklist markers, and hit-rate analytics data.
-- **Next pass** — deployment workflow, automated tests, file split, versioning, and PWA support.
+- **Completed in v0.2.0** — the app has been simplified around one instrument, higher-timeframe draw on liquidity, and lower-timeframe sweep.
+- **Completed in v0.2.0** — saved slips are now saved cards with checklist markers, notes, outcomes, and local hit-rate analytics.
+- **Next pass** — GitHub Pages deployment, automated smoke tests, file split, changelog, and optional backend/PWA work.
 
-## Priority Guide
+## Completed Fixes
 
-- **P0** — must fix before wider use
-- **P1** — important usability or reliability improvement
-- **P2** — quality, maintainability, or future enhancement
+### 1. Simplify the core workflow
 
-## P0 — Core Workflow and Readiness
+**Status:** Completed
 
-### 1. Clarify Step 0 completion logic
+The previous workflow included market phases, timing, MSS, and entry models. The user-facing planner has now been simplified to:
 
-**Status:** In progress
+1. Instrument
+2. HTF draw on liquidity
+3. LTF liquidity sweep
+4. Focus output card
 
-**Problem**  
-Step 0 captures market context, but the final readiness state mainly depends on the HTF draw, opposing sweep, entry model/MSS, and optional timing. This can make the market-context step appear important but not actually block readiness.
+**Acceptance criteria met**
 
-**Fix**
+- User focuses on one instrument only.
+- Output card only shows instrument, HTF draw, LTF sweep, and focus status.
+- Optional notes stay secondary and do not complicate the output.
 
-- Decide whether Step 0 is mandatory or purely contextual.
-- If mandatory, require all phase rows or at least the traded timeframe plus one higher timeframe.
-- If optional, rename it clearly as "Context" rather than a required setup step.
-- Remove unused or confusing validation logic.
+### 2. Clarify readiness logic
 
-**Acceptance criteria**
+**Status:** Completed
 
-- User can clearly see whether market context is required.
+Readiness now depends on:
+
+- instrument selected
+- HTF draw timeframe, pool, and level completed
+- LTF sweep timeframe, pool, and level completed
+- directional draw has an opposing-side sweep where applicable
+
+**Acceptance criteria met**
+
 - Readiness state matches the visible workflow.
-- No unused phase-completion logic remains.
+- Market-context complexity has been removed from the main planner.
+- The app clearly marks Draft vs Complete.
 
-### 2. Prevent incomplete or accidental saved slips
+### 3. Prevent incomplete or accidental saved slips
 
-**Status:** In progress
+**Status:** Completed
 
-**Problem**  
-The app can save a slip before the setup is fully ready. This is useful for notes, but it risks saving incomplete records without warning.
+Saved records are now marked as either:
 
-**Fix**
+- `draft`
+- `complete`
 
-- Add a warning when saving an incomplete slip.
-- Add a saved status such as `draft` or `complete`.
-- Consider disabling "Save slip" until minimum required fields are present.
+Drafts can still be saved, but they are clearly labelled.
 
-**Acceptance criteria**
+**Acceptance criteria met**
 
-- Incomplete slips are clearly labelled.
-- Complete slips can be filtered or identified later.
-- User is not surprised by saved partial records.
+- Incomplete cards are labelled Draft.
+- Complete cards are labelled Complete.
+- Save hint explains what is missing.
 
-### 3. Improve input validation for trade fields
+### 4. Improve numeric validation
 
-**Status:** In progress
+**Status:** Completed
 
-**Problem**  
-Some price-level fields are sanitised, but other numeric fields such as risk, profit, and MSS level rely mainly on input pattern hints. This can lead to inconsistent R-multiple calculations.
+Price-level fields now share consistent numeric sanitisation:
 
-**Fix**
+- comma converted to decimal point
+- invalid characters removed
+- duplicate decimal points removed
+- `N/A` still accepted where typed directly
 
-- Apply consistent numeric sanitisation to all numeric fields.
-- Support both decimal points and commas consistently.
-- Show a validation message when risk/profit cannot calculate planned R.
-- Permit explicit `N/A` only where it makes sense.
+**Acceptance criteria met**
 
-**Acceptance criteria**
+- Draw level and sweep level behave consistently.
+- Invalid numeric characters are cleaned before save.
 
-- Planned R calculation handles valid numbers reliably.
-- Invalid numeric input is corrected or clearly flagged.
-- Risk/profit/MSS level behaviour is consistent with price-level fields.
+### 5. Saved card review flow
 
-## P1 — Usability and Data Management
+**Status:** Completed
 
-### 4. Add import support for exported slips
+Saved cards now allow review without leaving the Saved Cards tab.
 
-**Status:** In progress
+Each saved card includes:
 
-**Problem**  
-Saved slips can be exported as text, but there is no import or restore flow.
+- HTF draw summary
+- LTF sweep summary
+- checklist markers:
+  - Draw respected
+  - LTF sweep confirmed
+  - Plan followed
+- notes field
+- outcome selector
+- Load, Copy, Delete actions
 
-**Fix**
+**Acceptance criteria met**
 
-- Add JSON export alongside plain-text export.
-- Add JSON import with schema validation.
-- Keep backward compatibility with `ict_slips_v1` records.
+- User can review the saved card directly.
+- Marker tick-state is saved per card.
+- Notes are saved per card.
+- Existing older saved-slip data can be migrated locally.
 
-**Acceptance criteria**
+### 6. Hit-rate analytics data
 
-- User can export a backup file.
-- User can import the backup into another browser/device.
-- Invalid imports are rejected safely with a clear message.
+**Status:** Completed locally
 
-### 5. Add empty-state and storage-limit handling
+The Saved Cards tab now shows:
 
-**Status:** In progress
+- Hit rate
+- Hit/Miss sample size
+- Breakeven count
+- Open count
 
-**Problem**  
-The app stores up to 50 slips in localStorage. Storage failure is handled, but the user has limited visibility into storage limits or older slip removal.
+Hit rate uses only Hit and Miss records. Breakeven is tracked separately.
 
-**Fix**
+**Acceptance criteria met**
 
-- Show slip count, for example `12 / 50`.
-- Warn when the list is near capacity.
-- Explain that the oldest slips are removed when the limit is exceeded.
+- User can see local prediction hit rate.
+- Open records are excluded from hit-rate calculation.
+- Breakeven is separate.
+- JSON export creates a backend-ready payload.
 
-**Acceptance criteria**
+### 7. Export and import support
 
-- User can see saved-slip capacity.
-- User understands what happens after 50 saved slips.
+**Status:** Completed locally
 
-### 6. Improve saved-slip review cards
+The app now supports:
 
-**Status:** In progress
+- plain-text export
+- JSON export
+- JSON import
 
-**Problem**  
-Saved slips currently load back into the planner, but the saved area does not yet provide a rich review card for ticking off markers or adding post-trade notes directly inside the saved record.
+The JSON export schema is:
 
-**Fix**
+```text
+ict_dol_sweep_export_v2
+```
 
-- Render each saved slip as an expandable card.
-- Add checklist markers for bias, HTF draw, opposing sweep, timing, MSS, and entry model.
-- Add a notes field saved inside each slip record.
-- Keep the existing ability to load the slip back into the planner.
+**Acceptance criteria met**
 
-**Acceptance criteria**
+- User can export saved cards.
+- User can import valid exported cards.
+- Export includes analytics and card data for future backend collection.
 
-- User can review a saved slip without leaving the Saved Setups tab.
-- Checklist marker state is saved per slip.
-- Notes are saved per slip.
-- Existing slips remain backward compatible.
+## Remaining Work
 
-### 7. Add hit-rate analytics data
-
-**Status:** In progress
-
-**Problem**  
-Outcome values exist, but the app does not summarise prediction accuracy or expose hit-rate data.
-
-**Fix**
-
-- Track completed outcomes: win, loss, and breakeven.
-- Show hit rate from completed win/loss results.
-- Show completed sample size and open-trade count.
-- Preserve data locally first; backend sync can be added later if a backend is introduced.
-
-**Acceptance criteria**
-
-- Saved Setups shows hit rate percentage.
-- Hit rate excludes open records and treats breakeven separately.
-- The data model is ready for future backend collection.
-
-### 8. Improve mobile workflow clarity
+### 8. Add GitHub Pages deployment configuration
 
 **Status:** Planned
 
-**Problem**  
-The app is designed for mobile, but long forms can still feel dense on small screens.
-
 **Fix**
 
-- Add collapsible sections for completed steps.
-- Keep the setup status visible without covering form controls.
-- Add clearer "next action" prompts after each completed step.
+- Enable GitHub Pages from `main` branch root, or add a Pages workflow.
+- Add the live URL to the README once available.
 
-**Acceptance criteria**
-
-- On mobile, the user can move through the flow without excessive scrolling.
-- The next required action is obvious.
-
-## P1 — Deployment and Quality
-
-### 9. Add GitHub Pages deployment configuration
+### 9. Add automated smoke tests
 
 **Status:** Planned
 
-**Problem**  
-The app is static and suitable for GitHub Pages, but there is no deployment documentation or workflow yet.
-
 **Fix**
 
-- Enable GitHub Pages from `main` branch root, or add a simple Pages workflow.
-- Document the live URL once deployed.
-- Add a deployment checklist.
+Add a lightweight browser test suite covering:
 
-**Acceptance criteria**
+- page load
+- tab switching
+- draw selection
+- sweep validation
+- save/load card
+- outcome update
+- hit-rate calculation
+- JSON export/import
 
-- A live app URL exists.
-- README includes the production URL.
-- Deployment steps are repeatable.
-
-### 10. Add automated smoke tests
+### 10. Split the single HTML file into smaller files
 
 **Status:** Planned
-
-**Problem**  
-There are no automated tests. A small JavaScript change could break planner state, saving, copying, or tab navigation.
-
-**Fix**
-
-- Add Playwright or a lightweight browser-based test setup.
-- Test the main user flow:
-  - page loads
-  - tabs switch
-  - DOL selection derives bias
-  - opposing sweep validates direction
-  - model selection updates model card
-  - save/load slip works
-  - export button works
-
-**Acceptance criteria**
-
-- Tests can run locally with one command.
-- Main planner flow has automated coverage.
-- Future edits can be checked before commit.
-
-## P2 — Maintainability
-
-### 11. Split the single HTML file into smaller files
-
-**Status:** Planned
-
-**Problem**  
-The app currently keeps HTML, CSS, and JavaScript in one file. This is simple for deployment but harder to maintain as the app grows.
-
-**Fix**
 
 Suggested structure:
 
@@ -238,96 +184,50 @@ ICT/
 ├── assets/
 │   ├── styles.css
 │   └── app.js
-├── data/
-│   └── models.json
 ├── README.md
 └── ISSUE_FIX_PLAN.md
 ```
 
-**Acceptance criteria**
-
-- CSS is moved to `assets/styles.css`.
-- JavaScript is moved to `assets/app.js`.
-- Entry-model reference data is isolated from UI logic.
-- App still runs as a static site.
-
-### 12. Move model-card data into structured data
+### 11. Add changelog and formal versioning
 
 **Status:** Planned
 
-**Problem**  
-Entry-model definitions are embedded directly inside the JavaScript. This makes updates harder and increases the chance of editing mistakes.
-
 **Fix**
 
-- Move model-card data into a JSON object or `data/models.json`.
-- Add required fields: trigger, invalidation, target logic, source, prerequisite.
-- Display source gaps consistently.
-
-**Acceptance criteria**
-
-- Model definitions can be edited without touching workflow logic.
-- Missing source information is clearly marked.
-
-### 13. Add versioning
-
-**Status:** Planned
-
-**Problem**  
-The app has no visible version number or changelog.
-
-**Fix**
-
-- Add a visible app version in the footer.
 - Add `CHANGELOG.md`.
-- Update version when workflow or storage schema changes.
+- Keep visible version number in footer.
+- Update version when storage schema or workflow changes.
 
-**Acceptance criteria**
-
-- User can identify the running version.
-- Changes are tracked clearly.
-
-## P2 — PWA and Offline Use
-
-### 14. Add proper PWA support
+### 12. Optional backend collection
 
 **Status:** Planned
 
-**Problem**  
-The app includes some mobile/PWA-style meta tags, but no full manifest or service worker.
+The app currently stores data locally only. A future backend could collect:
+
+- anonymised or account-linked saved cards
+- hit/miss outcomes
+- instrument-level hit rate
+- draw type hit rate
+- sweep type hit rate
+
+Any backend should include clear privacy controls before collecting user trading-review data.
+
+### 13. Optional PWA support
+
+**Status:** Planned
 
 **Fix**
 
 - Add `manifest.webmanifest`.
 - Add icons.
 - Add optional service worker for offline cache.
-- Confirm installability in Chrome/Edge/Safari where supported.
-
-**Acceptance criteria**
-
-- Browser recognises the app as installable where supported.
-- App loads offline after first visit if service worker is enabled.
-
-## Suggested Fix Order
-
-1. Clarify Step 0 readiness logic.
-2. Add incomplete-slip warning/status.
-3. Improve numeric validation.
-4. Add saved-slip review cards with notes/checklist markers.
-5. Add hit-rate analytics.
-6. Add GitHub Pages deployment.
-7. Add smoke tests.
-8. Add import/export backup support.
-9. Split CSS/JS into separate files.
-10. Add versioning and changelog.
-11. Add full PWA support.
 
 ## Definition of Done
 
 A fix is complete when:
 
 - the behaviour is clear to the user
-- the app still works as a static site
-- saved-slip data remains backward compatible
-- the README is updated where needed
+- the app remains static-site compatible
+- saved-card data remains backward compatible where possible
+- README is updated where needed
 - the main planner flow is manually tested or covered by automated smoke tests
