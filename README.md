@@ -5,7 +5,7 @@ A lightweight browser-based ICT planning tool focused on one job:
 1. Choose one instrument.
 2. Define the higher-timeframe draw on liquidity.
 3. Confirm the lower-timeframe sweep.
-4. Save the card for review, notes, marker checks, and outcome tracking.
+4. Save the card for review, notes, marker checks, outcome tracking, and verification.
 
 > Educational tool only. This project does not provide financial advice, investment advice, or trade recommendations.
 
@@ -16,7 +16,7 @@ A lightweight browser-based ICT planning tool focused on one job:
 - Runtime dependencies: none
 - Data storage: browser `localStorage`
 - Main file: `index.html`
-- Current app version: `v0.2.0`
+- Current app version: `v0.3.0`
 
 ## Main Features
 
@@ -41,30 +41,45 @@ Saved cards can be reviewed without leaving the Saved Cards tab. Each card inclu
   - Draw respected
   - LTF sweep confirmed
   - Plan followed
-- review notes
+  - Analysis verified
+- verification notes with autosave
 - outcome: Open, Hit, Miss, or Breakeven
 - load, copy, and delete actions
+- visible local save state, such as Saved locally or Save failed
 
-### Hit-Rate Data
+### Production Save Behaviour
 
-The Saved Cards page shows a local hit-rate summary:
+Saved-card edits use stable card IDs rather than list position. This protects the wrong card from being updated after deletion, import, or re-render.
 
-- Hit rate
-- Hit/Miss sample size
-- Breakeven count
-- Open count
+Notes autosave while typing and also save on blur/change. Outcome, checklist markers, verification status, and delete actions all write through the same ID-based persistence layer.
 
-Hit rate uses only closed Hit/Miss records. Breakeven is tracked separately.
+### Verified Hit-Rate Data
 
-### Backend-Ready Export
+The Saved Cards page shows a local accuracy summary:
 
-The app can export saved card data as JSON using the schema:
+- Verified hit rate
+- Verified Hit/Miss sample size
+- Verified Breakeven count
+- Needs verify count
+
+Hit rate uses only cards marked **Analysis verified** with a Hit or Miss outcome. Breakeven is tracked separately.
+
+### Data Verification and Backup
+
+The Saved Cards tab includes:
+
+- Verify data
+- Export text
+- Export JSON
+- Import JSON
+
+The JSON export schema is:
 
 ```text
-ict_dol_sweep_export_v2
+ict_dol_sweep_export_v3
 ```
 
-This gives a future backend a clean data payload for collecting hit-rate statistics. No backend is currently included.
+This gives a future backend a clean data payload for collecting verified hit-rate statistics. No hosted backend is currently included.
 
 ## How to Run Locally
 
@@ -120,7 +135,7 @@ It can also migrate older saved slips from:
 ict_slips_v1
 ```
 
-Data is not sent to a backend server. Clearing browser storage may remove saved cards.
+Data is not sent to a backend server. Clearing browser storage may remove saved cards, so users should use JSON export for backup.
 
 ## Known Limitations
 
