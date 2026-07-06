@@ -4,169 +4,43 @@ This document captures the main fixes and improvements for the ICT DOL Sweep Tra
 
 ## Implementation Status
 
-- **Completed in v0.2.0** — the app was simplified around one instrument, higher-timeframe draw on liquidity, and lower-timeframe sweep.
-- **Completed in v0.2.0** — saved slips became saved cards with checklist markers, notes, outcomes, and local hit-rate analytics.
-- **Completed in v0.3.0** — saved-card persistence was hardened with stable IDs, visible save status, verified-analysis markers, and verified hit-rate tracking.
-- **Completed in v0.4.0** — saved cards gained explicit **Save changes** and **Final save** buttons so users can separate draft edits from final verified analyses.
-- **Completed in v0.5.0** — the planner was converted into a page-by-page wizard interface with simple Back/Next navigation, and Saved Cards are accessible directly from the main page.
-- **Next pass** — GitHub Pages deployment, automated smoke tests, changelog, and optional backend/PWA work.
+- Completed in v0.2.0 — simplified the workflow around one instrument, draw on liquidity, and lower-timeframe sweep.
+- Completed in v0.3.0 — hardened saved-card persistence with stable IDs and visible status.
+- Completed in v0.4.0 — added Save changes and Final save separation.
+- Completed in v0.5.0 — converted the planner into a page-by-page wizard.
+- Completed in v0.7.8 — restored the home page, saved-card review page, final-save analytics, JSON backup tools, cache-safe app loading, GitHub Pages workflow, changelog, and smoke tests.
 
-## Completed Fixes
+## Completed in v0.7.8
 
-### 1. Simplify the core workflow
+### 1. Restore main page navigation
 
-**Status:** Completed
+Status: Completed
 
-The previous workflow included market phases, timing, MSS, and entry models. The user-facing planner has now been simplified to:
+The app now opens on a clear main page with:
 
-1. Instrument
-2. HTF draw on liquidity
-3. LTF liquidity sweep
-4. Focus output card
+- Start new analysis
+- Saved cards
+- Liquidity notes
 
-**Acceptance criteria met**
+### 2. Restore saved-card review pages
 
-- User focuses on one instrument only.
-- Output card only shows instrument, HTF draw, LTF sweep, and focus status.
-- Optional notes stay secondary and do not complicate the output.
+Status: Completed
 
-### 2. Page-by-page wizard interface
+Each saved card now opens into its own review page with:
 
-**Status:** Completed in v0.5.0
+- Card summary
+- Verification markers
+- Outcome selector
+- Verification notes
+- Load to planner
+- Copy
+- Save changes
+- Final save
+- Delete
 
-The planner now renders one screen at a time:
+### 3. Restore final-save analytics
 
-1. Main page
-2. Instrument
-3. HTF Draw on Liquidity
-4. LTF Sweep
-5. Review Focus Card
-6. Saved Cards
-7. Individual Saved Card Review
-
-**Acceptance criteria met**
-
-- User no longer needs to scroll through one long form.
-- Back and Next navigation controls guide the planner flow.
-- Each page focuses on one input group only.
-- Saved Cards can be opened directly from the main page.
-- Each saved card opens into its own review page.
-
-### 3. Clarify readiness logic
-
-**Status:** Completed
-
-Readiness now depends on:
-
-- instrument selected
-- HTF draw timeframe, pool, and level completed
-- LTF sweep timeframe, pool, and level completed
-- directional draw has an opposing-side sweep where applicable
-
-**Acceptance criteria met**
-
-- Readiness state matches the visible workflow.
-- Market-context complexity has been removed from the main planner.
-- The app clearly marks Draft vs Complete.
-
-### 4. Prevent incomplete or accidental saved slips
-
-**Status:** Completed
-
-Saved records are now marked as either:
-
-- `draft`
-- `complete`
-
-Drafts can still be saved, but they are clearly labelled.
-
-**Acceptance criteria met**
-
-- Incomplete cards are labelled Draft.
-- Complete cards are labelled Complete.
-- Save hint explains what is missing.
-
-### 5. Improve numeric validation
-
-**Status:** Completed
-
-Price-level fields now share consistent numeric sanitisation:
-
-- comma converted to decimal point
-- invalid characters removed
-- duplicate decimal points removed
-- `N/A` still accepted where typed directly
-
-**Acceptance criteria met**
-
-- Draw level and sweep level behave consistently.
-- Invalid numeric characters are cleaned before save.
-
-### 6. Saved card review flow
-
-**Status:** Completed
-
-Saved cards now allow review without returning to the planner.
-
-Each saved card review page includes:
-
-- HTF draw summary
-- LTF sweep summary
-- checklist markers:
-  - Draw respected
-  - LTF sweep confirmed
-  - Plan followed
-- verification notes field
-- outcome selector
-- Load, Copy, Save changes, Final save, Delete actions
-
-**Acceptance criteria met**
-
-- User can review the saved card directly.
-- Marker tick-state is saved per card after Save changes or Final save.
-- Notes are saved per card after Save changes or Final save.
-- Existing older saved-slip data can be migrated locally.
-
-### 7. Production-grade saved-card persistence
-
-**Status:** Completed in v0.3.0
-
-Saved-card edits use stable card IDs instead of array index position.
-
-**Fixes completed**
-
-- Added ID-based helpers for get, update, and delete.
-- Checklist, outcome, notes, load, copy, and delete target `card.id`.
-- Load and copy fetch the latest card before use.
-- Save failures show visible feedback.
-- Card status, draw side, sweep side, and alignment are recalculated during normalisation.
-
-**Acceptance criteria met**
-
-- Deleting or importing cards does not cause later edits to update the wrong card.
-- User can see when local save succeeds or fails.
-- Imported or migrated cards are rechecked before display.
-
-### 8. Save changes and Final save workflow
-
-**Status:** Completed in v0.4.0
-
-Saved-card edits are staged first. The user must click one of two buttons:
-
-- **Save changes** — stores edits locally but keeps the card out of the final hit-rate sample.
-- **Final save** — stores edits, marks the card as final-saved, and allows the outcome to count in the accuracy sample.
-
-**Acceptance criteria met**
-
-- Every saved card has a Save changes button.
-- Every saved card has a Final save button.
-- Unsaved edits are clearly shown with an Unsaved changes message.
-- Final save requires an outcome other than Open.
-- Editing a final-saved card and pressing Save changes returns it to a non-final state until Final save is pressed again.
-
-### 9. Final hit-rate analytics data
-
-**Status:** Completed locally in v0.5.0
+Status: Completed
 
 The Saved Cards page shows:
 
@@ -175,126 +49,84 @@ The Saved Cards page shows:
 - Final Breakeven count
 - Needs final save count
 
-Hit rate uses only final-saved cards with Hit or Miss outcome. Breakeven is tracked separately.
+Only final-saved Hit/Miss cards count in the hit-rate sample.
 
-**Acceptance criteria met**
+### 4. Fix persistence and migration
 
-- User can see final-saved prediction hit rate.
-- Open records are excluded from hit-rate calculation.
-- Non-final records do not enter the hit-rate sample.
-- Breakeven is separate.
-- JSON export creates a backend-ready payload.
+Status: Completed
 
-### 10. Modular file structure
-
-**Status:** Completed in v0.5.0
-
-The app was split into:
+Current saved cards are stored under:
 
 ```text
-ICT/
-├── index.html
-├── assets/
-│   ├── app.js
-│   └── styles.css
-├── README.md
-└── ISSUE_FIX_PLAN.md
+ict_cards_v078
 ```
 
-**Acceptance criteria met**
+Older local data is migrated from:
 
-- `index.html` is now a small entry point.
-- Styling lives in `assets/styles.css`.
-- App logic lives in `assets/app.js`.
-- The app remains static-site compatible.
+```text
+ict_cards_v077
+ict_cards_v076
+ict_dol_sweep_cards_v2
+ict_slips_v1
+```
 
-### 11. Export and import support
+### 5. Improve numeric validation
 
-**Status:** Completed locally
+Status: Completed
 
-The app supports:
+Price-level inputs now accept decimal values and N/A consistently. The inputs no longer rely on type=number, which previously blocked valid N/A entries.
 
-- plain-text export
-- JSON export
-- JSON import
-- data verification/normalisation
+### 6. Add export/import backup tools
+
+Status: Completed
+
+The Saved Cards page now includes:
+
+- Verify data
+- Export text
+- Export JSON
+- Import JSON
 
 The JSON export schema is:
 
 ```text
-ict_dol_sweep_export_v5
+ict_dol_sweep_export_v6
 ```
 
-**Acceptance criteria met**
+### 7. Add deployment and smoke-test support
 
-- User can export saved cards.
-- User can import valid exported cards.
-- Export includes analytics and final-saved card data for future backend collection.
+Status: Completed
+
+Added:
+
+- .github/workflows/pages.yml
+- .github/workflows/smoke.yml
+- tests/smoke.js
+- manifest.webmanifest
+- .nojekyll
+- CHANGELOG.md
 
 ## Remaining Work
 
-### 12. Add GitHub Pages deployment configuration
+### Optional backend collection
 
-**Status:** Planned
+Status: Planned
 
-**Fix**
+The app currently stores data locally only. A future backend could collect anonymised or account-linked final-saved outcomes, instrument-level hit rate, draw type hit rate, and sweep type hit rate.
 
-- Enable GitHub Pages from `main` branch root, or add a Pages workflow.
-- Add the live URL to the README once available.
+Any backend should include clear privacy controls before collecting trading-review data.
 
-### 13. Add automated smoke tests
+### Optional deeper browser automation
 
-**Status:** Planned
+Status: Planned
 
-**Fix**
+A deeper browser suite could cover full click-through flows, saved-card edits, JSON import/export, and final hit-rate calculation.
 
-Add a lightweight browser test suite covering:
+### Optional PWA icons and service worker
 
-- page load
-- main page saved-card navigation
-- Back/Next wizard navigation
-- draw selection
-- sweep validation
-- save/load card
-- Save changes button
-- Final save button
-- outcome update
-- final hit-rate calculation
-- JSON export/import
+Status: Planned
 
-### 14. Add changelog and formal versioning
-
-**Status:** Planned
-
-**Fix**
-
-- Add `CHANGELOG.md`.
-- Keep visible version number in footer.
-- Update version when storage schema or workflow changes.
-
-### 15. Optional backend collection
-
-**Status:** Planned
-
-The app currently stores data locally only. A future backend could collect:
-
-- anonymised or account-linked saved cards
-- final-saved hit/miss outcomes
-- instrument-level hit rate
-- draw type hit rate
-- sweep type hit rate
-
-Any backend should include clear privacy controls before collecting user trading-review data.
-
-### 16. Optional PWA support
-
-**Status:** Planned
-
-**Fix**
-
-- Add `manifest.webmanifest`.
-- Add icons.
-- Add optional service worker for offline cache.
+A manifest is included. Remaining optional PWA work includes icons and an optional offline service worker.
 
 ## Definition of Done
 
