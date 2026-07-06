@@ -9,6 +9,69 @@ This document captures the main fixes and improvements for the ICT DOL Sweep Tra
 - Completed in v0.4.0 — added Save changes and Final save separation.
 - Completed in v0.5.0 — converted the planner into a page-by-page wizard.
 - Completed in v0.7.8 — restored the home page, saved-card review page, final-save analytics, JSON backup tools, cache-safe app loading, GitHub Pages workflow, changelog, and smoke tests.
+- Completed in v0.7.9 — added bias, validation, invalidation, saved-card bias display, review markers, and an updated smoke test.
+
+## Completed in v0.7.9
+
+### 1. Add bias thesis inputs
+
+Status: Completed
+
+The planner now captures:
+
+- Bias: Bullish or Bearish
+- Validation of bias
+- Invalidation of bias
+
+### 2. Display bias on review and saved cards
+
+Status: Completed
+
+The focus card and saved-card review page display:
+
+- Bias
+- Bias read
+- Validation
+- Invalidation
+
+Saved-card rows also show the bias label where bias metadata exists.
+
+### 3. Add bias review markers
+
+Status: Completed
+
+Saved-card review pages now include:
+
+- Bias validated
+- Bias invalidated
+
+### 4. Preserve static-site compatibility
+
+Status: Completed
+
+The bias feature is implemented in:
+
+```text
+assets/bias-extension.js
+```
+
+The core app remains static-site compatible and can still be deployed through GitHub Pages.
+
+### 5. Update backup schema
+
+Status: Completed
+
+Bias-aware JSON export uses:
+
+```text
+ict_dol_sweep_export_v7
+```
+
+Bias metadata is stored locally under:
+
+```text
+ict_bias_card_meta_v1
+```
 
 ## Completed in v0.7.8
 
