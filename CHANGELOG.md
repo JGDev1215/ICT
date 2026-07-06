@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.9 — 2026-07-06
+
+### Added
+
+- Added a Bias thesis panel to the planner with Bullish/Bearish selection.
+- Added Validation of bias and Invalidation of bias inputs.
+- Added saved-card display support for bias.
+- Added Bias validated and Bias invalidated markers on the saved-card review page.
+- Added enriched JSON export schema ict_dol_sweep_export_v7.
+- Added assets/bias-extension.js and updated the smoke test to cover it.
+
+### Notes
+
+- Bias support is browser-local and educational only.
+- The bias extension preserves the existing ict_cards_v078 storage key and stores bias metadata under ict_bias_card_meta_v1.
+
 ## v0.7.8 — 2026-07-06
 
 ### Fixed
