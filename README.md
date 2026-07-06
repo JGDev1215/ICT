@@ -3,11 +3,13 @@
 A lightweight browser-based ICT planning tool for one focused job:
 
 1. Choose one instrument.
-2. Define up to three draws on liquidity.
-3. Confirm up to three potential lower-timeframe sweep areas.
-4. Optionally mark whether an FVG formed after the sweep.
-5. Save the focus card.
-6. Review, verify, final-save, export, and import saved cards.
+2. Define the directional bias: Bullish or Bearish.
+3. Record validation of bias and invalidation of bias.
+4. Define up to three draws on liquidity.
+5. Confirm up to three potential lower-timeframe sweep areas.
+6. Optionally mark whether an FVG formed after the sweep.
+7. Save the focus card.
+8. Review, verify, final-save, export, and import saved cards.
 
 > Educational tool only. This project does not provide financial advice, investment advice, or trade recommendations.
 
@@ -16,16 +18,17 @@ A lightweight browser-based ICT planning tool for one focused job:
 - App type: static HTML/CSS/JavaScript
 - Build step: none
 - Runtime dependencies: none
-- Data storage: browser localStorage
-- Current app version: v0.7.8
+- Data storage: browser localStorage and sessionStorage
+- Current app version: v0.7.9
 - Main entrypoint: index.html
 - Stylesheet: assets/styles.css
 - App logic: assets/app.js
+- Bias extension: assets/bias-extension.js
 - Deployment support: GitHub Pages workflow included
 
 ## Main Page
 
-The main page now gives the user three clear actions:
+The main page gives the user three clear actions:
 
 - Start new analysis
 - Saved cards
@@ -35,20 +38,40 @@ Saved cards can be opened directly without going through the planner.
 
 ## Planner Flow
 
-The planner is a page-by-page wizard:
+The planner is a page-by-page wizard with an added ICT bias thesis panel on the instrument step:
 
 1. Instrument
-2. Draw on liquidity stack
-3. Potential sweep stack and FVG
-4. Review focus card
+2. Bias thesis: Bullish or Bearish
+3. Validation of bias
+4. Invalidation of bias
+5. Draw on liquidity stack
+6. Potential sweep stack and FVG
+7. Review focus card
 
 Back and Next are navigation controls only. Missing inputs are shown as Draft, and the user can still save a draft card.
+
+## Bias Logic
+
+The bias fields are built around simple ICT liquidity logic:
+
+- Bullish bias: seek a sell-side liquidity raid below an old low, then rejection or displacement higher toward buy-side liquidity.
+- Bearish bias: seek a buy-side liquidity raid above an old high, then rejection or displacement lower toward sell-side liquidity.
+- Validation: the price action that confirms the chosen bias.
+- Invalidation: the price action that proves the chosen bias wrong.
+
+The saved-card review page adds:
+
+- Bias validated marker
+- Bias invalidated marker
 
 ## Saved Cards
 
 Each saved card opens into its own review page with:
 
 - Card summary
+- Bias summary
+- Bias validated marker
+- Bias invalidated marker
 - DOL respected marker
 - LTF sweep confirmed marker
 - FVG formed after sweep marker
@@ -89,16 +112,22 @@ The Saved Cards page includes:
 - Export JSON
 - Import JSON
 
-The JSON export schema is:
+The v0.7.9 JSON export schema is:
 
 ```text
-ict_dol_sweep_export_v6
+ict_dol_sweep_export_v7
 ```
 
 Current saved cards are stored under:
 
 ```text
 ict_cards_v078
+```
+
+Bias metadata is stored under:
+
+```text
+ict_bias_card_meta_v1
 ```
 
 The app migrates older browser-local cards from:
@@ -136,7 +165,7 @@ A lightweight static smoke test is included:
 node tests/smoke.js
 ```
 
-The test checks the main files, app syntax, storage key, and version references.
+The test checks the main files, app syntax, bias extension syntax, storage key, and version references.
 
 ## GitHub Pages Deployment
 
@@ -158,6 +187,7 @@ ICT/
 ├── manifest.webmanifest
 ├── assets/
 │   ├── app.js
+│   ├── bias-extension.js
 │   └── styles.css
 ├── tests/
 │   └── smoke.js
@@ -174,4 +204,5 @@ ICT/
 
 - No hosted backend yet.
 - Saved cards are browser-local only and are not synced across devices.
+- Bias support is currently implemented as a browser-side extension script layered over the static app.
 - The smoke test is static; it does not replace full browser automation.
