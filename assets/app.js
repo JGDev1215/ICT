@@ -59,6 +59,11 @@
   const biasOptions = ['Bullish','Bearish'];
   const marketTimeframes = ['Monthly','Weekly','Daily','4H','1H','15m'];
   const phaseOptions = ['Consolidation','Expansion','Retracement','Reversal'];
+  const dolIds = ['dol1','dol2','dol3'];
+  const riskDirections = ['Long','Short'];
+  const arrayTypes = ['SIBI','BISI','CE','OB','FVG','High','Low','Other'];
+  const routeBehaviors = ['Respect','Disrespect','Pending','Untested'];
+  const PRICE_DELAY_DISCLAIMER = 'Price data may be delayed by 5 minutes. You can override it manually before saving.';
   const marketPhaseKeys = {
     Monthly: 'monthly',
     Weekly: 'weekly',
@@ -115,6 +120,25 @@
   function uid(){
     if(typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
     return 'card_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  }
+
+  function isoNow(){
+    return new Date().toISOString();
+  }
+
+  function nyTimestamp(value){
+    const date = value ? new Date(value) : new Date();
+    if(Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).format(date).replace(',', '') + ' NY';
   }
 
   function isObject(v){
@@ -189,6 +213,66 @@
     if(!s || s === 'N/A') return null;
     const n = Number(s);
     return Number.isFinite(n) ? n : null;
+  }
+
+  function inferPriceSource(source){
+    const s = asText(source);
+    if(s) return s;
+    if(priceFetchState === 'ok') return 'hosted-yfinance';
+    return 'manual';
+  }
+
+  function priceSnapshot(fields, source, at){
+    const flds = normFields(fields || {});
+    const capturedAt = at || isoNow();
+    return {
+      price: flds.currentPrice || '',
+      symbol: flds.instrument || '',
+      source: flds.currentPrice ? inferPriceSource(source) : '',
+      capturedAt,
+      capturedAtNy: nyTimestamp(capturedAt),
+      delayDisclaimer: PRICE_DELAY_DISCLAIMER
+    };
+  }
+
+  function normPriceSnapshot(snapshot, fields, fallbackAt){
+    const s = isObject(snapshot) ? snapshot : {};
+    const flds = normFields(fields || {});
+    const capturedAt = asText(s.capturedAt) || fallbackAt || isoNow();
+    return {
+      price: clean(s.price || flds.currentPrice),
+      symbol: asText(s.symbol || flds.instrument),
+      source: asText(s.source) || (s.price || flds.currentPrice ? 'manual' : ''),
+      capturedAt,
+      capturedAtNy: asText(s.capturedAtNy) || nyTimestamp(capturedAt),
+      delayDisclaimer: asText(s.delayDisclaimer) || PRICE_DELAY_DISCLAIMER
+    };
+  }
+
+  function priceHistoryEvent(event, fields, source, at){
+    const snap = priceSnapshot(fields, source, at);
+    return Object.assign({id: uid(), event: asText(event) || 'saved-edit'}, snap);
+  }
+
+  function normPriceHistory(history, snapshot, fields, createdAt){
+    const source = Array.isArray(history) ? history : [];
+    const rows = source.map(row => {
+      const s = isObject(row) ? row : {};
+      const capturedAt = asText(s.capturedAt) || createdAt || isoNow();
+      return {
+        id: asText(s.id) || uid(),
+        event: ['created','saved-edit','final-save'].includes(s.event) ? s.event : 'saved-edit',
+        price: clean(s.price),
+        symbol: asText(s.symbol),
+        source: asText(s.source),
+        capturedAt,
+        capturedAtNy: asText(s.capturedAtNy) || nyTimestamp(capturedAt),
+        delayDisclaimer: asText(s.delayDisclaimer) || PRICE_DELAY_DISCLAIMER
+      };
+    });
+    if(rows.length) return rows;
+    const snap = normPriceSnapshot(snapshot, fields, createdAt);
+    return snap.price ? [Object.assign({id: uid(), event: 'created'}, snap)] : [];
   }
 
   function fmtNum(n){
@@ -326,6 +410,129 @@
     };
   }
 
+  function dolLabel(fields, id){
+    const flds = normFields(fields || {});
+    const n = Number(String(id || '').replace('dol', ''));
+    if(!n || n < 1 || n > 3) return 'No DOL selected';
+    const draw = flds['dol' + n + 'Draw'] || 'DOL ' + n;
+    const level = flds['dol' + n + 'Level'] || 'No level';
+    return draw + ' @ ' + level;
+  }
+
+  function firstDolId(fields){
+    const flds = normFields(fields || {});
+    return dolIds.find(id => flds[id + 'Level'] || flds[id + 'Draw']) || '';
+  }
+
+  function normActiveDolId(value, fields){
+    const id = dolIds.includes(value) ? value : firstDolId(fields);
+    return id || '';
+  }
+
+  function activeDol(fields, id){
+    const flds = normFields(fields || {});
+    const dolId = normActiveDolId(id, flds);
+    if(!dolId) return null;
+    const prefix = dolId;
+    const target = priceNumber(flds[prefix + 'Level']);
+    const current = priceNumber(flds.currentPrice);
+    const diff = target == null || current == null ? null : target - current;
+    return {
+      id: dolId,
+      label: dolLabel(flds, dolId),
+      draw: flds[prefix + 'Draw'],
+      timeframe: flds[prefix + 'Tf'],
+      level: flds[prefix + 'Level'],
+      target,
+      current,
+      diff,
+      direction: diff == null ? '' : diff > 0 ? 'upward delivery required' : diff < 0 ? 'downward delivery required' : 'at selected DOL',
+      status: flds[prefix + 'Taken'] ? 'Swept' : diff == null ? 'Pending' : Math.abs(diff) === 0 ? 'Tagged' : 'Pending',
+      distance: dolDistance(flds[prefix + 'Level'], flds.currentPrice)
+    };
+  }
+
+  function normRouteEvidence(rows){
+    const source = Array.isArray(rows) ? rows : [];
+    return source.map(row => {
+      const s = isObject(row) ? row : {};
+      const createdAt = asText(s.createdAt) || isoNow();
+      return {
+        id: asText(s.id) || uid(),
+        arrayType: arrayTypes.includes(s.arrayType) ? s.arrayType : '',
+        timeframe: liquidityTimeframes.includes(s.timeframe) ? s.timeframe : '',
+        level: asText(s.level),
+        behavior: routeBehaviors.includes(s.behavior) ? s.behavior : '',
+        notes: asText(s.notes),
+        createdAt,
+        createdAtNy: asText(s.createdAtNy) || nyTimestamp(createdAt)
+      };
+    }).filter(row => row.arrayType || row.timeframe || row.level || row.behavior || row.notes);
+  }
+
+  function blankRiskPlan(fields, activeDolId){
+    const flds = normFields(fields || {});
+    const dol = activeDol(flds, activeDolId);
+    return {
+      direction: '',
+      entryPrice: flds.currentPrice || '',
+      targetDolId: dol ? dol.id : '',
+      targetPrice: dol ? dol.level : '',
+      invalidationPrice: '',
+      riskPoints: '',
+      rewardPoints: '',
+      rr: '',
+      status: 'incomplete',
+      message: 'R:R unavailable - check entry, DOL target, invalidation, and direction.'
+    };
+  }
+
+  function calculateRiskPlan(plan, fields, activeDolId){
+    const p = isObject(plan) ? plan : {};
+    const flds = normFields(fields || {});
+    const targetDolId = normActiveDolId(p.targetDolId || activeDolId, flds);
+    const dol = activeDol(flds, targetDolId);
+    const direction = riskDirections.includes(p.direction) ? p.direction : '';
+    const entryPrice = clean(p.entryPrice || flds.currentPrice);
+    const targetPrice = clean(p.targetPrice || (dol && dol.level));
+    const invalidationPrice = clean(p.invalidationPrice);
+    const entry = priceNumber(entryPrice);
+    const target = priceNumber(targetPrice);
+    const stop = priceNumber(invalidationPrice);
+    const base = {
+      direction,
+      entryPrice,
+      targetDolId,
+      targetPrice,
+      invalidationPrice,
+      riskPoints: '',
+      rewardPoints: '',
+      rr: '',
+      status: 'incomplete',
+      message: 'R:R unavailable - check entry, DOL target, invalidation, and direction.'
+    };
+    if(!direction || entry == null || target == null || stop == null) return base;
+    const risk = direction === 'Long' ? entry - stop : stop - entry;
+    const reward = direction === 'Long' ? target - entry : entry - target;
+    if(risk <= 0 || reward <= 0){
+      return Object.assign(base, {
+        status: 'invalid',
+        message: 'Invalid R:R - target and invalidation must be on the correct side of entry/current price.'
+      });
+    }
+    return Object.assign(base, {
+      riskPoints: fmtNum(risk),
+      rewardPoints: fmtNum(reward),
+      rr: fmtNum(reward / risk) + 'R',
+      status: 'ready',
+      message: 'Potential R:R to selected DOL. Educational planning only; not a trade recommendation.'
+    });
+  }
+
+  function normRiskPlan(plan, fields, activeDolId){
+    return calculateRiskPlan(plan || blankRiskPlan(fields, activeDolId), fields, activeDolId);
+  }
+
   function comp(x){
     const count = p => {
       let done = 0;
@@ -351,19 +558,32 @@
 
   function normaliseCard(o){
     const source = isObject(o) ? o : {};
-    const now = new Date().toISOString();
+    const now = isoNow();
     const fields = normFields(source.fields || source);
+    const createdAt = asText(source.createdAt || source.savedAt) || now;
+    const updatedAt = asText(source.updatedAt || source.savedAt) || createdAt;
     const marketContext = normMarketContext(source.marketContext || (isObject(source.fields) ? source.fields.marketContext : null));
     const markerSource = isObject(source.markers) ? source.markers : {};
     const out = outcomes.includes(source.outcome) ? source.outcome : 'Open';
     const finalSaved = !!(source.finalSaved && finalOutcomes.includes(out));
+    const activeId = normActiveDolId(source.activeDolId, fields);
+    const snapshot = normPriceSnapshot(source.priceSnapshot, fields, createdAt);
+    const routeEvidence = normRouteEvidence(source.routeEvidence);
 
     return {
       id: String(source.id || uid()),
-      savedAt: asText(source.savedAt) || now,
-      updatedAt: asText(source.updatedAt || source.savedAt) || now,
+      savedAt: asText(source.savedAt) || createdAt,
+      createdAt,
+      updatedAt,
+      createdAtNy: asText(source.createdAtNy) || nyTimestamp(createdAt),
+      updatedAtNy: asText(source.updatedAtNy) || nyTimestamp(updatedAt),
       fields,
       marketContext,
+      activeDolId: activeId,
+      priceSnapshot: snapshot,
+      priceHistory: normPriceHistory(source.priceHistory, snapshot, fields, createdAt),
+      routeEvidence,
+      riskPlan: normRiskPlan(source.riskPlan, fields, activeId),
       markers: {
         biasValidated: !!(markerSource.biasValidated || source.biasValidated),
         biasInvalidated: !!(markerSource.biasInvalidated || source.biasInvalidated),
@@ -433,12 +653,21 @@
 
   function createBlankDraft(seed){
     const input = isObject(seed) ? seed : {};
+    const now = isoNow();
+    const fields = Object.assign(blank(), input.fields || {});
+    const activeId = normActiveDolId(input.activeDolId, fields);
     return normaliseCard({
       id: input.id || uid(),
-      savedAt: input.savedAt || new Date().toISOString(),
-      updatedAt: input.updatedAt || new Date().toISOString(),
-      fields: Object.assign(blank(), input.fields || {}),
+      savedAt: input.savedAt || now,
+      createdAt: input.createdAt || input.savedAt || now,
+      updatedAt: input.updatedAt || now,
+      fields,
       marketContext: normMarketContext(input.marketContext || (input.fields && input.fields.marketContext)),
+      activeDolId: activeId,
+      priceSnapshot: input.priceSnapshot || priceSnapshot(fields, input.priceSource || 'manual', input.createdAt || input.savedAt || now),
+      priceHistory: input.priceHistory || [priceHistoryEvent('created', fields, input.priceSource || 'manual', input.createdAt || input.savedAt || now)],
+      routeEvidence: input.routeEvidence || [],
+      riskPlan: input.riskPlan || blankRiskPlan(fields, activeId),
       markers: input.markers || {},
       outcome: input.outcome || 'Open',
       notes: input.notes || '',
@@ -454,10 +683,20 @@
     const next = Object.assign({}, card, p);
     if(p.fields) next.fields = Object.assign({}, card.fields || {}, p.fields);
     if(p.marketContext) next.marketContext = normMarketContext(p.marketContext);
+    if(p.routeEvidence) next.routeEvidence = normRouteEvidence(p.routeEvidence);
     if(p.markers) next.markers = Object.assign({}, card.markers || {}, p.markers);
     if(p.journal) next.journal = Object.assign({}, card.journal || {}, p.journal);
     if(p.risk) next.risk = Object.assign({}, card.risk || {}, p.risk);
-    next.updatedAt = p.updatedAt || new Date().toISOString();
+    next.activeDolId = normActiveDolId(p.activeDolId || next.activeDolId, next.fields);
+    next.riskPlan = normRiskPlan(p.riskPlan || next.riskPlan, next.fields, next.activeDolId);
+    next.createdAt = card.createdAt || card.savedAt || isoNow();
+    next.createdAtNy = card.createdAtNy || nyTimestamp(next.createdAt);
+    next.updatedAt = p.updatedAt || isoNow();
+    next.updatedAtNy = p.updatedAtNy || nyTimestamp(next.updatedAt);
+    const event = p.priceHistoryEvent || (p.finalSaved ? 'final-save' : 'saved-edit');
+    const priceSource = p.priceSource || 'manual';
+    next.priceSnapshot = p.priceSnapshot || priceSnapshot(next.fields, priceSource, next.updatedAt);
+    next.priceHistory = (card.priceHistory || []).concat([priceHistoryEvent(event, next.fields, priceSource, next.updatedAt)]);
     return normaliseCard(next);
   }
 
@@ -557,6 +796,7 @@
   let reviewId = '';
   let notice = '';
   let priceFetchState = '';
+  let lastPriceSource = 'manual';
 
   const api = {
     KEY,
@@ -570,6 +810,12 @@
     derivePotentialPhase,
     normaliseCard,
     normalizeCard: normaliseCard,
+    nyTimestamp,
+    priceSnapshot,
+    activeDol,
+    normRouteEvidence,
+    calculateRiskPlan,
+    normRiskPlan,
     priceNumber,
     dolDistance,
     priceSourceLabel,
@@ -790,6 +1036,39 @@
     return `<div class='price-map'>${header}<div class='price-map-body'>${above.map(row).join('')}<div class='price-map-current'><span>CURRENT PRICE</span><strong>${esc(fmtNum(current))}</strong></div>${below.map(row).join('')}</div>${notice}</div>`;
   }
 
+  function activeDolHtml(c){
+    const dol = activeDol(c.fields, c.activeDolId);
+    if(!dol) return `<div class='panel'><p class='hint'>Select or add a DOL target to focus the card.</p></div>`;
+    return `<div class='metric-grid'><div class='metric'><div class='m'>${esc(dol.level || '-')}</div><div class='l'>Active DOL</div></div><div class='metric'><div class='m'>${esc(dol.distance.absolute)}</div><div class='l'>Points to DOL</div></div><div class='metric'><div class='m'>${esc(dol.distance.percent)}</div><div class='l'>Percent distance</div></div><div class='metric'><div class='m'>${esc(dol.status)}</div><div class='l'>DOL status</div></div></div><div class='panel'><h3>${esc(dol.label)}</h3><p class='sub'>${esc(dol.direction || 'Direction unavailable')} · ${esc(dol.timeframe || 'No timeframe')}</p><p class='hint'>Focus card tracks where price is relative to the selected DOL and how price is delivering toward it.</p></div>`;
+  }
+
+  function timestampHtml(c){
+    const latest = c.priceSnapshot || {};
+    const created = c.priceHistory && c.priceHistory.length ? c.priceHistory[0] : latest;
+    return `<div class='grid'><div class='panel'>${line('Created', c.createdAtNy)}${line('Last edited', c.updatedAtNy)}</div><div class='panel'>${line('Current price', c.fields.currentPrice)}${line('Price at creation', created.price)}${line('Latest saved price', latest.price)}${line('Source', latest.source)}${line('Price source', priceSourceLabel())}<p class='hint'>${esc(PRICE_DELAY_DISCLAIMER)}</p></div></div>`;
+  }
+
+  function riskPlanHtml(c){
+    const rp = normRiskPlan(c.riskPlan, c.fields, c.activeDolId);
+    const statusClass = rp.status === 'ready' ? 'ok' : rp.status === 'invalid' ? 'bad' : 'warn';
+    const dolOptions = dolIds.map(id => {
+      const label = dolLabel(c.fields, id);
+      const has = c.fields[id + 'Level'] || c.fields[id + 'Draw'];
+      return has ? `<option value='${id}'${rp.targetDolId === id ? ' selected' : ''}>${esc(label)}</option>` : '';
+    }).join('');
+    return `<div class='status-row'>${pill(rp.status, statusClass)}${rp.rr ? pill(rp.rr, 'info') : ''}</div><div class='grid'><div><label class='label' for='riskDirection'>Planning direction</label><select class='in' id='riskDirection'>${options(riskDirections, rp.direction, '- direction -')}</select></div><div><label class='label' for='riskTargetDol'>Target DOL</label><select class='in' id='riskTargetDol'><option value=''>- target DOL -</option>${dolOptions}</select></div></div><div class='grid'><div><label class='label' for='riskEntryPrice'>Entry/current planning price</label><input class='in numeric' id='riskEntryPrice' inputmode='decimal' value='${esc(rp.entryPrice)}' placeholder='current or entry price'></div><div><label class='label' for='riskTargetPrice'>Target price</label><input class='in numeric' id='riskTargetPrice' inputmode='decimal' value='${esc(rp.targetPrice)}' placeholder='DOL target'></div></div><label class='label' for='riskInvalidation'>Invalidation / stop level</label><input class='in numeric' id='riskInvalidation' inputmode='decimal' value='${esc(rp.invalidationPrice)}' placeholder='price that invalidates idea'><div class='metric-grid'><div class='metric'><div class='m'>${esc(rp.riskPoints || '-')}</div><div class='l'>Risk points</div></div><div class='metric'><div class='m'>${esc(rp.rewardPoints || '-')}</div><div class='l'>Reward points</div></div><div class='metric'><div class='m'>${esc(rp.rr || '-')}</div><div class='l'>Potential R:R</div></div></div><p class='hint'>${esc(rp.message)}</p>`;
+  }
+
+  function routeEvidenceHtml(c){
+    const rows = c.routeEvidence && c.routeEvidence.length ? c.routeEvidence.map(row => `<div class='card-row'><div><div class='progress'>${esc(row.createdAtNy)}</div><h3>${esc([row.arrayType, row.behavior].filter(Boolean).join(' · ') || 'Route evidence')}</h3><p class='sub'>${esc(row.timeframe || 'No timeframe')} · ${esc(row.level || 'No level')}</p>${row.notes ? `<p class='hint'>${esc(row.notes)}</p>` : ''}</div>${pill(row.behavior || 'Pending', row.behavior === 'Respect' ? 'ok' : row.behavior === 'Disrespect' ? 'bad' : 'warn')}</div>`).join('') : `<div class='panel'><p class='hint'>No route evidence logged yet. Add respect/disrespect observations for SIBI, BISI, CE, OB, FVG, highs or lows.</p></div>`;
+    return `${rows}<div class='panel'><div class='progress'>Add route evidence</div><div class='grid'><div><label class='label' for='routeArrayType'>Array type</label><select class='in' id='routeArrayType'>${options(arrayTypes, '', '- array -')}</select></div><div><label class='label' for='routeBehavior'>Observed behavior</label><select class='in' id='routeBehavior'>${options(routeBehaviors, '', '- behavior -')}</select></div></div><div class='grid'><div><label class='label' for='routeTimeframe'>Timeframe</label><select class='in' id='routeTimeframe'>${options(liquidityTimeframes, '', '- timeframe -')}</select></div><div><label class='label' for='routeLevel'>Level / zone</label><input class='in' id='routeLevel' placeholder='price or range'></div></div><label class='label' for='routeNotes'>Observation notes</label><textarea class='in' id='routeNotes' placeholder='How is price getting to the DOL? Respecting/disrespecting SIBI, BISI, CE, etc.'></textarea></div>`;
+  }
+
+  function priceHistoryHtml(c){
+    const rows = (c.priceHistory || []).slice(-5).reverse().map(row => `<div class='card-row'><div><div class='progress'>${esc(row.event)} · ${esc(row.capturedAtNy)}</div><h3>${esc(row.price || 'No price')}</h3><p class='sub'>${esc(row.symbol || c.fields.instrument || 'No symbol')} · ${esc(row.source || 'manual')}</p></div>${pill(row.event, 'info')}</div>`).join('');
+    return rows || `<div class='panel'><p class='hint'>No price history saved yet.</p></div>`;
+  }
+
   function summary(x, ctx){
     return biasSummary(x) +
       line('Date', x.date) +
@@ -866,6 +1145,7 @@
     marketContextOpenTimeframes = selectedMarketTimeframes(marketContextDraft);
     plannerCardId = '';
     priceFetchState = '';
+    lastPriceSource = 'manual';
     step = 0;
   }
 
@@ -973,7 +1253,11 @@
     if(!c) return `<section class='screen'>${pageHead('Focus card', 'No Card Selected', 'Open a saved card or build a new plan.', 'saved')}<div class='panel'><p class='hint'>No local focus card is available.</p></div></section>`;
     reviewId = c.id;
     const status = cardStatus(c);
-    return `<section class='screen'>${pageHead('Focus card details', c.fields.instrument || 'No instrument', c.fields.session || 'No session', 'saved')}<div class='card-hero'><div class='progress'>${esc(c.fields.date || 'No date')}</div><h2>${esc(c.fields.instrument || 'No instrument')}</h2><p class='sub'>${esc(c.fields.session || 'No session')} · ${esc(c.fields.bias || 'No bias selected')}</p><div class='status-row'>${biasPill(c.fields.bias)}${c.finalSaved ? pill('Final saved', 'info') : pill(status === 'complete' ? 'Complete draft' : 'Draft', status === 'complete' ? 'ok' : 'warn')}${outcomePill(c.outcome)}</div><p class='hint'>Bias Determination For Session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price snapshot</div>${priceMapHtml(c.fields, {updatedAt: c.updatedAt})}${line('Date', c.fields.date)}${line('Time', c.fields.time)}${line('Current price', c.fields.currentPrice)}${line('Price source', priceSourceLabel())}</div><div class='card'><div class='progress'>Market Context</div>${marketContextRows(c.marketContext)}</div><div class='card'><div class='progress'>DOL stack</div>${stackRows(c.fields, 'dol', 'DOL')}</div><div class='card'><div class='progress'>Potential sweep stack</div>${stackRows(c.fields, 'sweep', 'Sweep')}</div><div class='grid'><div class='card'><div class='progress'>FVG</div><h3>${c.fields.fvg || c.markers.fvgFormed ? 'FVG recorded' : 'No FVG recorded'}</h3><p class='sub'>${esc(c.fields.fvgTf || 'No timeframe')}</p></div><div class='card'><div class='progress'>Risk estimate</div>${line('Planned risk %', c.risk.plannedRiskPct)}${line('Planned R', c.risk.plannedR)}${line('Max loss', c.risk.maxLoss)}</div></div><div class='card'><h3>Trade highlights</h3><div class='review-grid'>${check('mark_dolRespected', 'DOL respected', c.markers.dolRespected)}${check('mark_sweepConfirmed', 'LTF sweep confirmed', c.markers.sweepConfirmed)}${check('mark_fvgFormed', 'FVG formed after sweep', c.markers.fvgFormed)}${check('mark_planFollowed', 'Plan followed', c.markers.planFollowed)}</div><label class='label' for='reviewOutcome'>Outcome</label><select class='in' id='reviewOutcome'>${options(outcomes, c.outcome, '- outcome -')}</select><label class='label' for='reviewNotes'>Verification notes</label><textarea class='in' id='reviewNotes' placeholder='Add review notes'>${esc(c.notes)}</textarea><div class='grid'><div><label class='label' for='riskPct'>Planned risk %</label><input class='in' id='riskPct' value='${esc(c.risk.plannedRiskPct)}' placeholder='0.5'></div><div><label class='label' for='plannedR'>Planned R</label><input class='in' id='plannedR' value='${esc(c.risk.plannedR)}' placeholder='2R'></div></div><label class='label' for='maxLoss'>Max loss</label><input class='in' id='maxLoss' value='${esc(c.risk.maxLoss)}' placeholder='Optional amount'><label class='label' for='journalLesson'>Journal lesson</label><textarea class='in' id='journalLesson' placeholder='Lesson learned'>${esc(c.journal.lesson)}</textarea><label class='label' for='journalTags'>Behaviour tags</label><input class='in' id='journalTags' value='${esc(c.journal.tags.join(', '))}' placeholder='patient, followed plan'></div><div class='row-actions'><button class='btn' id='loadBtn'>Load to planner</button><button class='btn' data-route='timeline'>Timeline</button><button class='btn' id='copyBtn'>Copy</button><button class='btn' id='shareBtn'>Share</button><button class='btn' id='saveChangesBtn'>Save changes</button><button class='btn good' id='finalSaveBtn'>Final save</button><button class='btn danger' id='deleteBtn'>Delete</button></div></section>`;
+    const activeOptions = dolIds.map(id => {
+      const has = c.fields[id + 'Level'] || c.fields[id + 'Draw'];
+      return has ? `<option value='${id}'${c.activeDolId === id ? ' selected' : ''}>${esc(dolLabel(c.fields, id))}</option>` : '';
+    }).join('');
+    return `<section class='screen'>${pageHead('Focus card details', c.fields.instrument || 'No instrument', c.fields.session || 'No session', 'saved')}<div class='card-hero'><div class='progress'>${esc(c.fields.date || 'No date')}</div><h2>${esc(c.fields.instrument || 'No instrument')}</h2><p class='sub'>${esc(c.fields.session || 'No session')} · ${esc(c.fields.bias || 'No bias selected')}</p><div class='status-row'>${biasPill(c.fields.bias)}${c.finalSaved ? pill('Final saved', 'info') : pill(status === 'complete' ? 'Complete draft' : 'Draft', status === 'complete' ? 'ok' : 'warn')}${outcomePill(c.outcome)}</div><p class='hint'>Bias Determination For Session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map Dashboard</div>${priceMapHtml(c.fields, {updatedAt: c.updatedAt})}<p class='hint'>${esc(PRICE_DELAY_DISCLAIMER)}</p></div><div class='card'><div class='progress'>Focus DOL</div><label class='label' for='activeDol'>Active draw on liquidity</label><select class='in' id='activeDol'><option value=''>- active DOL -</option>${activeOptions}</select>${activeDolHtml(c)}</div><div class='card'><div class='progress'>Timestamps and price snapshot</div>${timestampHtml(c)}<label class='label' for='focusCurrentPrice'>Override latest price before saving</label><input class='in numeric' id='focusCurrentPrice' inputmode='decimal' value='${esc(c.fields.currentPrice)}' placeholder='manual current price'><p class='hint'>User must press Save changes or Final save to capture edits, timestamps and price data.</p></div><div class='card'><div class='progress'>Potential risk-to-reward</div>${riskPlanHtml(c)}</div><div class='card'><div class='progress'>Route to DOL / PD array evidence</div>${routeEvidenceHtml(c)}</div><div class='card'><div class='progress'>Market Context</div>${marketContextRows(c.marketContext)}</div><div class='card'><div class='progress'>DOL stack</div>${stackRows(c.fields, 'dol', 'DOL')}</div><div class='card'><div class='progress'>Potential sweep stack</div>${stackRows(c.fields, 'sweep', 'Sweep')}</div><div class='grid'><div class='card'><div class='progress'>FVG</div><h3>${c.fields.fvg || c.markers.fvgFormed ? 'FVG recorded' : 'No FVG recorded'}</h3><p class='sub'>${esc(c.fields.fvgTf || 'No timeframe')}</p></div><div class='card'><div class='progress'>Price history</div>${priceHistoryHtml(c)}</div></div><div class='card'><h3>Trade highlights</h3><div class='review-grid'>${check('mark_dolRespected', 'DOL respected', c.markers.dolRespected)}${check('mark_sweepConfirmed', 'LTF sweep confirmed', c.markers.sweepConfirmed)}${check('mark_fvgFormed', 'FVG formed after sweep', c.markers.fvgFormed)}${check('mark_planFollowed', 'Plan followed', c.markers.planFollowed)}</div><label class='label' for='reviewOutcome'>Outcome</label><select class='in' id='reviewOutcome'>${options(outcomes, c.outcome, '- outcome -')}</select><label class='label' for='reviewNotes'>Verification notes</label><textarea class='in' id='reviewNotes' placeholder='Add review notes'>${esc(c.notes)}</textarea><div class='grid'><div><label class='label' for='riskPct'>Planned risk %</label><input class='in' id='riskPct' value='${esc(c.risk.plannedRiskPct)}' placeholder='0.5'></div><div><label class='label' for='plannedR'>Planned R</label><input class='in' id='plannedR' value='${esc(c.risk.plannedR)}' placeholder='2R'></div></div><label class='label' for='maxLoss'>Max loss</label><input class='in' id='maxLoss' value='${esc(c.risk.maxLoss)}' placeholder='Optional amount'><label class='label' for='journalLesson'>Journal lesson</label><textarea class='in' id='journalLesson' placeholder='Lesson learned'>${esc(c.journal.lesson)}</textarea><label class='label' for='journalTags'>Behaviour tags</label><input class='in' id='journalTags' value='${esc(c.journal.tags.join(', '))}' placeholder='patient, followed plan'></div><div class='row-actions'><button class='btn' id='loadBtn'>Load to planner</button><button class='btn' data-route='timeline'>Timeline</button><button class='btn' id='copyBtn'>Copy</button><button class='btn' id='shareBtn'>Share</button><button class='btn' id='saveChangesBtn'>Save changes</button><button class='btn good' id='finalSaveBtn'>Final save</button><button class='btn danger' id='deleteBtn'>Delete</button></div></section>`;
   }
 
   function timeline(){
@@ -1047,9 +1331,9 @@
     sync();
     let c;
     if(plannerCardId && cards.find(x => x.id === plannerCardId)){
-      c = updateCard(plannerCardId, {fields: f, marketContext: marketContextDraft, finalSaved: false});
+      c = updateCard(plannerCardId, {fields: f, marketContext: marketContextDraft, finalSaved: false, priceSource: lastPriceSource, priceHistoryEvent: 'saved-edit'});
     } else {
-      c = createBlankDraft({fields: f, marketContext: marketContextDraft});
+      c = createBlankDraft({fields: f, marketContext: marketContextDraft, priceSource: lastPriceSource});
       saveCards([c].concat(cards));
       plannerCardId = c.id;
     }
@@ -1068,6 +1352,13 @@
       'Session: ' + (c.fields.session || '-'),
       'Current price: ' + (c.fields.currentPrice || '-'),
       'Price source: ' + priceSourceLabel(),
+      'Created NY: ' + (c.createdAtNy || '-'),
+      'Last edited NY: ' + (c.updatedAtNy || '-'),
+      'Active DOL: ' + (c.activeDolId ? dolLabel(c.fields, c.activeDolId) : '-'),
+      'Latest price snapshot: ' + ((c.priceSnapshot && c.priceSnapshot.price) || '-'),
+      'Potential R:R: ' + ((c.riskPlan && c.riskPlan.rr) || '-'),
+      'R:R status: ' + ((c.riskPlan && c.riskPlan.status) || '-'),
+      'Route evidence: ' + ((c.routeEvidence || []).map(r => [r.arrayType, r.timeframe, r.level, r.behavior, r.notes].filter(Boolean).join(' | ')).join(' ; ') || '-'),
       'Bias Determination For Session: ' + (c.fields.bias || '-'),
       'Session bias warning: Before 10:30am NY, full-day prediction is not supported by this tool.',
       'Market Context: ' + (marketContextText(c.marketContext) || '-'),
@@ -1159,7 +1450,8 @@
           const now = new Date();
           f.time = f.time || now.toTimeString().slice(0, 5);
           priceFetchState = 'ok';
-          const source = data.helperUrl === localPriceHelperUrl(symbol) ? 'local yfinance helper' : 'hosted yfinance API';
+          lastPriceSource = data.helperUrl === localPriceHelperUrl(symbol) ? 'local-yfinance' : 'hosted-yfinance';
+          const source = lastPriceSource === 'local-yfinance' ? 'local yfinance helper' : 'hosted yfinance API';
           notice = 'Price auto-detected from ' + source + '.';
           render();
         })
@@ -1219,7 +1511,10 @@
       const ev = n.tagName === 'SELECT' || n.type === 'checkbox' ? 'change' : 'input';
       n.addEventListener(ev, () => {
         sync();
-        if(n.id === 'currentPrice') priceFetchState = '';
+        if(n.id === 'currentPrice'){
+          priceFetchState = '';
+          lastPriceSource = 'manual';
+        }
         updatePlannerOutputs();
         syncMarketContextOpenTimeframes(marketContextDraft);
       });
@@ -1317,8 +1612,34 @@
         render();
         return;
       }
+      const fieldsPatch = Object.assign({}, focusDolTakenFields(c, q));
+      const focusPrice = q('focusCurrentPrice') ? clean(q('focusCurrentPrice').value) : c.fields.currentPrice;
+      if(focusPrice !== c.fields.currentPrice) fieldsPatch.currentPrice = focusPrice;
+      const activeDolId = normActiveDolId(q('activeDol') ? q('activeDol').value : c.activeDolId, Object.assign({}, c.fields, fieldsPatch));
+      const routeRows = c.routeEvidence.slice();
+      const routeRow = {
+        arrayType: q('routeArrayType') ? q('routeArrayType').value : '',
+        timeframe: q('routeTimeframe') ? q('routeTimeframe').value : '',
+        level: q('routeLevel') ? q('routeLevel').value.trim() : '',
+        behavior: q('routeBehavior') ? q('routeBehavior').value : '',
+        notes: q('routeNotes') ? q('routeNotes').value.trim() : ''
+      };
+      if(routeRow.arrayType || routeRow.timeframe || routeRow.level || routeRow.behavior || routeRow.notes){
+        const createdAt = isoNow();
+        routeRows.push(Object.assign({id: uid(), createdAt, createdAtNy: nyTimestamp(createdAt)}, routeRow));
+      }
+      const riskPlan = {
+        direction: q('riskDirection') ? q('riskDirection').value : c.riskPlan.direction,
+        targetDolId: q('riskTargetDol') ? q('riskTargetDol').value : activeDolId,
+        entryPrice: q('riskEntryPrice') ? q('riskEntryPrice').value : c.riskPlan.entryPrice,
+        targetPrice: q('riskTargetPrice') ? q('riskTargetPrice').value : c.riskPlan.targetPrice,
+        invalidationPrice: q('riskInvalidation') ? q('riskInvalidation').value : c.riskPlan.invalidationPrice
+      };
       updateCard(c.id, {
-        fields: focusDolTakenFields(c, q),
+        fields: fieldsPatch,
+        activeDolId,
+        routeEvidence: routeRows,
+        riskPlan,
         markers: {
           biasValidated: q('mark_biasValidated') ? !!q('mark_biasValidated').checked : !!c.markers.biasValidated,
           biasInvalidated: q('mark_biasInvalidated') ? !!q('mark_biasInvalidated').checked : !!c.markers.biasInvalidated,
@@ -1330,6 +1651,8 @@
         outcome,
         notes: q('reviewNotes').value.trim(),
         finalSaved: !!(finalSave && finalOutcomes.includes(outcome)),
+        priceSource: focusPrice !== c.fields.currentPrice ? 'manual' : (c.priceSnapshot.source || 'manual'),
+        priceHistoryEvent: finalSave ? 'final-save' : 'saved-edit',
         journal: {
           tags: arrayText(q('journalTags') ? q('journalTags').value : c.journal.tags),
           lesson: q('journalLesson') ? q('journalLesson').value.trim() : c.journal.lesson

@@ -139,6 +139,25 @@ The ladder shows:
 
 The module uses `.price-map`, `.price-map-current`, `.price-map-row.dol`, `.price-map-row.sweep`, `.price-map-empty`, `.price-map-loading`, and `.price-map-error` hooks.
 
+## Focus Card DOL Navigation
+
+Focus Card Details now starts with the Price Map Dashboard, then an Active DOL panel, timestamp/price snapshot panel, potential risk-to-reward panel, and Route to DOL / PD array evidence log.
+
+The Focus Card records:
+
+- Created timestamp in New York time.
+- Last edited timestamp in New York time.
+- Price snapshot at creation.
+- Latest saved price snapshot.
+- Price history for created, saved-edit, and final-save events.
+- Active DOL target.
+- Route evidence for SIBI, BISI, CE, OB, FVG, highs, lows, and other arrays.
+- Potential R:R to the selected DOL using entry/current price, target price, invalidation/stop, and direction.
+
+Typing does not update the saved card. The user must press Save changes or Final save to capture edits, timestamps, price data, route evidence, and risk metrics.
+
+Price data may be delayed by 5 minutes. Users can override price manually before saving.
+
 ## Bias Logic
 
 The bias field is session-scoped. It is a planning label for the selected session, not a whole-day prediction.

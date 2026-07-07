@@ -21,14 +21,19 @@ const changelog = read('CHANGELOG.md');
 
 ok(index.includes('ICT DOL Sweep Tracker v0.7.9'), 'index version missing');
 ok(!index.includes('assets/bias-extension.js'), 'obsolete bias extension should not be loaded');
-ok(index.includes('assets/app.js?v=0.7.9-price-api-20260707'), 'cache-safe app reference missing');
-ok(index.includes('assets/styles.css?v=0.7.9-price-api-20260707'), 'cache-safe style reference missing');
+ok(index.includes('assets/app.js?v=0.7.9-focus-card-dol-risk-20260707'), 'cache-safe app reference missing');
+ok(index.includes('assets/styles.css?v=0.7.9-focus-card-dol-risk-20260707'), 'cache-safe style reference missing');
 ok(index.includes("navigator.serviceWorker.register('./service-worker.js')"), 'service worker registration missing');
 ok(appSource.includes("const KEY = 'ict_cards_v078'"), 'storage key missing');
 ok(appSource.includes('function normaliseCard'), 'normaliseCard helper missing');
 ok(appSource.includes('function dolDistance'), 'dolDistance helper missing');
 ok(appSource.includes('function priceMapLevels'), 'price map levels helper missing');
 ok(appSource.includes('function priceMapHtml'), 'price map html helper missing');
+ok(appSource.includes('function nyTimestamp'), 'NY timestamp helper missing');
+ok(appSource.includes('function activeDol'), 'active DOL helper missing');
+ok(appSource.includes('function calculateRiskPlan'), 'risk-to-reward helper missing');
+ok(appSource.includes('function routeEvidenceHtml'), 'route evidence UI missing');
+ok(appSource.includes('PRICE_DELAY_DISCLAIMER'), 'price delay disclaimer missing');
 ok(appSource.includes('Auto-detect price'), 'price auto-detect button missing');
 ok(appSource.includes('HOSTED_PRICE_API_BASE'), 'hosted price API base missing');
 ok(appSource.includes('https://ict-price-api.vercel.app/api/price'), 'default hosted price API URL missing');
@@ -83,8 +88,8 @@ ok(changelog.includes('Price Map ladder'), 'changelog price map support entry mi
 const manifestJson = JSON.parse(manifest);
 ok(manifestJson.name === 'ICT DOL Sweep Tracker', 'manifest name invalid');
 ok(manifestJson.theme_color === '#FAFAF8', 'manifest theme color invalid');
-ok(serviceWorker.includes('ict-sweep-tracker-v079-price-api-20260707'), 'service worker cache name missing');
-ok(serviceWorker.includes('assets/app.js?v=0.7.9-price-api-20260707'), 'service worker app cache missing');
+ok(serviceWorker.includes('ict-sweep-tracker-v079-focus-card-dol-risk-20260707'), 'service worker cache name missing');
+ok(serviceWorker.includes('assets/app.js?v=0.7.9-focus-card-dol-risk-20260707'), 'service worker app cache missing');
 ok(serviceWorker.includes("url.pathname.startsWith('/api/')"), 'service worker should bypass API requests');
 ok(!serviceWorker.includes('assets/bias-extension.js'), 'service worker should not cache obsolete bias extension');
 ok(priceServer.includes('import yfinance as yf'), 'yfinance helper missing');
@@ -244,6 +249,11 @@ ok(Array.isArray(migratedCards[0].journal.tags), 'journal tags default invalid')
 ok(migratedCards[0].risk.plannedRiskPct === '', 'risk default invalid');
 ok(migratedCards[0].marketContext.Monthly.phase === '', 'legacy market context default invalid');
 ok(migratedCards[0].marketContext['15m'].potentialNextPhase === '', 'legacy lower timeframe context default invalid');
+ok(migratedCards[0].createdAtNy.includes('NY'), 'legacy card should receive NY created timestamp');
+ok(migratedCards[0].updatedAtNy.includes('NY'), 'legacy card should receive NY updated timestamp');
+ok(migratedCards[0].priceSnapshot.price === '20000', 'legacy card price snapshot invalid');
+ok(migratedCards[0].priceHistory.length >= 1, 'legacy card price history missing');
+ok(migratedCards[0].activeDolId === 'dol1', 'legacy card active DOL should default to first DOL');
 
 const metricsFixture = runApp();
 const api = metricsFixture.context.ICTSweepState;
@@ -303,6 +313,19 @@ ok(priceCard.fields.dol1Confidence === 'High', 'DOL confidence compatibility fie
 ok(priceCard.fields.dol1HitTime === 'NY AM', 'DOL hit-time compatibility field was not preserved');
 ok(priceCard.fields.dol1Tf === 'Daily', 'DOL timeframe normalization failed');
 ok(priceCard.fields.dol1Taken === true, 'DOL taken normalization failed');
+ok(priceCard.activeDolId === 'dol1', 'active DOL default invalid');
+ok(priceCard.priceSnapshot.price === '20000', 'price snapshot should use current price');
+ok(priceCard.priceSnapshot.delayDisclaimer.includes('delayed by 5 minutes'), 'price snapshot disclaimer missing');
+ok(priceCard.priceHistory[0].event === 'created', 'created price history event missing');
+ok(api.activeDol(priceCard.fields, priceCard.activeDolId).direction === 'upward delivery required', 'active DOL direction invalid');
+const longRisk = api.calculateRiskPlan({direction: 'Long', entryPrice: '20000', targetPrice: '20250', invalidationPrice: '19950'}, priceCard.fields, 'dol1');
+ok(longRisk.status === 'ready' && longRisk.rr === '5R', 'long R:R calculation invalid');
+const shortRisk = api.calculateRiskPlan({direction: 'Short', entryPrice: '20000', targetPrice: '19850', invalidationPrice: '20050'}, priceCard.fields, 'dol1');
+ok(shortRisk.status === 'ready' && shortRisk.rr === '3R', 'short R:R calculation invalid');
+const invalidRisk = api.calculateRiskPlan({direction: 'Long', entryPrice: '20000', targetPrice: '19850', invalidationPrice: '19950'}, priceCard.fields, 'dol1');
+ok(invalidRisk.status === 'invalid', 'invalid R:R should be blocked');
+const routeEvidence = api.normRouteEvidence([{arrayType: 'BISI', timeframe: '5m', level: '20010-20020', behavior: 'Respect', notes: 'CE held.'}]);
+ok(routeEvidence.length === 1 && routeEvidence[0].createdAtNy.includes('NY'), 'route evidence normalization invalid');
 const distance = api.dolDistance(priceCard.fields.dol1Level, priceCard.fields.currentPrice);
 ok(distance.absolute === '250', 'DOL absolute distance invalid');
 ok(distance.percent === '1.25%', 'DOL percent distance invalid');
@@ -324,6 +347,9 @@ ok(takenUpdated.fields.instrument === 'MNQ', 'focus DOL taken patch should not r
 
 const updated = api.updateCard('hit', {
   fields: {bias: 'Bearish', biasValidation: 'Buy-side sweep confirmed.'},
+  activeDolId: 'dol1',
+  routeEvidence,
+  riskPlan: {direction: 'Long', entryPrice: '20000', targetPrice: '20250', invalidationPrice: '19950'},
   marketContext: {Daily: {phase: 'Retracement', note: 'Corrective delivery.', potentialNextPhase: ''}},
   markers: {biasInvalidated: true},
   journal: {tags: ['review', 'nyam'], lesson: 'Wait for confirmation.'},
@@ -334,6 +360,9 @@ ok(updated.marketContext.Daily.potentialNextPhase === 'Expansion', 'updateCard d
 ok(updated.markers.biasInvalidated === true, 'updateCard did not merge markers');
 ok(updated.journal.tags.length === 2, 'updateCard did not preserve journal tags');
 ok(updated.risk.maxLoss === '$50', 'updateCard did not preserve risk');
+ok(updated.routeEvidence.length === 1 && updated.routeEvidence[0].arrayType === 'BISI', 'updateCard did not preserve route evidence');
+ok(updated.riskPlan.status === 'ready' && updated.riskPlan.rr === '5R', 'updateCard did not calculate risk plan');
+ok(updated.priceHistory.length >= 2, 'updateCard should append price history');
 ok(api.toggleFavorite('hit').favorite === false, 'toggleFavorite did not flip favorite');
 ok(api.deleteCard('draft-miss') === true, 'deleteCard did not report deletion');
 ok(!api.getCards().find(card => card.id === 'draft-miss'), 'deleteCard did not remove card');
@@ -344,6 +373,8 @@ ok(exported.analytics.sample === 2, 'export analytics invalid');
 ok(exported.cards.find(card => card.id === 'hit').journal.lesson === 'Wait for confirmation.', 'export lost journal');
 ok(exported.cards.find(card => card.id === 'hit').risk.maxLoss === '$50', 'export lost risk');
 ok(exported.cards.find(card => card.id === 'hit').marketContext.Daily.phase === 'Retracement', 'export lost market context');
+ok(exported.cards.find(card => card.id === 'hit').routeEvidence[0].arrayType === 'BISI', 'export lost route evidence');
+ok(exported.cards.find(card => card.id === 'hit').riskPlan.rr === '5R', 'export lost risk plan');
 
 api.saveCards([]);
 const imported = api.importCards(JSON.stringify(exported));
@@ -353,6 +384,8 @@ ok(roundTrip.fields.bias === 'Bearish', 'import lost bias');
 ok(roundTrip.journal.lesson === 'Wait for confirmation.', 'import lost journal lesson');
 ok(roundTrip.risk.plannedR === '2R', 'import lost planned R');
 ok(roundTrip.marketContext.Daily.potentialNextPhase === 'Expansion', 'import lost market context');
+ok(roundTrip.routeEvidence[0].behavior === 'Respect', 'import lost route evidence');
+ok(roundTrip.riskPlan.status === 'ready', 'import lost risk plan');
 ok(roundTrip.favorite === false, 'import lost favorite state');
 
 const beforeInvalidImportCount = api.getCards().length;
@@ -377,6 +410,8 @@ ok(blankDraft.finalSaved === false, 'blank draft finalSaved invalid');
 ok(blankDraft.fields.instrument === '', 'blank draft fields invalid');
 ok(Array.isArray(blankDraft.journal.tags), 'blank draft journal invalid');
 ok(blankDraft.marketContext.Monthly.phase === '', 'blank draft market context invalid');
+ok(blankDraft.createdAtNy.includes('NY') && blankDraft.updatedAtNy.includes('NY'), 'blank draft NY timestamps invalid');
+ok(Array.isArray(blankDraft.priceHistory), 'blank draft price history invalid');
 
 const routes = runApp();
 const routeApi = routes.context.ICTSweepState;
@@ -449,6 +484,9 @@ const routeCard = routeApi.createBlankDraft({
     '15m': {phase: 'Expansion', note: '15m displacement.', potentialNextPhase: ''}
   },
   markers: {biasValidated: true, dolRespected: true, sweepConfirmed: true},
+  activeDolId: 'dol1',
+  routeEvidence: [{arrayType: 'BISI', timeframe: '5m', level: '20020', behavior: 'Respect', notes: 'BISI CE respected toward DOL.'}],
+  riskPlan: {direction: 'Long', entryPrice: '20000', targetDolId: 'dol1', targetPrice: '20250', invalidationPrice: '19950'},
   outcome: 'Hit',
   finalSaved: true,
   favorite: true,
@@ -466,7 +504,19 @@ ok(routes.appNode.innerHTML.includes('Export JSON'), 'saved export action missin
 
 routeApi.go('focus', {id: 'route-card'});
 ok(routes.appNode.innerHTML.includes('Focus card details'), 'focus route did not render');
-ok(routes.appNode.innerHTML.includes('Price snapshot'), 'focus price snapshot missing');
+ok(routes.appNode.innerHTML.includes('Price Map Dashboard'), 'focus price map dashboard missing');
+ok(routes.appNode.innerHTML.indexOf('Price Map Dashboard') < routes.appNode.innerHTML.indexOf('Market Context'), 'price map dashboard should render before market context');
+ok(routes.appNode.innerHTML.includes('Focus DOL'), 'focus active DOL panel missing');
+ok(routes.appNode.innerHTML.includes('Active draw on liquidity'), 'active DOL selector missing');
+ok(routes.appNode.innerHTML.includes('Potential risk-to-reward'), 'focus risk-to-reward panel missing');
+ok(routes.appNode.innerHTML.includes('Potential R:R'), 'potential R:R label missing');
+ok(routes.appNode.innerHTML.includes('5R'), 'calculated R:R missing from focus panel');
+ok(routes.appNode.innerHTML.includes('Route to DOL / PD array evidence'), 'route evidence panel missing');
+ok(routes.appNode.innerHTML.includes('BISI CE respected toward DOL.'), 'route evidence note missing');
+ok(routes.appNode.innerHTML.includes('Timestamps and price snapshot'), 'timestamp panel missing');
+ok(routes.appNode.innerHTML.includes('Last edited'), 'last edited timestamp missing');
+ok(routes.appNode.innerHTML.includes('Price data may be delayed by 5 minutes'), 'price delay disclaimer missing');
+ok(routes.appNode.innerHTML.includes('focusCurrentPrice'), 'manual price override field missing');
 ok(routes.appNode.innerHTML.includes('Current price'), 'focus current price missing');
 ok(routes.appNode.innerHTML.includes('Distance: 250 (1.25%)'), 'focus DOL distance missing');
 ok(routes.appNode.innerHTML.includes('Timeframe: Daily'), 'focus DOL timeframe missing');
@@ -485,6 +535,8 @@ ok(!routes.appNode.innerHTML.includes('Bias invalidated'), 'focus should not ren
 ok(routes.appNode.innerHTML.includes('Final save'), 'focus final save action missing');
 ok(routes.appNode.innerHTML.includes('journalLesson'), 'focus journal field missing');
 ok(routes.appNode.innerHTML.includes('riskPct'), 'focus risk field missing');
+ok(routes.appNode.innerHTML.includes('riskInvalidation'), 'risk invalidation field missing');
+ok(routes.appNode.innerHTML.includes('routeArrayType'), 'route evidence input missing');
 
 routeApi.go('timeline', {id: 'route-card'});
 ok(routes.appNode.innerHTML.includes('Execution timeline'), 'timeline route did not render');
