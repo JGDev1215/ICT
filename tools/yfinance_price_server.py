@@ -3,6 +3,7 @@
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
+from datetime import datetime, timezone
 import json
 
 
@@ -13,10 +14,15 @@ ALIASES = {
     "ES": "ES=F",
     "MYM": "MYM=F",
     "YM": "YM=F",
+    "RTY": "RTY=F",
+    "M2K": "M2K=F",
     "MGC": "MGC=F",
     "GC": "GC=F",
     "CL": "CL=F",
     "BTCUSD": "BTC-USD",
+    "BTC": "BTC-USD",
+    "ETHUSD": "ETH-USD",
+    "ETH": "ETH-USD",
 }
 
 
@@ -48,7 +54,11 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"error": "Install yfinance with: python3 -m pip install yfinance"}, 500)
             return
 
-        yf_symbol = ALIASES.get(symbol, symbol)
+        yf_symbol = ALIASES.get(symbol)
+        if not yf_symbol:
+            self.send_json({"error": "unsupported symbol", "symbol": symbol, "supported": sorted(ALIASES.keys())}, 400)
+            return
+
         try:
             ticker = yf.Ticker(yf_symbol)
             hist = ticker.history(period="1d", interval="1m")
@@ -59,7 +69,14 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"error": str(exc), "symbol": symbol, "yfSymbol": yf_symbol}, 502)
             return
 
-        self.send_json({"symbol": symbol, "yfSymbol": yf_symbol, "price": price})
+        self.send_json({
+            "symbol": symbol,
+            "yfSymbol": yf_symbol,
+            "price": price,
+            "source": "yfinance",
+            "cached": False,
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        })
 
     def send_json(self, body, status=200):
         data = json.dumps(body).encode("utf-8")

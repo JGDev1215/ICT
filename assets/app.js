@@ -13,8 +13,11 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const doc = root.document || null;
   const app = doc ? doc.getElementById('app') : null;
+  const HOSTED_PRICE_API_BASE = 'https://ict-price-api.vercel.app/api/price';
+  const LOCAL_PRICE_API_BASE = 'http://127.0.0.1:8765/price';
+  const PRICE_TIMEOUT_MS = 8000;
 
-  const instruments = ['MNQ','NQ','MES','ES','MYM','YM','MGC','GC','CL','EURUSD','GBPUSD','BTCUSD'];
+  const instruments = ['MNQ','NQ','MES','ES','MYM','YM','RTY','M2K','MGC','GC','CL','BTCUSD','ETHUSD','EURUSD','GBPUSD'];
   const draws = [
     'Previous day high (PDH)',
     'Previous day low (PDL)',
@@ -212,11 +215,62 @@
   }
 
   function priceSourceLabel(){
-    return 'Manual/static entry; optional local yfinance helper when running on this Mac.';
+    const configured = priceApiBase();
+    const hosted = configured === HOSTED_PRICE_API_BASE ? 'Vercel yfinance API' : 'configured yfinance API';
+    return 'Manual/static entry; optional ' + hosted + ' with local helper fallback.';
+  }
+
+  function trimSlash(s){
+    return clean(s).replace(/\/+$/, '');
+  }
+
+  function priceApiBase(){
+    const configured = trimSlash(root.ICT_PRICE_API_BASE || '');
+    if(configured) return configured;
+    if(root.location && /\.vercel\.app$/.test(root.location.hostname || '')){
+      return trimSlash(root.location.origin) + '/api/price';
+    }
+    return HOSTED_PRICE_API_BASE;
   }
 
   function priceHelperUrl(symbol){
-    return 'http://127.0.0.1:8765/price?symbol=' + encodeURIComponent(symbol || '');
+    return priceApiBase() + '?symbol=' + encodeURIComponent(symbol || '');
+  }
+
+  function localPriceHelperUrl(symbol){
+    return LOCAL_PRICE_API_BASE + '?symbol=' + encodeURIComponent(symbol || '');
+  }
+
+  function priceHelperUrls(symbol){
+    const urls = [priceHelperUrl(symbol)];
+    const local = localPriceHelperUrl(symbol);
+    if(!urls.includes(local)) urls.push(local);
+    return urls;
+  }
+
+  function fetchJsonWithTimeout(url, ms){
+    if(typeof fetch !== 'function') return Promise.reject(new Error('fetch unavailable'));
+    const hasAbort = typeof AbortController === 'function';
+    const controller = hasAbort ? new AbortController() : null;
+    const timer = hasAbort ? setTimeout(() => controller.abort(), ms) : null;
+    return fetch(url, controller ? {signal: controller.signal} : undefined)
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('price helper unavailable')))
+      .finally(() => {
+        if(timer) clearTimeout(timer);
+      });
+  }
+
+  function fetchPrice(symbol){
+    const urls = priceHelperUrls(symbol);
+    let index = 0;
+    const next = () => fetchJsonWithTimeout(urls[index], PRICE_TIMEOUT_MS)
+      .then(data => Object.assign({}, data, {helperUrl: urls[index]}))
+      .catch(err => {
+        index += 1;
+        if(index >= urls.length) throw err;
+        return next();
+      });
+    return next();
   }
 
   function derivePotentialPhase(phase){
@@ -519,7 +573,10 @@
     priceNumber,
     dolDistance,
     priceSourceLabel,
+    priceApiBase,
     priceHelperUrl,
+    localPriceHelperUrl,
+    priceHelperUrls,
     selectedMarketTimeframes,
     focusDolTakenFields,
     priceMapLevels,
@@ -886,7 +943,7 @@
     const c = comp(f);
     const instrumentInput = `<label class='label' for='instrument'>Instrument</label><input class='in' id='instrument' list='inst' value='${esc(f.instrument)}' placeholder='Select or type instrument'><datalist id='inst'>${instruments.map(x => `<option value='${esc(x)}'>`).join('')}</datalist>`;
     const status = raw('Status', c.ok ? pill('Complete', 'ok') : pill('Draft', 'warn'));
-    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats your inputs only. It does not call external AI, forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button></div><p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses an optional local yfinance helper at 127.0.0.1:8765. GitHub Pages remains manual-only.</p><label class='label'>Bias Determination For Session</label><div class='segmented' role='group' aria-label='Bias Determination For Session'>${biasOptions.map(b => `<button class='segmented-option' data-bias='${b}' aria-pressed='${f.bias === b ? 'true' : 'false'}'>${esc(b)}</button>`).join('')}</div><p class='hint'>Session bias is a planning label for the selected session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Market Context</div><h3>Phase map by timeframe</h3><p class='sub'>Record observed context only. Potential next phase is a conservative planning note, not a trade signal or forecast.</p>${marketContextPlanner(marketContextDraft)}</div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}<div class='panel'><h3>FVG Formation</h3><label class='check-row'><input type='checkbox' id='fvg' ${f.fvg ? 'checked' : ''}> <span>FVG formed after sweep</span></label>${select('fvgTf', 'FVG timeframe', tfs, '- FVG timeframe -')}</div></div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' style='bottom:var(--bottom-nav-height)'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
+    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats your inputs only. It does not call external AI, forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button></div><p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the hosted yfinance price API when configured, then falls back to the local helper at 127.0.0.1:8765.</p><label class='label'>Bias Determination For Session</label><div class='segmented' role='group' aria-label='Bias Determination For Session'>${biasOptions.map(b => `<button class='segmented-option' data-bias='${b}' aria-pressed='${f.bias === b ? 'true' : 'false'}'>${esc(b)}</button>`).join('')}</div><p class='hint'>Session bias is a planning label for the selected session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Market Context</div><h3>Phase map by timeframe</h3><p class='sub'>Record observed context only. Potential next phase is a conservative planning note, not a trade signal or forecast.</p>${marketContextPlanner(marketContextDraft)}</div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}<div class='panel'><h3>FVG Formation</h3><label class='check-row'><input type='checkbox' id='fvg' ${f.fvg ? 'checked' : ''}> <span>FVG formed after sweep</span></label>${select('fvgTf', 'FVG timeframe', tfs, '- FVG timeframe -')}</div></div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' style='bottom:var(--bottom-nav-height)'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
   }
 
   function saved(){
@@ -1095,20 +1152,20 @@
       }
       priceFetchState = 'loading';
       render();
-      fetch(priceHelperUrl(symbol))
-        .then(res => res.ok ? res.json() : Promise.reject(new Error('price helper unavailable')))
+      fetchPrice(symbol)
         .then(data => {
           if(!data || data.price == null) throw new Error('no price returned');
           f.currentPrice = clean(String(data.price));
           const now = new Date();
           f.time = f.time || now.toTimeString().slice(0, 5);
           priceFetchState = 'ok';
-          notice = 'Price auto-detected from local yfinance helper.';
+          const source = data.helperUrl === localPriceHelperUrl(symbol) ? 'local yfinance helper' : 'hosted yfinance API';
+          notice = 'Price auto-detected from ' + source + '.';
           render();
         })
         .catch(() => {
           priceFetchState = 'error';
-          notice = 'Auto-detect unavailable. Start tools/yfinance_price_server.py or enter price manually.';
+          notice = 'Auto-detect unavailable. Check the hosted price API, start tools/yfinance_price_server.py, or enter price manually.';
           render();
         });
     });

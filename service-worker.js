@@ -1,10 +1,10 @@
-const CACHE_NAME = 'ict-sweep-tracker-v079-price-map-visible-20260707';
+const CACHE_NAME = 'ict-sweep-tracker-v079-price-api-20260707';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './assets/styles.css?v=0.7.9-price-map-visible-20260707',
-  './assets/app.js?v=0.7.9-price-map-visible-20260707'
+  './assets/styles.css?v=0.7.9-price-api-20260707',
+  './assets/app.js?v=0.7.9-price-api-20260707'
 ];
 
 self.addEventListener('install', event => {
@@ -25,6 +25,8 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if(event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  if(url.pathname.startsWith('/api/')) return;
   event.respondWith(
     caches.match(event.request)
       .then(cached => cached || fetch(event.request))

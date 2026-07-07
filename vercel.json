@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/price.py": {
+      "runtime": "python3.12"
+    }
+  }
+}

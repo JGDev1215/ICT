@@ -23,6 +23,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 - Main entrypoint: index.html
 - Stylesheet: assets/styles.css
 - App logic: assets/app.js
+- Optional hosted price API: api/price.py for Vercel Python Functions
 - Legacy compatibility file: Legacy/assets/bias-extension.js is retained but no longer loaded by index.html
 - Deployment support: GitHub Pages workflow included
 
@@ -56,7 +57,7 @@ The planner captures:
 
 Missing inputs are shown as Draft, and the user can still save an incomplete draft card.
 
-Current price can be entered manually. When running locally, the app can also call the optional yfinance helper:
+Current price can be entered manually. The app can also call an optional hosted yfinance price API on Vercel. If the hosted API is unavailable, it falls back to the local helper when running on this Mac:
 
 ```bash
 python3 -m venv .venv
@@ -64,7 +65,62 @@ python3 -m venv .venv
 .venv/bin/python tools/yfinance_price_server.py
 ```
 
-Then use `Auto-detect price` in the Planner. GitHub Pages remains manual-only because it cannot run Python/yfinance in the browser.
+Then use `Auto-detect price` in the Planner.
+
+## Hosted Price API
+
+GitHub Pages serves the static frontend and cannot run Python or yfinance server-side. The optional hosted price lookup is implemented as a Vercel Python Function at:
+
+```text
+api/price.py
+```
+
+The endpoint accepts:
+
+```text
+/api/price?symbol=MNQ
+```
+
+And returns:
+
+```json
+{
+  "symbol": "MNQ",
+  "yfSymbol": "MNQ=F",
+  "price": 22450.25,
+  "source": "yfinance",
+  "cached": false,
+  "timestamp": "2026-07-07T20:10:00Z"
+}
+```
+
+The API includes a short in-memory cache and CORS allow-list for `https://jgdev1215.github.io`, `localhost:8000`, and `localhost:8888`.
+
+By default, the frontend points at:
+
+```text
+https://ict-price-api.vercel.app/api/price
+```
+
+If the Vercel project uses a different production URL, set this before `assets/app.js` loads:
+
+```html
+<script>
+window.ICT_PRICE_API_BASE = 'https://your-vercel-project.vercel.app/api/price';
+</script>
+```
+
+Or update `HOSTED_PRICE_API_BASE` in `assets/app.js`. Manual price entry remains the fallback.
+
+Deploy the API to Vercel:
+
+```bash
+npm i -g vercel
+vercel login
+vercel --prod
+```
+
+yfinance is unofficial, not affiliated with Yahoo, and intended here for educational/research use only. For trading-critical or commercial use, replace it with a licensed market-data provider.
 
 ## Price Map Ladder
 
@@ -223,6 +279,8 @@ ICT/
 ├── index.html
 ├── manifest.webmanifest
 ├── service-worker.js
+├── api/
+│   └── price.py
 ├── assets/
 │   ├── app.js
 │   └── styles.css
@@ -237,10 +295,14 @@ ICT/
 │   └── ui-redesign/
 ├── tests/
 │   └── smoke.js
+├── tools/
+│   └── yfinance_price_server.py
 ├── .github/
 │   └── workflows/
 │       ├── pages.yml
 │       └── smoke.yml
+├── requirements.txt
+├── vercel.json
 ├── CHANGELOG.md
 ├── ISSUE_FIX_PLAN.md
 └── README.md
@@ -248,7 +310,7 @@ ICT/
 
 ## Known Limitations
 
-- No hosted backend yet.
+- Hosted yfinance lookup is optional; manual price entry remains the primary fallback.
 - Saved cards are browser-local only and are not synced across devices.
 - Screenshot support is metadata-only for v1.
 - The smoke test is static; it does not replace full browser automation or real-device QA.
