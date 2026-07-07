@@ -148,6 +148,7 @@
   function renderSoon(){ setTimeout(inject, 0); }
 
   function injectPlanner(){
+    if(window.ICTSweepState) return;
     const h2 = document.querySelector('.screen h2');
     if(!h2 || h2.textContent.indexOf('Choose the instrument') === -1) return;
     if(document.getElementById('ictBiasPanel')) return;
@@ -156,9 +157,10 @@
   }
 
   function injectReviewSummary(){
+    if(window.ICTSweepState) return;
     const h2 = document.querySelector('.screen h2, .btn-row-between h2');
     const output = document.querySelector('.focus-output');
-    if(!h2 || !output || document.getElementById('ictBiasSummary')) return;
+    if(!h2 || !output || document.getElementById('ictBiasSummary') || document.querySelector('[data-core-bias-summary]')) return;
     const isReview = h2.textContent.indexOf('Review focus card') !== -1 || document.querySelector('#reviewOutcome');
     if(!isReview) return;
     let s = state();
@@ -172,6 +174,7 @@
   }
 
   function injectReviewMarkers(){
+    if(window.ICTSweepState) return;
     if(!document.getElementById('reviewOutcome') || document.getElementById('mark_biasValidated')) return;
     const grid = document.querySelector('.review-grid');
     if(!grid) return;
@@ -273,13 +276,6 @@
   }
 
   function inject(){
-    injectPlanner();
-    injectReviewSummary();
-    injectReviewMarkers();
-    injectSavedRows();
-    attachBiasHandlers();
-    wireSaveButtons();
-    wireExports();
     fixVersionLabels();
   }
 
