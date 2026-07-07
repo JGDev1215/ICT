@@ -141,6 +141,32 @@
     }).format(date).replace(',', '') + ' NY';
   }
 
+  function nyDateInput(value){
+    const date = value ? new Date(value) : new Date();
+    if(Number.isNaN(date.getTime())) return '';
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(date).reduce((acc, part) => {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+    return [parts.year, parts.month, parts.day].filter(Boolean).join('-');
+  }
+
+  function nyTimeInput(value){
+    const date = value ? new Date(value) : new Date();
+    if(Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).format(date);
+  }
+
   function isObject(v){
     return !!(v && typeof v === 'object' && !Array.isArray(v));
   }
@@ -162,6 +188,10 @@
       }
     }
     return r;
+  }
+
+  function cleanUrl(v){
+    return String(v == null ? '' : v).trim();
   }
 
   function blank(){
@@ -305,7 +335,7 @@
   }
 
   function trimSlash(s){
-    return clean(s).replace(/\/+$/, '');
+    return cleanUrl(s).replace(/\/+$/, '');
   }
 
   function priceApiBase(){
@@ -696,7 +726,9 @@
     const event = p.priceHistoryEvent || (p.finalSaved ? 'final-save' : 'saved-edit');
     const priceSource = p.priceSource || 'manual';
     next.priceSnapshot = p.priceSnapshot || priceSnapshot(next.fields, priceSource, next.updatedAt);
-    next.priceHistory = (card.priceHistory || []).concat([priceHistoryEvent(event, next.fields, priceSource, next.updatedAt)]);
+    next.priceHistory = p.priceHistoryEvent === false
+      ? (card.priceHistory || [])
+      : (card.priceHistory || []).concat([priceHistoryEvent(event, next.fields, priceSource, next.updatedAt)]);
     return normaliseCard(next);
   }
 
@@ -720,7 +752,7 @@
   function toggleFavorite(id){
     const card = cards.find(c => c.id === id);
     if(!card) return null;
-    return updateCard(id, {favorite: !card.favorite});
+    return updateCard(id, {favorite: !card.favorite, priceHistoryEvent: false});
   }
 
   function getMetrics(inputCards){
@@ -780,7 +812,11 @@
 
     const byId = {};
     cards.concat(incoming).forEach(card => {
-      byId[card.id] = normaliseCard(card);
+      const next = normaliseCard(card);
+      const current = byId[next.id];
+      if(!current || new Date(next.updatedAt || next.savedAt || 0) >= new Date(current.updatedAt || current.savedAt || 0)){
+        byId[next.id] = next;
+      }
     });
     const merged = Object.values(byId).sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
     saveCards(merged);
@@ -811,6 +847,8 @@
     normaliseCard,
     normalizeCard: normaliseCard,
     nyTimestamp,
+    nyDateInput,
+    nyTimeInput,
     priceSnapshot,
     activeDol,
     normRouteEvidence,
@@ -819,6 +857,7 @@
     priceNumber,
     dolDistance,
     priceSourceLabel,
+    cleanUrl,
     priceApiBase,
     priceHelperUrl,
     localPriceHelperUrl,
@@ -1016,7 +1055,8 @@
     const session = x.session || (meta && meta.session) || 'No session';
     const updated = x.time || (meta && meta.updatedAt) || 'Manual';
     const source = current == null ? 'Manual pending' : 'yfinance/manual';
-    const header = `<div class='price-map-header'><div><div class='progress'>Price Map</div><h3 class='price-map-title'>${esc(instrument)}</h3><div class='price-map-meta'>${esc(session)} · Updated ${esc(updated)}</div><div class='price-map-source'>Source: ${esc(source)}</div></div><div class='price-map-live'>${esc(current == null ? 'Pending' : 'Live')}</div></div>`;
+    const liveClass = current == null ? 'pending' : 'live';
+    const header = `<div class='price-map-header'><div><div class='progress'>Price Map</div><h3 class='price-map-title'>${esc(instrument)}</h3><div class='price-map-meta'>${esc(session)} · Updated ${esc(updated)}</div><div class='price-map-source'>Source: ${esc(source)}</div></div><div class='price-map-live ${liveClass}'>${esc(current == null ? 'Manual needed' : 'Live')}</div></div>`;
     const notice = priceFetchState === 'loading'
       ? `<div class='price-map-loading'>Fetching ${esc(instrument)} price from yfinance...</div>`
       : priceFetchState === 'error'
@@ -1128,7 +1168,7 @@
   }
 
   function today(){
-    return new Date().toISOString().slice(0, 10);
+    return nyDateInput();
   }
 
   function sortedCards(){
@@ -1223,8 +1263,8 @@
     const current = latestCard();
     const settings = getSettings();
     const chips = sessions.map(s => `<button class='chip' data-session-chip='${esc(s)}'>${esc(s)}</button>`).join('');
-    const hero = current ? `<div class='card-hero'><div class='progress'>Today's focus</div><h2>${esc(current.fields.instrument || 'No instrument')}</h2><p class='sub'>${esc(current.fields.session || 'No session')} · ${esc(current.fields.date || 'No date')}</p><div class='status-row'>${biasPill(current.fields.bias)}${statusPill(current)}${outcomePill(current.outcome)}</div><div class='hero-actions'><button class='btn primary' data-open-card='${esc(current.id)}'>Open focus card</button><button class='btn ghost' id='continuePlanBtn'>Continue plan</button></div></div>` : `<div class='card-hero'><div class='progress'>Today's focus</div><h2>Build first plan</h2><p class='sub'>Start with one instrument, one bias thesis, mapped liquidity and review notes.</p><div class='hero-actions'><button class='btn primary' id='startBtn'>Start new analysis</button><button class='btn ghost' data-route='saved'>Saved cards</button></div></div>`;
-    return `<section class='screen'>${pageHead('Market focus', 'ICT Sweep Tracker', 'Educational planning tool only. Not financial advice.', '')}<div class='field'><label class='label' for='homePrompt'>Planning prompt</label><input class='in' id='homePrompt' placeholder='What are you planning today?'></div><div class='card'><div class='progress'>Plan assistant</div><h3>Bias-led liquidity plan</h3><p class='sub'>Use the planner to structure observations. The app does not forecast price or provide trade recommendations.</p><div class='hero-actions'><button class='btn primary' id='startBtn'>Start new analysis</button><button class='btn' data-route='liquidity-map'>Liquidity map</button><button class='btn' data-route='risk'>Risk review</button></div></div><div class='row-actions'>${chips}</div>${hero}<h3>Review metrics</h3>${metricHtml()}<div class='card'><div class='progress'>Watchlist</div><h3>${settings.watchlist.length ? settings.watchlist.map(esc).join(' · ') : 'No watchlist set'}</h3><p class='sub'>Set default instruments and sessions from Profile.</p></div></section>`;
+    const hero = current ? `<div class='card-hero'><div class='progress'>Today's focus</div><h2>${esc(current.fields.instrument || 'No instrument')}</h2><p class='sub'>${esc(current.fields.session || 'No session')} · ${esc(current.fields.date || 'No date')}</p><div class='status-row'>${biasPill(current.fields.bias)}${statusPill(current)}${outcomePill(current.outcome)}</div><div class='hero-actions'><button class='btn primary' data-open-card='${esc(current.id)}'>Open focus card</button><button class='btn ghost' id='continuePlanBtn'>Continue plan</button></div></div>` : `<div class='card-hero'><div class='progress'>Today's focus</div><h2>Build first plan</h2><p class='sub'>Start with one instrument, one bias thesis, mapped liquidity and review notes.</p><div class='hero-actions'><button class='btn primary' id='startHeroBtn'>Start new analysis</button><button class='btn ghost' data-route='saved'>Saved cards</button></div></div>`;
+    return `<section class='screen'>${pageHead('Market focus', 'ICT Sweep Tracker', 'Educational planning tool only. Not financial advice.', '')}<div class='field'><label class='label' for='homePrompt'>Planning prompt</label><input class='in' id='homePrompt' placeholder='What are you planning today?'></div><div class='card'><div class='progress'>Plan assistant</div><h3>Bias-led liquidity plan</h3><p class='sub'>Use the planner to structure observations. The app does not forecast price or provide trade recommendations.</p><div class='hero-actions'><button class='btn primary' id='startPlanBtn'>Start new analysis</button><button class='btn' data-route='liquidity-map'>Liquidity map</button><button class='btn' data-route='risk'>Risk review</button></div></div><div class='row-actions'>${chips}</div>${hero}<h3>Review metrics</h3>${metricHtml()}<div class='card'><div class='progress'>Watchlist</div><h3>${settings.watchlist.length ? settings.watchlist.map(esc).join(' · ') : 'No watchlist set'}</h3><p class='sub'>Set default instruments and sessions from Profile.</p></div></section>`;
   }
 
   function planner(){
@@ -1419,7 +1459,8 @@
       route = 'planner';
       render();
     });
-    on('startBtn', () => { startDraft(); route = 'planner'; render(); });
+    on('startPlanBtn', () => { startDraft(); route = 'planner'; render(); });
+    on('startHeroBtn', () => { startDraft(); route = 'planner'; render(); });
     on('continuePlanBtn', () => {
       const c = latestCard();
       if(c){
@@ -1455,8 +1496,7 @@
         .then(data => {
           if(!data || data.price == null) throw new Error('no price returned');
           f.currentPrice = clean(String(data.price));
-          const now = new Date();
-          f.time = f.time || now.toTimeString().slice(0, 5);
+          f.time = f.time || nyTimeInput();
           priceFetchState = 'ok';
           lastPriceSource = data.helperUrl === localPriceHelperUrl(symbol) ? 'local-yfinance' : 'hosted-yfinance';
           const source = lastPriceSource === 'local-yfinance' ? 'local yfinance helper' : 'hosted yfinance API';
@@ -1643,6 +1683,9 @@
         targetPrice: q('riskTargetPrice') ? q('riskTargetPrice').value : c.riskPlan.targetPrice,
         invalidationPrice: q('riskInvalidation') ? q('riskInvalidation').value : c.riskPlan.invalidationPrice
       };
+      if(focusPrice !== c.fields.currentPrice && (!riskPlan.entryPrice || clean(riskPlan.entryPrice) === clean(c.fields.currentPrice))){
+        riskPlan.entryPrice = focusPrice;
+      }
       updateCard(c.id, {
         fields: fieldsPatch,
         activeDolId,
@@ -1737,7 +1780,7 @@
     on('timelineNoteBtn', () => {
       const c = cards.find(x => x.id === reviewId) || latestCard();
       if(c && q('timelineNote')){
-        updateCard(c.id, {notes: q('timelineNote').value.trim(), finalSaved: false});
+        updateCard(c.id, {notes: q('timelineNote').value.trim(), finalSaved: false, priceHistoryEvent: false});
         notice = 'Timeline note saved.';
         render();
       }

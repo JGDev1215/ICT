@@ -61,7 +61,7 @@ body{
   font-family:var(--font-sans);
   font-size:15px;
   line-height:1.55;
-  padding:16px 12px calc(var(--bottom-nav-height) + 18px);
+  padding:16px 12px calc(var(--bottom-nav-height) + 56px);
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
 }
@@ -94,7 +94,7 @@ img,svg,canvas,video{max-width:100%}
 }
 .app-shell{
   background:var(--canvas);
-  padding-bottom:var(--bottom-nav-height);
+  padding-bottom:calc(var(--bottom-nav-height) + 56px);
 }
 #app,.app-main{width:100%}
 
@@ -357,7 +357,7 @@ h3{font-size:17px;line-height:1.25;font-weight:800;margin-bottom:var(--space-2)}
 .fab{
   position:fixed;
   right:max(18px,env(safe-area-inset-right));
-  bottom:calc(var(--bottom-nav-height) + max(18px,env(safe-area-inset-bottom)));
+  bottom:calc(var(--bottom-nav-height) + max(28px,env(safe-area-inset-bottom)));
   z-index:30;
   background:var(--primary);
   color:#fff;
@@ -504,12 +504,18 @@ textarea.in,.textarea{min-height:104px;resize:vertical;line-height:1.45}
   font-size:12px;
   font-weight:800;
 }
+.price-map-live.pending{
+  color:var(--attention);
+}
 .price-map-live:before{
   content:"";
   width:8px;
   height:8px;
   border-radius:50%;
   background:var(--confirmed);
+}
+.price-map-live.pending:before{
+  background:var(--attention);
 }
 .price-map-body{
   display:grid;
@@ -563,9 +569,8 @@ textarea.in,.textarea{min-height:104px;resize:vertical;line-height:1.45}
   font-weight:850;
 }
 .price-map-row-title span:last-child{
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+  overflow-wrap:anywhere;
+  white-space:normal;
 }
 .price-map-row > div:last-child{
   text-align:right;
@@ -720,7 +725,7 @@ textarea.in,.textarea{min-height:104px;resize:vertical;line-height:1.45}
 .timeline-node.pending:before{background:var(--attention)}
 
 @media(max-width:720px){
-  body{padding:14px 10px calc(var(--bottom-nav-height) + 16px)}
+  body{padding:14px 10px calc(var(--bottom-nav-height) + 64px)}
   .top{display:block}
   .clock{display:inline-flex;align-items:center;margin-top:var(--space-3)}
   .screen{min-height:calc(100vh - 170px)}

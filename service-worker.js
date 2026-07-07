@@ -1,10 +1,11 @@
-const CACHE_NAME = 'ict-sweep-tracker-v079-vercel-price-fix-20260707';
+const CACHE_NAME = 'ict-sweep-tracker-v079-price-autodetect-fix-20260707';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './assets/styles.css?v=0.7.9-vercel-price-fix-20260707',
-  './assets/app.js?v=0.7.9-vercel-price-fix-20260707'
+  './favicon.svg',
+  './assets/styles.css?v=0.7.9-price-autodetect-fix-20260707',
+  './assets/app.js?v=0.7.9-price-autodetect-fix-20260707'
 ];
 
 self.addEventListener('install', event => {
@@ -27,6 +28,13 @@ self.addEventListener('fetch', event => {
   if(event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if(url.pathname.startsWith('/api/')) return;
+  if(event.request.mode === 'navigate'){
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
   event.respondWith(
     caches.match(event.request)
       .then(cached => cached || fetch(event.request))

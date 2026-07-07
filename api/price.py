@@ -23,6 +23,8 @@ ALIASES = {
     "BTC": "BTC-USD",
     "ETHUSD": "ETH-USD",
     "ETH": "ETH-USD",
+    "EURUSD": "EURUSD=X",
+    "GBPUSD": "GBPUSD=X",
 }
 
 ALLOWED_ORIGINS = {
