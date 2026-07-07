@@ -93,7 +93,7 @@ The API includes a short in-memory cache and CORS allow-list for `https://jgdev1
 By default, the frontend points at:
 
 ```text
-https://ict-price-api.vercel.app/api/price
+https://ict-2mrz.vercel.app/api/price
 ```
 
 If the Vercel project uses a different production URL, set this before `assets/app.js` loads:

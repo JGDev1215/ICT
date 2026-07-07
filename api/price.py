@@ -27,6 +27,7 @@ ALIASES = {
 
 ALLOWED_ORIGINS = {
     "https://jgdev1215.github.io",
+    "https://ict-2mrz.vercel.app",
     "http://localhost:8000",
     "http://localhost:8888",
     "http://127.0.0.1:8000",

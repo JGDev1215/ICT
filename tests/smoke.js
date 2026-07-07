@@ -20,8 +20,8 @@ const changelog = read('CHANGELOG.md');
 
 ok(index.includes('ICT DOL Sweep Tracker v0.7.9'), 'index version missing');
 ok(!index.includes('assets/bias-extension.js'), 'obsolete bias extension should not be loaded');
-ok(index.includes('assets/app.js?v=0.7.9-repo-cleanup-20260707'), 'cache-safe app reference missing');
-ok(index.includes('assets/styles.css?v=0.7.9-repo-cleanup-20260707'), 'cache-safe style reference missing');
+ok(index.includes('assets/app.js?v=0.7.9-vercel-price-fix-20260707'), 'cache-safe app reference missing');
+ok(index.includes('assets/styles.css?v=0.7.9-vercel-price-fix-20260707'), 'cache-safe style reference missing');
 ok(index.includes("navigator.serviceWorker.register('./service-worker.js')"), 'service worker registration missing');
 ok(appSource.includes("const KEY = 'ict_cards_v078'"), 'storage key missing');
 ok(appSource.includes('function normaliseCard'), 'normaliseCard helper missing');
@@ -35,7 +35,7 @@ ok(appSource.includes('function routeEvidenceHtml'), 'route evidence UI missing'
 ok(appSource.includes('PRICE_DELAY_DISCLAIMER'), 'price delay disclaimer missing');
 ok(appSource.includes('Auto-detect price'), 'price auto-detect button missing');
 ok(appSource.includes('HOSTED_PRICE_API_BASE'), 'hosted price API base missing');
-ok(appSource.includes('https://ict-price-api.vercel.app/api/price'), 'default hosted price API URL missing');
+ok(appSource.includes('https://ict-2mrz.vercel.app/api/price'), 'default hosted price API URL missing');
 ok(appSource.includes("root.location.origin") && appSource.includes("/api/price"), 'same-origin Vercel price API fallback missing');
 ok(appSource.includes('priceHelperUrl'), 'price helper URL boundary missing');
 ok(appSource.includes('localPriceHelperUrl'), 'local price helper fallback missing');
@@ -91,14 +91,15 @@ ok(changelog.includes('Price Map ladder'), 'changelog price map support entry mi
 const manifestJson = JSON.parse(manifest);
 ok(manifestJson.name === 'ICT DOL Sweep Tracker', 'manifest name invalid');
 ok(manifestJson.theme_color === '#FAFAF8', 'manifest theme color invalid');
-ok(serviceWorker.includes('ict-sweep-tracker-v079-repo-cleanup-20260707'), 'service worker cache name missing');
-ok(serviceWorker.includes('assets/app.js?v=0.7.9-repo-cleanup-20260707'), 'service worker app cache missing');
+ok(serviceWorker.includes('ict-sweep-tracker-v079-vercel-price-fix-20260707'), 'service worker cache name missing');
+ok(serviceWorker.includes('assets/app.js?v=0.7.9-vercel-price-fix-20260707'), 'service worker app cache missing');
 ok(serviceWorker.includes("url.pathname.startsWith('/api/')"), 'service worker should bypass API requests');
 ok(!serviceWorker.includes('assets/bias-extension.js'), 'service worker should not cache obsolete bias extension');
 ok(priceApi.includes('class handler(BaseHTTPRequestHandler)'), 'Vercel Python handler missing');
 ok(priceApi.includes('STATIC_FILES'), 'Vercel static-file serving missing');
 ok(priceApi.includes('def send_static'), 'Vercel static handler missing');
 ok(priceApi.includes('ALLOWED_ORIGINS'), 'price API CORS allow-list missing');
+ok(priceApi.includes('https://ict-2mrz.vercel.app'), 'price API Vercel origin missing');
 ok(priceApi.includes('CACHE_TTL_SECONDS = 30'), 'price API cache TTL missing');
 ok(priceApi.includes('"MNQ": "MNQ=F"') && priceApi.includes('"M2K": "M2K=F"'), 'price API futures aliases missing');
 ok(priceApi.includes('import yfinance as yf'), 'price API yfinance import missing');

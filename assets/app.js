@@ -13,7 +13,7 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const doc = root.document || null;
   const app = doc ? doc.getElementById('app') : null;
-  const HOSTED_PRICE_API_BASE = 'https://ict-price-api.vercel.app/api/price';
+  const HOSTED_PRICE_API_BASE = 'https://ict-2mrz.vercel.app/api/price';
   const LOCAL_PRICE_API_BASE = 'http://127.0.0.1:8765/price';
   const PRICE_TIMEOUT_MS = 8000;
 
