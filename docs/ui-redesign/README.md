@@ -36,6 +36,7 @@ It defines:
 | `03-screen-specs.md` | Screen-by-screen functional mapping from design to app behaviour. |
 | `04-agent-workstreams.md` | Work split for multiple agents, dependencies and acceptance criteria. |
 | `05-agent-prompt-pack.md` | Copy-ready prompts for Codex / coding agents. |
+| `06-build-plan-gap-review.md` | Review of the attached build plan against this implementation pack, including missed items and updated priorities. |
 
 ## Implementation principle
 
