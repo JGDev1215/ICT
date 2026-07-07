@@ -8,6 +8,7 @@ This implementation turns the Focus Card into a DOL navigation dashboard. The ca
 
 - Added immutable creation timestamp and saved-edit timestamp in New York time.
 - Added price snapshot and price history records for creation, saved edits, and final saves.
+- Replaced the timestamp/price table display with a compact audit strip, latest-price snapshot card, separate manual override panel, and collapsible recent price captures.
 - Added 5-minute delayed-price disclaimer near price data.
 - Added manual current-price override on the Focus Card.
 - Moved the Price Map Dashboard to the top of the Focus Card Details view.
