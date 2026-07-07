@@ -1,16 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "installCommand": "uv pip install --system -r requirements.txt",
   "buildCommand": "mkdir -p _site/assets && cp index.html manifest.webmanifest service-worker.js _site/ && cp assets/app.js assets/styles.css _site/assets/",
-  "outputDirectory": "_site",
-  "functions": {
-    "api/price.py": {
-      "includeFiles": [
-        "index.html",
-        "assets/**",
-        "manifest.webmanifest",
-        "service-worker.js"
-      ]
-    }
-  }
+  "outputDirectory": "_site"
 }

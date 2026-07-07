@@ -105,7 +105,10 @@ ok(priceApi.includes('"MNQ": "MNQ=F"') && priceApi.includes('"M2K": "M2K=F"'), '
 ok(priceApi.includes('import yfinance as yf'), 'price API yfinance import missing');
 ok(priceApi.includes('"source": "yfinance"'), 'price API source response missing');
 ok(requirements.includes('yfinance=='), 'requirements should pin yfinance');
-ok(JSON.parse(vercelConfig).functions['api/price.py'].includeFiles.includes('index.html'), 'vercel static include files invalid');
+const parsedVercelConfig = JSON.parse(vercelConfig);
+ok(parsedVercelConfig.framework === null, 'vercel framework should be disabled');
+ok(parsedVercelConfig.outputDirectory === '_site', 'vercel output directory invalid');
+ok(parsedVercelConfig.buildCommand.includes('cp index.html') && parsedVercelConfig.buildCommand.includes('_site/assets'), 'vercel static build command invalid');
 
 new vm.Script(appSource, {filename: 'assets/app.js'});
 new vm.Script(biasSource, {filename: 'Legacy/assets/bias-extension.js'});
