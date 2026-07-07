@@ -3,6 +3,8 @@
 Date: 2026-07-07
 Scope: full-repo structure review of `JGDev1215/ICT` at v0.7.9, with a phased improvement plan.
 
+Update note: Phase 0.1, Phase 0.2, Phase 1.1, Phase 1.2, and the fix-list filename cleanup from Phase 1.4 were implemented after this review. This document is retained in `docs/plans/` as the source review and roadmap record.
+
 ---
 
 ## 1. Current Structure Snapshot

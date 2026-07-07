@@ -1465,7 +1465,7 @@
         })
         .catch(() => {
           priceFetchState = 'error';
-          notice = 'Auto-detect unavailable. Check the hosted price API, start tools/yfinance_price_server.py, or enter price manually.';
+          notice = 'Auto-detect unavailable. Check the hosted price API or enter price manually.';
           render();
         });
     });

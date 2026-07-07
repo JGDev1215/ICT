@@ -39,7 +39,7 @@ ICT/
 │       ├── pages.yml
 │       └── smoke.yml
 ├── CHANGELOG.md
-├── ISSUE_FIX_PLAN.md
+├── docs/plans/issue-fix-plan.md
 └── README.md
 ```
 

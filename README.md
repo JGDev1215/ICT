@@ -57,15 +57,9 @@ The planner captures:
 
 Missing inputs are shown as Draft, and the user can still save an incomplete draft card.
 
-Current price can be entered manually. The app can also call an optional hosted yfinance price API on Vercel. If the hosted API is unavailable, it falls back to the local helper when running on this Mac:
+Current price can be entered manually. The app can also call an optional hosted yfinance price API on Vercel. Manual entry remains the fallback when the hosted API is unavailable.
 
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip yfinance
-.venv/bin/python tools/yfinance_price_server.py
-```
-
-Then use `Auto-detect price` in the Planner.
+Use `Auto-detect price` in the Planner after the Vercel API is deployed.
 
 ## Hosted Price API
 
@@ -311,19 +305,20 @@ ICT/
 │       ├── app-v0.7.7.js
 │       └── bias-extension.js
 ├── docs/
+│   ├── fix-lists/
+│   ├── plans/
 │   └── ui-redesign/
 ├── tests/
 │   └── smoke.js
-├── tools/
-│   └── yfinance_price_server.py
 ├── .github/
 │   └── workflows/
 │       ├── pages.yml
 │       └── smoke.yml
 ├── requirements.txt
 ├── vercel.json
+├── CLAUDE.md
 ├── CHANGELOG.md
-├── ISSUE_FIX_PLAN.md
+├── AGENTS.md
 └── README.md
 ```
 

@@ -124,7 +124,7 @@ Validated with:
 
 ```bash
 node tests/smoke.js
-python3 -m py_compile api/price.py tools/yfinance_price_server.py
+python3 -m py_compile api/price.py
 ```
 
 The smoke test now covers:

@@ -20,8 +20,8 @@ const changelog = read('CHANGELOG.md');
 
 ok(index.includes('ICT DOL Sweep Tracker v0.7.9'), 'index version missing');
 ok(!index.includes('assets/bias-extension.js'), 'obsolete bias extension should not be loaded');
-ok(index.includes('assets/app.js?v=0.7.9-focus-card-snapshot-ui-20260707'), 'cache-safe app reference missing');
-ok(index.includes('assets/styles.css?v=0.7.9-focus-card-snapshot-ui-20260707'), 'cache-safe style reference missing');
+ok(index.includes('assets/app.js?v=0.7.9-repo-cleanup-20260707'), 'cache-safe app reference missing');
+ok(index.includes('assets/styles.css?v=0.7.9-repo-cleanup-20260707'), 'cache-safe style reference missing');
 ok(index.includes("navigator.serviceWorker.register('./service-worker.js')"), 'service worker registration missing');
 ok(appSource.includes("const KEY = 'ict_cards_v078'"), 'storage key missing');
 ok(appSource.includes('function normaliseCard'), 'normaliseCard helper missing');
@@ -91,8 +91,8 @@ ok(changelog.includes('Price Map ladder'), 'changelog price map support entry mi
 const manifestJson = JSON.parse(manifest);
 ok(manifestJson.name === 'ICT DOL Sweep Tracker', 'manifest name invalid');
 ok(manifestJson.theme_color === '#FAFAF8', 'manifest theme color invalid');
-ok(serviceWorker.includes('ict-sweep-tracker-v079-focus-card-snapshot-ui-20260707'), 'service worker cache name missing');
-ok(serviceWorker.includes('assets/app.js?v=0.7.9-focus-card-snapshot-ui-20260707'), 'service worker app cache missing');
+ok(serviceWorker.includes('ict-sweep-tracker-v079-repo-cleanup-20260707'), 'service worker cache name missing');
+ok(serviceWorker.includes('assets/app.js?v=0.7.9-repo-cleanup-20260707'), 'service worker app cache missing');
 ok(serviceWorker.includes("url.pathname.startsWith('/api/')"), 'service worker should bypass API requests');
 ok(!serviceWorker.includes('assets/bias-extension.js'), 'service worker should not cache obsolete bias extension');
 ok(priceApi.includes('class handler(BaseHTTPRequestHandler)'), 'Vercel Python handler missing');
