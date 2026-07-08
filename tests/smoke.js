@@ -118,6 +118,8 @@ ok(manifestJson.theme_color === '#FAFAF8', 'manifest theme color invalid');
 ok(serviceWorker.includes('./favicon.svg'), 'service worker favicon cache missing');
 ok(serviceWorker.includes("url.pathname.startsWith('/api/')"), 'service worker should bypass API requests');
 ok(serviceWorker.includes("event.request.mode === 'navigate'"), 'service worker should network-first navigations');
+ok(serviceWorker.includes('Response.error()'), 'service worker should fail missing asset requests instead of returning HTML');
+ok(!/cached => cached \|\| fetch\(event\.request\)[\s\S]*?caches\.match\('\.\/index\.html'\)/.test(serviceWorker), 'service worker should not use index fallback for non-navigation assets');
 ok(!serviceWorker.includes('assets/bias-extension.js'), 'service worker should not cache obsolete bias extension');
 ok(priceApi.includes('class handler(BaseHTTPRequestHandler)'), 'Vercel Python handler missing');
 ok(priceApi.includes('STATIC_FILES'), 'Vercel static-file serving missing');
@@ -129,6 +131,8 @@ ok(priceApi.includes('"MNQ": "MNQ=F"') && priceApi.includes('"M2K": "M2K=F"'), '
 ok(priceApi.includes('"EURUSD": "EURUSD=X"') && priceApi.includes('"GBPUSD": "GBPUSD=X"'), 'price API FX aliases missing');
 ok(priceApi.includes('import yfinance as yf'), 'price API yfinance import missing');
 ok(priceApi.includes('"source": "yfinance"'), 'price API source response missing');
+ok(priceApi.includes('"price provider unavailable"'), 'price API should use a generic provider error');
+ok(!priceApi.includes('str(exc)'), 'price API should not expose raw provider exceptions');
 ok(requirements.includes('yfinance=='), 'requirements should pin yfinance');
 const parsedVercelConfig = JSON.parse(vercelConfig);
 ok(parsedVercelConfig.framework === null, 'vercel framework should be disabled');
@@ -139,13 +143,15 @@ new vm.Script(appSource, {filename: 'assets/app.js'});
 new vm.Script(biasSource, {filename: 'Legacy/assets/bias-extension.js'});
 new vm.Script(serviceWorker, {filename: 'service-worker.js'});
 
-function makeStorage(seed){
+function makeStorage(seed, options){
   const data = Object.assign({}, seed || {});
+  let failWrites = !!(options && options.failWrites);
   return {
     getItem(key){
       return Object.prototype.hasOwnProperty.call(data, key) ? data[key] : null;
     },
     setItem(key, value){
+      if(failWrites) throw Error('quota exceeded');
       data[key] = String(value);
     },
     removeItem(key){
@@ -156,11 +162,15 @@ function makeStorage(seed){
     },
     dump(){
       return Object.assign({}, data);
+    },
+    setFailWrites(value){
+      failWrites = !!value;
     }
   };
 }
 
-function runApp(seed){
+function runApp(seed, options){
+  const runOptions = options || {};
   const appNode = {innerHTML: ''};
   const clockNode = {innerHTML: ''};
   const document = {
@@ -192,7 +202,7 @@ function runApp(seed){
       return true;
     }
   };
-  const storage = makeStorage(seed);
+  const storage = makeStorage(seed, runOptions);
   const context = {
     console,
     Date,
@@ -212,6 +222,8 @@ function runApp(seed){
     },
     document,
     localStorage: storage,
+    location: runOptions.location,
+    history: runOptions.history,
     navigator: {clipboard: {writeText(){ return Promise.resolve(); }}},
     setInterval(){},
     setTimeout(fn){ fn(); },
@@ -507,6 +519,22 @@ const newestHit = api.getCards().find(card => card.id === 'hit');
 api.importCards({cards: [Object.assign({}, newestHit, {updatedAt: '2000-01-01T00:00:00.000Z', fields: Object.assign({}, newestHit.fields, {session: 'Older import'})})]});
 ok(api.getCards().find(card => card.id === 'hit').fields.session === 'London', 'older duplicate import should not overwrite newer local card');
 
+const quotaFixture = runApp();
+const quotaApi = quotaFixture.context.ICTSweepState;
+const quotaCard = quotaApi.normaliseCard({id: 'quota-card', fields: {instrument: 'MNQ', bias: 'Bullish'}});
+quotaApi.saveCards([quotaCard]);
+quotaFixture.storage.setFailWrites(true);
+const failedUpdate = quotaApi.updateCard('quota-card', {fields: {bias: 'Bearish'}});
+ok(failedUpdate === null, 'updateCard should report failed durable writes');
+ok(quotaApi.getCards()[0].fields.bias === 'Bullish', 'failed update should not mutate card memory');
+ok(quotaApi.lastStorageError().includes('Storage limit'), 'storage failure should expose a user-facing error');
+ok(quotaApi.deleteCard('quota-card') === false, 'deleteCard should report failed durable writes');
+ok(quotaApi.getCards().length === 1, 'failed delete should not mutate card memory');
+const failedImport = quotaApi.importCards({cards: [quotaApi.normaliseCard({id: 'quota-import', fields: {instrument: 'ES'}})]});
+ok(failedImport.imported === 0 && failedImport.error, 'importCards should report failed durable writes');
+quotaApi.saveSettings({defaultInstrument: 'ES'});
+ok(quotaApi.lastSettingsError().includes('Settings could not be saved'), 'settings write failure should be surfaced');
+
 const blankDraft = api.createBlankDraft();
 ok(blankDraft.outcome === 'Open', 'blank draft outcome invalid');
 ok(blankDraft.finalSaved === false, 'blank draft finalSaved invalid');
@@ -521,6 +549,9 @@ const routeApi = routes.context.ICTSweepState;
 ok(routes.appNode.innerHTML.includes('ICT Sweep Tracker'), 'home route did not render');
 ok(routes.appNode.innerHTML.includes('tab-bar'), 'bottom tab bar did not render');
 ok(routes.appNode.innerHTML.includes('Start new analysis'), 'home route action did not render');
+
+const malformedHash = runApp(null, {location: {hash: '#%E0%A4%A', hostname: 'localhost', origin: 'http://localhost'}});
+ok(malformedHash.appNode.innerHTML.includes('ICT Sweep Tracker'), 'malformed hash should fall back to a rendered home route');
 
 routeApi.go('planner');
 ok(routes.appNode.innerHTML.includes('AI Trade Plan Builder'), 'planner route did not render');

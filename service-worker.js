@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ict-sweep-tracker-v080-concept-improvements-20260708';
+const CACHE_NAME = 'ict-sweep-tracker-v080-audit-fixes-20260708';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -38,6 +38,6 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(cached => cached || fetch(event.request))
-      .catch(() => caches.match('./index.html'))
+      .catch(() => Response.error())
   );
 });

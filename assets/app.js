@@ -784,14 +784,15 @@
       updated = mergeCard(card, patch);
       return updated;
     });
-    if(updated) saveCards(nextCards);
-    return updated;
+    if(!updated) return null;
+    saveCards(nextCards);
+    return lastStorageError ? null : (cards.find(card => card.id === id) || updated);
   }
 
   function deleteCard(id){
     const before = cards.length;
     saveCards(cards.filter(card => card.id !== id));
-    return cards.length !== before;
+    return !lastStorageError && cards.length !== before;
   }
 
   function toggleFavorite(id){
@@ -838,7 +839,14 @@
     next.watchlist = arrayText(next.watchlist);
     next.riskDefaults = normRisk(next.riskDefaults);
     const store = storage();
-    if(store) store.setItem(SETTINGS_KEY, JSON.stringify(next));
+    lastSettingsError = '';
+    if(store){
+      try {
+        store.setItem(SETTINGS_KEY, JSON.stringify(next));
+      } catch(e) {
+        lastSettingsError = 'Settings could not be saved in this browser. The change is applied for this session only.';
+      }
+    }
     applyTheme(next.theme);
     return next;
   }
@@ -868,6 +876,7 @@
     });
     const merged = Object.values(byId).sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
     saveCards(merged);
+    if(lastStorageError) return {imported: 0, cards: getCards(), error: lastStorageError};
     return {imported: incoming.length, cards: getCards()};
   }
 
@@ -959,9 +968,17 @@
     if(!hash) return null;
     const parts = hash.split('/');
     return {
-      route: normaliseRoute(decodeURIComponent(parts[0] || 'home')),
-      id: parts[1] ? decodeURIComponent(parts[1]) : ''
+      route: normaliseRoute(safeDecode(parts[0] || 'home', 'home')),
+      id: parts[1] ? safeDecode(parts[1], '') : ''
     };
+  }
+
+  function safeDecode(value, fallback){
+    try {
+      return decodeURIComponent(value);
+    } catch(e) {
+      return fallback || '';
+    }
   }
 
   function routeHash(){
@@ -1005,6 +1022,7 @@
   let marketContextDraft = blankMarketContext();
   let marketContextOpenTimeframes = [];
   let lastStorageError = '';
+  let lastSettingsError = '';
   let cards = loadCards();
   let reviewId = '';
   let notice = '';
@@ -1051,6 +1069,7 @@
     priceMapHtml,
     getCards,
     saveCards,
+    lastStorageError: () => lastStorageError,
     getMetrics,
     createBlankDraft,
     updateCard,
@@ -1060,6 +1079,8 @@
     importCards,
     getSettings,
     saveSettings,
+    lastSettingsError: () => lastSettingsError,
+    parseRouteHash,
     go
   };
   root.ICTSweepState = api;
@@ -1593,8 +1614,8 @@
       c = saved;
       plannerCardId = c.id;
     }
-    if(lastStorageError){
-      notice = lastStorageError;
+    if(lastStorageError || !c){
+      notice = lastStorageError || 'Draft could not be saved.';
       render();
       return;
     }
@@ -1733,6 +1754,7 @@
           marketContextOpenTimeframes.push(tf);
           marketContextOpenTimeframes = marketTimeframes.filter(x => marketContextOpenTimeframes.includes(x));
         }
+        persistPlannerDraft();
         render();
       };
     }
@@ -1745,8 +1767,8 @@
 
     doc.querySelectorAll('[data-favorite]').forEach(n => {
       n.onclick = () => {
-        toggleFavorite(n.getAttribute('data-favorite'));
-        notice = 'Favorite updated.';
+        const updated = toggleFavorite(n.getAttribute('data-favorite'));
+        notice = updated ? 'Favorite updated.' : (lastStorageError || 'Favorite could not be updated.');
         render();
       };
     });
@@ -1847,7 +1869,7 @@
 
     on('verifyBtn', () => {
       saveCards(cards);
-      notice = 'Saved data verified and normalised.';
+      notice = lastStorageError || 'Saved data verified and normalised.';
       render();
     });
     on('exportTextBtn', () => down('ict-dol-sweep-cards.txt', cards.map(text).join(NL + NL + '---' + NL + NL) || 'No saved cards.', 'text/plain'));
@@ -1862,7 +1884,7 @@
         const reader = new FileReader();
         reader.onload = () => {
           const result = importCards(String(reader.result || ''));
-          notice = result.imported ? result.imported + ' card(s) imported.' : 'No valid cards found in the JSON file.';
+          notice = result.error || (result.imported ? result.imported + ' card(s) imported.' : 'No valid cards found in the JSON file.');
           render();
         };
         reader.readAsText(file);
@@ -1915,7 +1937,7 @@
       if(focusPrice !== c.fields.currentPrice && (!riskPlan.entryPrice || clean(riskPlan.entryPrice) === clean(c.fields.currentPrice))){
         riskPlan.entryPrice = focusPrice;
       }
-      updateCard(c.id, {
+      const saved = updateCard(c.id, {
         fields: fieldsPatch,
         activeDolId,
         routeEvidence: routeRows,
@@ -1943,6 +1965,11 @@
           maxLoss: q('maxLoss') ? q('maxLoss').value.trim() : c.risk.maxLoss
         }
       });
+      if(!saved){
+        notice = lastStorageError || 'Changes could not be saved.';
+        render();
+        return;
+      }
       notice = finalSave ? 'Final saved.' : 'Changes saved. Card is no longer final-saved.';
       render();
     }
@@ -1998,7 +2025,11 @@
     on('deleteBtn', () => {
       const c = cur();
       if(c && confirm('Delete this saved card?')){
-        deleteCard(c.id);
+        if(!deleteCard(c.id)){
+          notice = lastStorageError || 'Card could not be deleted.';
+          render();
+          return;
+        }
         reviewId = '';
         notice = 'Card deleted.';
         go('saved');
@@ -2008,15 +2039,15 @@
     on('timelineNoteBtn', () => {
       const c = cards.find(x => x.id === reviewId) || latestCard();
       if(c && q('timelineNote')){
-        updateCard(c.id, {notes: q('timelineNote').value.trim(), finalSaved: false, priceHistoryEvent: false});
-        notice = 'Timeline note saved.';
+        const saved = updateCard(c.id, {notes: q('timelineNote').value.trim(), finalSaved: false, priceHistoryEvent: false});
+        notice = saved ? 'Timeline note saved.' : (lastStorageError || 'Timeline note could not be saved.');
         render();
       }
     });
 
     on('saveSettingsBtn', () => {
       saveSettings(profileFormSettings(q));
-      notice = 'Settings saved.';
+      notice = lastSettingsError || 'Settings saved.';
       render();
     });
 
@@ -2024,7 +2055,7 @@
     if(themeMode){
       themeMode.onchange = () => {
         saveSettings(profileFormSettings(q, themeMode.value));
-        notice = 'Theme updated.';
+        notice = lastSettingsError || 'Theme updated.';
         render();
       };
     }

@@ -120,9 +120,13 @@ class handler(BaseHTTPRequestHandler):
             if close.empty:
                 raise ValueError("no close price data")
             price = float(close.iloc[-1])
-        except Exception as exc:
+        except Exception:
             self.send_json(
-                {"error": str(exc), "symbol": symbol, "yfSymbol": yf_symbol},
+                {
+                    "error": "price provider unavailable",
+                    "symbol": symbol,
+                    "yfSymbol": yf_symbol,
+                },
                 502,
             )
             return
