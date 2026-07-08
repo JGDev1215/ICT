@@ -5,6 +5,11 @@ const read = p => fs.readFileSync(p, 'utf8');
 const ok = (condition, message) => {
   if(!condition) throw Error(message);
 };
+const match = (source, pattern, message) => {
+  const found = source.match(pattern);
+  ok(found, message);
+  return found;
+};
 
 const index = read('index.html');
 const appSource = read('assets/app.js');
@@ -18,10 +23,23 @@ const vercelConfig = read('vercel.json');
 const readme = read('README.md');
 const changelog = read('CHANGELOG.md');
 
-ok(index.includes('ICT DOL Sweep Tracker v0.7.9'), 'index version missing');
+const appVersion = match(appSource, /const VERSION = '([^']+)'/, 'app version constant missing')[1];
+const appVersionNumber = appVersion.replace(/^v/, '');
+const appAsset = match(index, /<script src="([^"]*assets\/app\.js\?v=[^"]+)"><\/script>/, 'cache-safe app reference missing')[1];
+const styleAsset = match(index, /<link rel="stylesheet" href="([^"]*assets\/styles\.css\?v=[^"]+)">/, 'cache-safe style reference missing')[1];
+const cacheName = match(serviceWorker, /const CACHE_NAME = '([^']+)'/, 'service worker cache name missing')[1];
+const hostedPriceApiBase = match(appSource, /const HOSTED_PRICE_API_BASE = '([^']+)'/, 'hosted price API base missing')[1];
+const hostedPriceUrl = new URL(hostedPriceApiBase);
+
+ok(appVersion.startsWith('v0.8.'), 'app version should be v0.8.x');
+ok(index.includes(`<title>ICT DOL Sweep Tracker ${appVersion}</title>`), 'index title version missing');
+ok(index.includes(`ICT DOL Sweep Tracker ${appVersion} · Educational planning tool only. Not financial advice.`), 'index footer version missing');
 ok(!index.includes('assets/bias-extension.js'), 'obsolete bias extension should not be loaded');
-ok(index.includes('assets/app.js?v=0.7.9-price-autodetect-fix-20260707'), 'cache-safe app reference missing');
-ok(index.includes('assets/styles.css?v=0.7.9-price-autodetect-fix-20260707'), 'cache-safe style reference missing');
+ok(appAsset.includes(`v=${appVersionNumber}`), 'app asset cache key should include app version');
+ok(styleAsset.includes(`v=${appVersionNumber}`), 'style asset cache key should include app version');
+ok(serviceWorker.includes(`'./${appAsset}'`), 'service worker app cache does not match index');
+ok(serviceWorker.includes(`'./${styleAsset}'`), 'service worker style cache does not match index');
+ok(cacheName.includes(appVersionNumber.replaceAll('.', '')), 'service worker cache name should include app version');
 ok(index.includes('href="favicon.svg"'), 'favicon link missing');
 ok(index.includes("navigator.serviceWorker.register('./service-worker.js')"), 'service worker registration missing');
 ok(appSource.includes("const KEY = 'ict_cards_v078'"), 'storage key missing');
@@ -38,7 +56,7 @@ ok(appSource.includes('function routeEvidenceHtml'), 'route evidence UI missing'
 ok(appSource.includes('PRICE_DELAY_DISCLAIMER'), 'price delay disclaimer missing');
 ok(appSource.includes('Auto-detect price'), 'price auto-detect button missing');
 ok(appSource.includes('HOSTED_PRICE_API_BASE'), 'hosted price API base missing');
-ok(appSource.includes('https://ict-2mrz.vercel.app/api/price'), 'default hosted price API URL missing');
+ok(hostedPriceUrl.pathname === '/api/price', 'default hosted price API URL invalid');
 ok(appSource.includes("root.location.origin") && appSource.includes("/api/price"), 'same-origin Vercel price API fallback missing');
 ok(appSource.includes('priceHelperUrl'), 'price helper URL boundary missing');
 ok(appSource.includes('localPriceHelperUrl'), 'local price helper fallback missing');
@@ -67,7 +85,7 @@ ok(appSource.includes('Trade journal'), 'journal screen missing');
 ok(appSource.includes('Trader profile'), 'profile screen missing');
 ok(appSource.includes('Final save'), 'final save missing');
 ok(appSource.includes('Export JSON'), 'json export missing');
-ok(biasSource.includes("VERSION = 'v0.7.9'"), 'bias extension version missing');
+ok(/const VERSION = 'v0\.[0-9.]+'/.test(biasSource), 'bias extension version missing');
 ok(biasSource.includes('ict_dol_sweep_export_v7'), 'bias export schema missing');
 ok(biasSource.includes('function inject(){') && biasSource.includes('fixVersionLabels();'), 'bias extension compatibility hook missing');
 ok(css.includes('.bottom-nav'), 'bottom nav css missing');
@@ -97,8 +115,6 @@ ok(changelog.includes('Price Map ladder'), 'changelog price map support entry mi
 const manifestJson = JSON.parse(manifest);
 ok(manifestJson.name === 'ICT DOL Sweep Tracker', 'manifest name invalid');
 ok(manifestJson.theme_color === '#FAFAF8', 'manifest theme color invalid');
-ok(serviceWorker.includes('ict-sweep-tracker-v079-price-autodetect-fix-20260707'), 'service worker cache name missing');
-ok(serviceWorker.includes('assets/app.js?v=0.7.9-price-autodetect-fix-20260707'), 'service worker app cache missing');
 ok(serviceWorker.includes('./favicon.svg'), 'service worker favicon cache missing');
 ok(serviceWorker.includes("url.pathname.startsWith('/api/')"), 'service worker should bypass API requests');
 ok(serviceWorker.includes("event.request.mode === 'navigate'"), 'service worker should network-first navigations');
@@ -107,7 +123,7 @@ ok(priceApi.includes('class handler(BaseHTTPRequestHandler)'), 'Vercel Python ha
 ok(priceApi.includes('STATIC_FILES'), 'Vercel static-file serving missing');
 ok(priceApi.includes('def send_static'), 'Vercel static handler missing');
 ok(priceApi.includes('ALLOWED_ORIGINS'), 'price API CORS allow-list missing');
-ok(priceApi.includes('https://ict-2mrz.vercel.app'), 'price API Vercel origin missing');
+ok(priceApi.includes(`"${hostedPriceUrl.origin}"`), 'price API Vercel origin missing');
 ok(priceApi.includes('CACHE_TTL_SECONDS = 30'), 'price API cache TTL missing');
 ok(priceApi.includes('"MNQ": "MNQ=F"') && priceApi.includes('"M2K": "M2K=F"'), 'price API futures aliases missing');
 ok(priceApi.includes('"EURUSD": "EURUSD=X"') && priceApi.includes('"GBPUSD": "GBPUSD=X"'), 'price API FX aliases missing');
@@ -249,7 +265,7 @@ ok(migrated.storage.getItem('ict_cards_v078'), 'migration did not write current 
 ok(migratedCards[0].fields.bias === 'Bullish', 'bias was not preserved');
 ok(migratedCards[0].fields.biasValidation.includes('Displacement'), 'bias validation was not preserved');
 ok(migratedCards[0].fields.biasInvalidation.includes('Acceptance'), 'bias invalidation was not preserved');
-ok(migratedCards[0].fields.dol1Level === '20.25025', 'price sanitisation changed');
+ok(migratedCards[0].fields.dol1Level === '20250.25', 'price sanitisation changed');
 ok(migratedCards[0].fields.dol1Tf === 'Daily', 'DOL timeframe was not preserved');
 ok(migratedCards[0].fields.dol1Taken === true, 'DOL taken flag was not preserved');
 ok(migratedCards[0].fields.sweep1Tf === '15m', 'sweep timeframe was not preserved');
@@ -272,13 +288,73 @@ ok(migratedCards[0].activeDolId === 'dol1', 'legacy card active DOL should defau
 
 const metricsFixture = runApp();
 const api = metricsFixture.context.ICTSweepState;
-ok(api.cleanUrl('https://ict-2mrz.vercel.app/api/price/') === 'https://ict-2mrz.vercel.app/api/price/', 'cleanUrl should preserve URLs');
-metricsFixture.context.location = {hostname: 'ict-2mrz.vercel.app', origin: 'https://ict-2mrz.vercel.app'};
-ok(api.priceApiBase() === 'https://ict-2mrz.vercel.app/api/price', 'same-origin Vercel price API URL invalid');
-ok(api.priceHelperUrl('MNQ') === 'https://ict-2mrz.vercel.app/api/price?symbol=MNQ', 'price helper URL should not be numerically sanitized');
+ok(api.cleanUrl(hostedPriceApiBase + '/') === hostedPriceApiBase + '/', 'cleanUrl should preserve URLs');
+metricsFixture.context.location = {hostname: hostedPriceUrl.hostname, origin: hostedPriceUrl.origin};
+ok(api.priceApiBase() === hostedPriceUrl.origin + '/api/price', 'same-origin Vercel price API URL invalid');
+ok(api.priceHelperUrl('MNQ') === hostedPriceUrl.origin + '/api/price?symbol=MNQ', 'price helper URL should not be numerically sanitized');
 metricsFixture.context.ICT_PRICE_API_BASE = 'https://example.vercel.app/api/price/';
 ok(api.priceApiBase() === 'https://example.vercel.app/api/price', 'configured price API URL should be preserved');
 delete metricsFixture.context.ICT_PRICE_API_BASE;
+ok(api.priceHelperUrls('MNQ').includes(api.localPriceHelperUrl('MNQ')), 'price helper URLs should include local fallback without network access');
+ok(api.priceHelperUrl('MNQ U4').endsWith('?symbol=MNQ%20U4'), 'price helper URL should encode symbols');
+ok(api.priceNumber('20123.50') === 20123.5, 'plain decimal price should parse');
+ok(api.priceNumber('20,123.50') === 20123.5, 'comma thousands price should parse without changing meaning');
+ok(api.priceNumber('N/A') === null, 'N/A price should not parse as numeric');
+ok(api.priceNumber('-1') === null, 'negative market price should be rejected');
+ok(api.priceNumber('1e3') === null, 'scientific notation price should be rejected');
+ok(api.priceNumber('1.2.3') === null, 'multiple-decimal price should be rejected');
+ok(api.priceNumber('20,123,50') === null, 'ambiguous comma price should be rejected');
+
+const settingsFixture = runApp();
+const settingsApi = settingsFixture.context.ICTSweepState;
+const savedSettings = settingsApi.saveSettings({
+  defaultInstrument: 'NQ',
+  defaultSession: 'New York AM',
+  theme: 'dark',
+  watchlist: 'MNQ, ES, GC',
+  riskDefaults: {plannedRiskPct: '0.5', plannedR: '2R', maxLoss: '150'}
+});
+ok(savedSettings.defaultInstrument === 'NQ', 'default instrument setting did not save');
+ok(savedSettings.defaultSession === 'New York AM', 'default session setting did not save');
+ok(savedSettings.theme === 'dark', 'theme setting did not save');
+ok(savedSettings.watchlist.join(',') === 'MNQ,ES,GC', 'watchlist setting did not normalise');
+ok(savedSettings.riskDefaults.plannedRiskPct === '0.5', 'risk default percent did not save');
+const reloadedSettingsFixture = runApp(settingsFixture.storage.dump());
+const reloadedSettingsApi = reloadedSettingsFixture.context.ICTSweepState;
+const reloadedSettings = reloadedSettingsApi.getSettings();
+ok(reloadedSettings.defaultInstrument === 'NQ', 'default instrument setting did not persist');
+ok(reloadedSettings.defaultSession === 'New York AM', 'default session setting did not persist');
+ok(reloadedSettings.theme === 'dark', 'theme setting did not persist');
+ok(reloadedSettings.watchlist.length === 3 && reloadedSettings.watchlist[2] === 'GC', 'watchlist setting did not persist');
+ok(reloadedSettings.riskDefaults.plannedRiskPct === '0.5' && reloadedSettings.riskDefaults.plannedR === '2R' && reloadedSettings.riskDefaults.maxLoss === '150', 'risk defaults did not persist');
+reloadedSettingsApi.go('profile');
+ok(reloadedSettingsFixture.appNode.innerHTML.includes("id='defaultInstrument' value='NQ'"), 'profile did not render saved default instrument');
+ok(reloadedSettingsFixture.appNode.innerHTML.includes("id='defaultRiskPct' value='0.5'"), 'profile did not render saved risk percent');
+ok(reloadedSettingsFixture.appNode.innerHTML.includes("id='defaultPlannedR' value='2R'"), 'profile did not render saved planned R');
+reloadedSettingsApi.go('risk');
+ok(reloadedSettingsFixture.appNode.innerHTML.includes('Planned risk') && reloadedSettingsFixture.appNode.innerHTML.includes('<h2>0.5</h2>'), 'risk route did not reflect saved risk default');
+reloadedSettingsApi.go('planner', {new: true});
+ok(reloadedSettingsFixture.appNode.innerHTML.includes("id='instrument'") && reloadedSettingsFixture.appNode.innerHTML.includes("value='NQ'"), 'new planner draft did not inherit default instrument');
+ok(reloadedSettingsFixture.appNode.innerHTML.includes("<option value='New York AM' selected>New York AM</option>"), 'new planner draft did not inherit default session');
+const riskDefaultDraft = reloadedSettingsApi.createBlankDraft({
+  fields: {
+    instrument: 'NQ',
+    session: 'New York AM',
+    currentPrice: '20000',
+    dol1Level: '20200',
+    dol1Draw: 'Previous day high (PDH)',
+    dol1Tf: 'Daily'
+  }
+});
+ok(riskDefaultDraft.risk.plannedRiskPct === '0.5', 'new focus cards should inherit default risk percent');
+ok(riskDefaultDraft.risk.plannedR === '2R', 'new focus cards should inherit default planned R');
+ok(riskDefaultDraft.risk.maxLoss === '150', 'new focus cards should inherit default max loss');
+const explicitRiskCard = reloadedSettingsApi.normaliseCard({
+  id: 'explicit-risk',
+  fields: {instrument: 'NQ'},
+  risk: {plannedRiskPct: '1', plannedR: '3R', maxLoss: '300'}
+});
+ok(explicitRiskCard.risk.plannedRiskPct === '1' && explicitRiskCard.risk.plannedR === '3R' && explicitRiskCard.risk.maxLoss === '300', 'card-specific risk values should override defaults');
 const hit = api.normaliseCard({id: 'hit', fields: {instrument: 'MNQ'}, outcome: 'Hit', finalSaved: true, favorite: true});
 const miss = api.normaliseCard({id: 'miss', fields: {instrument: 'ES'}, outcome: 'Miss', finalSaved: true});
 const draftMiss = api.normaliseCard({id: 'draft-miss', fields: {instrument: 'NQ'}, outcome: 'Miss', finalSaved: false});
@@ -361,7 +437,7 @@ ok(priceMapMarkup.includes('price-map-current') && priceMapMarkup.includes('CURR
 ok(priceMapMarkup.includes('price-map-row dol above'), 'price map DOL row class missing');
 ok(priceMapMarkup.includes('price-map-row sweep'), 'price map sweep row class missing');
 ok(priceMapMarkup.includes('+250 pts · 1.25%'), 'price map distance label missing');
-const takenPatch = api.focusDolTakenFields(priceCard, id => ({checked: id === 'focus_dol2Taken'}));
+const takenPatch = api.focusReviewFields(priceCard, id => ({checked: id === 'focus_dol2Taken'}));
 ok(takenPatch.dol1Taken === false && takenPatch.dol2Taken === true && takenPatch.dol3Taken === false, 'focus DOL taken patch did not reflect checkbox states');
 const takenUpdated = api.updateCard('hit', {fields: takenPatch});
 ok(takenUpdated.fields.dol2Taken === true, 'focus DOL taken patch did not persist');

@@ -4,6 +4,7 @@
   const VERSION = 'v0.8.0';
   const KEY = 'ict_cards_v078';
   const SETTINGS_KEY = 'ict_settings_v1';
+  const DRAFT_KEY = 'ict_planner_draft_v1';
   const SCHEMA = 'ict_dol_sweep_export_v7';
   const NL = String.fromCharCode(10);
   const DQ = String.fromCharCode(34);
@@ -13,10 +14,13 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const doc = root.document || null;
   const app = doc ? doc.getElementById('app') : null;
-  const HOSTED_PRICE_API_BASE = 'https://ict-2mrz.vercel.app/api/price';
+  const HOSTED_PRICE_API_BASE = 'https://ictict-lake.vercel.app/api/price';
   const LOCAL_PRICE_API_BASE = 'http://127.0.0.1:8765/price';
   const PRICE_TIMEOUT_MS = 8000;
   const PRICE_REFRESH_SECONDS = 30;
+  const MAX_PRICE_INTEGER_DIGITS = 12;
+  const MAX_PRICE_DECIMALS = 8;
+  const ROUTES = ['home','planner','saved','journal','profile','focus','review','timeline','liquidity-map','risk'];
 
   const instruments = ['MNQ','NQ','MES','ES','MYM','YM','RTY','M2K','MGC','GC','CL','BTCUSD','ETHUSD','EURUSD','GBPUSD'];
   const draws = [
@@ -191,18 +195,17 @@
   }
 
   function clean(v){
-    let s = String(v || '').trim();
+    const s = String(v || '').trim();
     if(s.toUpperCase() === 'N/A') return 'N/A';
-    let r = '';
-    let dot = false;
-    for(const ch of s.replaceAll(',', '.')){
-      if(ch >= '0' && ch <= '9') r += ch;
-      else if(ch === '.' && !dot){
-        r += ch;
-        dot = true;
-      }
-    }
-    return r;
+    if(!s) return '';
+    const normalised = /,/.test(s)
+      ? (/^(?:0|[1-9]\d{0,2})(?:,\d{3})+(?:\.\d+)?$/.test(s) ? s.replaceAll(',', '') : '')
+      : s;
+    if(!normalised || !/^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(normalised)) return '';
+    const parts = normalised.split('.');
+    if(parts[0].replace(/^0+/, '').length > MAX_PRICE_INTEGER_DIGITS) return '';
+    if(parts[1] && parts[1].length > MAX_PRICE_DECIMALS) return '';
+    return normalised;
   }
 
   function cleanUrl(v){
@@ -242,6 +245,7 @@
       if(k === 'fvg') x[k] = s[k] === true || s[k] === 'yes' || s[k] === 'true';
       else if(k.endsWith('Taken')) x[k] = s[k] === true || s[k] === 'yes' || s[k] === 'true';
       else if(k === 'bias') x[k] = biasOptions.includes(s[k]) ? s[k] : '';
+      else if(k === 'fvgTf') x[k] = tfs.includes(s[k]) ? s[k] : '';
       else if(k.endsWith('Tf')) x[k] = liquidityTimeframes.includes(s[k]) ? s[k] : '';
       else if(isPriceField(k)) x[k] = clean(s[k]);
       else x[k] = asText(s[k]);
@@ -676,7 +680,15 @@
 
   function persistCards(nextCards){
     const store = storage();
-    if(store) store.setItem(KEY, JSON.stringify(nextCards));
+    if(!store) return true;
+    try {
+      store.setItem(KEY, JSON.stringify(nextCards));
+      lastStorageError = '';
+      return true;
+    } catch(e) {
+      lastStorageError = 'Storage limit reached. Export JSON, clear old cards, or reduce saved data before saving again.';
+      return false;
+    }
   }
 
   function loadCards(){
@@ -707,8 +719,9 @@
   }
 
   function saveCards(nextCards){
-    cards = Array.isArray(nextCards) ? nextCards.map(normaliseCard) : [];
-    persistCards(cards);
+    const normalised = Array.isArray(nextCards) ? nextCards.map(normaliseCard) : [];
+    if(!persistCards(normalised)) return getCards();
+    cards = normalised;
     return getCards();
   }
 
@@ -717,6 +730,7 @@
     const now = isoNow();
     const fields = Object.assign(blank(), input.fields || {});
     const activeId = normActiveDolId(input.activeDolId, fields);
+    const riskDefaults = getSettings().riskDefaults;
     return normaliseCard({
       id: input.id || uid(),
       savedAt: input.savedAt || now,
@@ -735,7 +749,7 @@
       finalSaved: false,
       favorite: !!input.favorite,
       journal: input.journal || {},
-      risk: input.risk || {}
+      risk: Object.assign({}, riskDefaults, isObject(input.risk) ? input.risk : {})
     });
   }
 
@@ -857,11 +871,140 @@
     return {imported: incoming.length, cards: getCards()};
   }
 
+  function profileFormSettings(lookup, themeOverride){
+    const find = typeof lookup === 'function' ? lookup : id => doc ? doc.getElementById(id) : null;
+    const current = getSettings();
+    const readValue = (id, fallback) => {
+      const node = find(id);
+      return node ? node.value : fallback;
+    };
+    return {
+      defaultInstrument: readValue('defaultInstrument', current.defaultInstrument),
+      defaultSession: readValue('defaultSession', current.defaultSession),
+      theme: themeOverride || readValue('themeMode', current.theme),
+      watchlist: arrayText(readValue('watchlist', current.watchlist)),
+      riskDefaults: {
+        plannedRiskPct: readValue('defaultRiskPct', current.riskDefaults.plannedRiskPct),
+        plannedR: readValue('defaultPlannedR', current.riskDefaults.plannedR),
+        maxLoss: readValue('defaultMaxLoss', current.riskDefaults.maxLoss)
+      }
+    };
+  }
+
+  function plannerHasInput(fields, ctx, cardId){
+    const flds = normFields(fields || {});
+    const baseDate = today();
+    const hasField = Object.keys(flds).some(k => {
+      const value = flds[k];
+      if(k === 'date' && value === baseDate) return false;
+      if(typeof value === 'boolean') return value;
+      return !!value;
+    });
+    return !!(cardId || hasField || marketContextText(ctx));
+  }
+
+  function persistPlannerDraft(){
+    const store = storage();
+    if(!store) return true;
+    try {
+      if(!plannerHasInput(f, marketContextDraft, plannerCardId)){
+        store.removeItem(DRAFT_KEY);
+        return true;
+      }
+      store.setItem(DRAFT_KEY, JSON.stringify({
+        version: VERSION,
+        savedAt: isoNow(),
+        fields: normFields(f),
+        marketContext: normMarketContext(marketContextDraft),
+        marketContextOpenTimeframes: marketTimeframes.filter(tf => marketContextOpenTimeframes.includes(tf)),
+        plannerCardId,
+        reviewId,
+        lastPriceSource,
+        lastPriceFetchAt
+      }));
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function clearPlannerDraft(){
+    const store = storage();
+    if(store) store.removeItem(DRAFT_KEY);
+  }
+
+  function restorePlannerDraft(){
+    const store = storage();
+    const payload = store ? parse(store.getItem(DRAFT_KEY) || '{}', {}) : {};
+    if(!isObject(payload) || !isObject(payload.fields)) return false;
+    f = normFields(payload.fields);
+    marketContextDraft = normMarketContext(payload.marketContext);
+    marketContextOpenTimeframes = selectedMarketTimeframes(marketContextDraft, payload.marketContextOpenTimeframes);
+    plannerCardId = asText(payload.plannerCardId);
+    if(plannerCardId && !cards.find(card => card.id === plannerCardId)) plannerCardId = '';
+    reviewId = asText(payload.reviewId) || reviewId;
+    lastPriceSource = asText(payload.lastPriceSource) || 'manual';
+    lastPriceFetchAt = Number(payload.lastPriceFetchAt) || 0;
+    priceFetchState = '';
+    return true;
+  }
+
+  function normaliseRoute(value){
+    const next = value === 'review' ? 'focus' : asText(value || 'home');
+    return ROUTES.includes(next) ? next : 'home';
+  }
+
+  function parseRouteHash(){
+    const hash = root.location && root.location.hash ? String(root.location.hash).replace(/^#\/?/, '') : '';
+    if(!hash) return null;
+    const parts = hash.split('/');
+    return {
+      route: normaliseRoute(decodeURIComponent(parts[0] || 'home')),
+      id: parts[1] ? decodeURIComponent(parts[1]) : ''
+    };
+  }
+
+  function routeHash(){
+    const id = ['focus','timeline'].includes(route) && reviewId ? '/' + encodeURIComponent(reviewId) : '';
+    return '#' + encodeURIComponent(route) + id;
+  }
+
+  function writeRouteHash(replace){
+    if(!root.location) return;
+    const hash = routeHash();
+    if(root.location.hash === hash) return;
+    if(root.history && (replace ? root.history.replaceState : root.history.pushState)){
+      root.history[replace ? 'replaceState' : 'pushState'](null, '', hash);
+    } else {
+      root.location.hash = hash;
+    }
+  }
+
+  function ensurePlannerDraft(){
+    if(plannerHasInput(f, marketContextDraft, plannerCardId)) return;
+    startDraft(null, {persist: false});
+  }
+
+  function restoreRouteFromHash(){
+    const parsed = parseRouteHash();
+    if(!parsed) return false;
+    route = parsed.route;
+    if(parsed.id) reviewId = parsed.id;
+    if(route === 'planner') ensurePlannerDraft();
+    return true;
+  }
+
+  function handleRouteChangeFromHash(){
+    if(route === 'planner') sync();
+    if(restoreRouteFromHash()) render();
+  }
+
   let route = 'home';
   let step = 0;
   let f = blank();
   let marketContextDraft = blankMarketContext();
   let marketContextOpenTimeframes = [];
+  let lastStorageError = '';
   let cards = loadCards();
   let reviewId = '';
   let notice = '';
@@ -874,7 +1017,9 @@
     LEGACY,
     SCHEMA,
     SETTINGS_KEY,
+    DRAFT_KEY,
     blank,
+    clean,
     normFields,
     normMarketContext,
     blankMarketContext,
@@ -901,6 +1046,7 @@
     priceCountdownText,
     selectedMarketTimeframes,
     focusReviewFields,
+    plannerHasInput,
     priceMapLevels,
     priceMapHtml,
     getCards,
@@ -931,6 +1077,10 @@
 
   function select(k, l, a, p){
     return `<label class='label' for='${k}'>${esc(l)}</label><select class='in' id='${k}'>${options(a, f[k], p)}</select>`;
+  }
+
+  function selectDisabled(k, l, a, p, disabled){
+    return `<label class='label' for='${k}'>${esc(l)}</label><select class='in' id='${k}' ${disabled ? 'disabled' : ''}>${options(a, disabled ? '' : f[k], p)}</select>`;
   }
 
   function selectValue(id, l, a, v, p){
@@ -995,7 +1145,8 @@
 
   function selectedMarketTimeframes(ctx){
     const context = normMarketContext(ctx);
-    return marketTimeframes.filter(tf => marketContextOpenTimeframes.includes(tf) || hasMarketContextRow(context[tf]));
+    const open = Array.isArray(arguments[1]) ? arguments[1] : marketContextOpenTimeframes;
+    return marketTimeframes.filter(tf => open.includes(tf) || hasMarketContextRow(context[tf]));
   }
 
   function focusReviewFields(c, lookup){
@@ -1013,7 +1164,7 @@
     const fvgNode = findNode('focusFvg');
     const fvgTfNode = findNode('focusFvgTf');
     out.fvg = fvgNode ? !!fvgNode.checked : !!fields.fvg;
-    out.fvgTf = fvgTfNode ? asText(fvgTfNode.value) : asText(fields.fvgTf);
+    out.fvgTf = out.fvg ? (fvgTfNode ? asText(fvgTfNode.value) : asText(fields.fvgTf)) : '';
     return out;
   }
 
@@ -1162,7 +1313,7 @@
 
   function fvgReviewHtml(c){
     const formed = !!(c.fields.fvg || c.markers.fvgFormed);
-    return `<label class='check-row'><input type='checkbox' id='focusFvg' ${formed ? 'checked' : ''}> <span>FVG formed after sweep</span></label><label class='label' for='focusFvgTf'>FVG timeframe</label><select class='in' id='focusFvgTf'>${options(tfs, c.fields.fvgTf, '- FVG timeframe -')}</select><p class='hint'>You can update this after the card is created because the FVG may form during the trade window.</p>`;
+    return `<label class='check-row'><input type='checkbox' id='focusFvg' ${formed ? 'checked' : ''}> <span>FVG formed after sweep</span></label><label class='label' for='focusFvgTf'>FVG timeframe</label><select class='in' id='focusFvgTf' ${formed ? '' : 'disabled'}>${options(tfs, formed ? c.fields.fvgTf : '', '- FVG timeframe -')}</select><p class='hint'>You can update this after the card is created because the FVG may form during the trade window.</p>`;
   }
 
   function summary(x, ctx){
@@ -1228,9 +1379,10 @@
     return sorted.find(c => !c.finalSaved) || sorted[0] || null;
   }
 
-  function startDraft(seed){
+  function startDraft(seed, options){
     const settings = getSettings();
     const input = isObject(seed) ? seed : {};
+    const opts = isObject(options) ? options : {};
     const base = blank();
     base.date = today();
     base.instrument = settings.defaultInstrument || '';
@@ -1238,11 +1390,12 @@
     const seedFields = input.fields ? input.fields : input;
     f = normFields(Object.assign(base, seedFields || {}));
     marketContextDraft = normMarketContext(input.marketContext || (input.fields && input.fields.marketContext));
-    marketContextOpenTimeframes = selectedMarketTimeframes(marketContextDraft);
+    marketContextOpenTimeframes = selectedMarketTimeframes(marketContextDraft, []);
     plannerCardId = '';
     priceFetchState = '';
     lastPriceSource = 'manual';
     step = 0;
+    if(opts.persist !== false) persistPlannerDraft();
   }
 
   function statusPill(c){
@@ -1317,7 +1470,7 @@
     const c = comp(f);
     const instrumentInput = `<label class='label' for='instrument'>Instrument</label><input class='in' id='instrument' list='inst' value='${esc(f.instrument)}' placeholder='Select or type instrument'><datalist id='inst'>${instruments.map(x => `<option value='${esc(x)}'>`).join('')}</datalist>`;
     const status = raw('Status', c.ok ? pill('Complete', 'ok') : pill('Draft', 'warn'));
-    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats your inputs only. It does not call external AI, forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button>${priceCountdownHtml()}</div><p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the hosted yfinance price API when configured, then falls back to the local helper at 127.0.0.1:8765.</p><label class='label'>Bias Determination For Session</label><div class='segmented' role='group' aria-label='Bias Determination For Session'>${biasOptions.map(b => `<button class='segmented-option' data-bias='${b}' aria-pressed='${f.bias === b ? 'true' : 'false'}'>${esc(b)}</button>`).join('')}</div><p class='hint'>Session bias is a planning label for the selected session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Market Context</div><h3>Phase map by timeframe</h3><p class='sub'>Record observed context only. Potential next phase is a conservative planning note, not a trade signal or forecast.</p>${marketContextPlanner(marketContextDraft)}</div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}<div class='panel'><h3>FVG Formation</h3><label class='check-row'><input type='checkbox' id='fvg' ${f.fvg ? 'checked' : ''}> <span>FVG formed after sweep</span></label>${select('fvgTf', 'FVG timeframe', tfs, '- FVG timeframe -')}</div></div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' style='bottom:var(--bottom-nav-height)'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
+    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats your inputs only. It does not call external AI, forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button>${priceCountdownHtml()}</div><p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the hosted yfinance price API when configured, then falls back to the local helper at 127.0.0.1:8765.</p><label class='label'>Bias Determination For Session</label><div class='segmented' role='group' aria-label='Bias Determination For Session'>${biasOptions.map(b => `<button class='segmented-option' data-bias='${b}' aria-pressed='${f.bias === b ? 'true' : 'false'}'>${esc(b)}</button>`).join('')}</div><p class='hint'>Session bias is a planning label for the selected session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Market Context</div><h3>Phase map by timeframe</h3><p class='sub'>Record observed context only. Potential next phase is a conservative planning note, not a trade signal or forecast.</p>${marketContextPlanner(marketContextDraft)}</div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}<div class='panel'><h3>FVG Formation</h3><label class='check-row'><input type='checkbox' id='fvg' ${f.fvg ? 'checked' : ''}> <span>FVG formed after sweep</span></label>${selectDisabled('fvgTf', 'FVG timeframe', tfs, '- FVG timeframe -', !f.fvg)}</div></div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' style='bottom:var(--bottom-nav-height)'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
   }
 
   function saved(){
@@ -1404,6 +1557,7 @@
       const n = doc.getElementById(k);
       if(n) f[k] = n.type === 'checkbox' ? n.checked : (isPriceField(k) ? clean(n.value) : asText(n.value));
     }
+    if(!f.fvg) f.fvgTf = '';
     marketTimeframes.forEach(tf => {
       const key = marketPhaseKeys[tf];
       const phase = doc.getElementById('ctx_' + key + '_phase');
@@ -1420,6 +1574,7 @@
       }
     });
     marketContextDraft = normMarketContext(marketContextDraft);
+    persistPlannerDraft();
   }
 
   function savePlanner(openDetails){
@@ -1429,12 +1584,25 @@
       c = updateCard(plannerCardId, {fields: f, marketContext: marketContextDraft, finalSaved: false, priceSource: lastPriceSource, priceHistoryEvent: 'saved-edit'});
     } else {
       c = createBlankDraft({fields: f, marketContext: marketContextDraft, priceSource: lastPriceSource});
-      saveCards([c].concat(cards));
+      const saved = saveCards([c].concat(cards)).find(card => card.id === c.id);
+      if(!saved){
+        notice = lastStorageError || 'Draft could not be saved.';
+        render();
+        return;
+      }
+      c = saved;
       plannerCardId = c.id;
+    }
+    if(lastStorageError){
+      notice = lastStorageError;
+      render();
+      return;
     }
     reviewId = c.id;
     route = openDetails ? 'focus' : 'planner';
     notice = openDetails ? 'Focus plan saved.' : 'Draft saved.';
+    persistPlannerDraft();
+    writeRouteHash();
     render();
   }
 
@@ -1501,25 +1669,23 @@
     });
 
     on('globalNewBtn', () => {
-      if(Object.values(f).some(Boolean) && !confirm('Start a new draft and replace the current planner inputs?')) return;
-      startDraft();
-      route = 'planner';
-      render();
+      if(plannerHasInput(f, marketContextDraft, plannerCardId) && !confirm('Start a new draft and replace the current planner inputs?')) return;
+      go('planner', {new: true});
     });
-    on('startPlanBtn', () => { startDraft(); route = 'planner'; render(); });
-    on('startHeroBtn', () => { startDraft(); route = 'planner'; render(); });
+    on('startPlanBtn', () => go('planner', {new: true}));
+    on('startHeroBtn', () => go('planner', {new: true}));
     on('continuePlanBtn', () => {
       const c = latestCard();
       if(c){
         f = normFields(c.fields);
         marketContextDraft = normMarketContext(c.marketContext);
-        marketContextOpenTimeframes = selectedMarketTimeframes(marketContextDraft);
+        marketContextOpenTimeframes = selectedMarketTimeframes(marketContextDraft, []);
         plannerCardId = c.id;
       } else {
         startDraft();
       }
-      route = 'planner';
-      render();
+      persistPlannerDraft();
+      go('planner');
     });
     on('saveDraftBtn', () => savePlanner(false));
     on('nextBtn', () => savePlanner(true));
@@ -1573,9 +1739,7 @@
 
     doc.querySelectorAll('[data-open-card]').forEach(n => {
       n.onclick = () => {
-        reviewId = n.getAttribute('data-open-card');
-        route = 'focus';
-        render();
+        go('focus', {id: n.getAttribute('data-open-card')});
       };
     });
 
@@ -1610,6 +1774,13 @@
         if(n.id === 'currentPrice'){
           priceFetchState = '';
           lastPriceSource = 'manual';
+        }
+        if(n.id === 'fvg'){
+          const fvgTf = q('fvgTf');
+          if(fvgTf){
+            fvgTf.disabled = !f.fvg;
+            if(!f.fvg) fvgTf.value = '';
+          }
         }
         updatePlannerOutputs();
         syncMarketContextOpenTimeframes(marketContextDraft);
@@ -1699,6 +1870,16 @@
     }
 
     const cur = () => cards.find(c => c.id === reviewId);
+    const focusFvg = q('focusFvg');
+    if(focusFvg){
+      focusFvg.onchange = () => {
+        const fvgTf = q('focusFvgTf');
+        if(fvgTf){
+          fvgTf.disabled = !focusFvg.checked;
+          if(!focusFvg.checked) fvgTf.value = '';
+        }
+      };
+    }
     function read(finalSave){
       const c = cur();
       if(!c) return;
@@ -1807,11 +1988,11 @@
       if(c){
         f = normFields(c.fields);
         marketContextDraft = normMarketContext(c.marketContext);
-        marketContextOpenTimeframes = selectedMarketTimeframes(marketContextDraft);
+        marketContextOpenTimeframes = selectedMarketTimeframes(marketContextDraft, []);
         plannerCardId = c.id;
         step = 0;
-        route = 'planner';
-        render();
+        persistPlannerDraft();
+        go('planner');
       }
     });
     on('deleteBtn', () => {
@@ -1819,9 +2000,8 @@
       if(c && confirm('Delete this saved card?')){
         deleteCard(c.id);
         reviewId = '';
-        route = 'saved';
         notice = 'Card deleted.';
-        render();
+        go('saved');
       }
     });
 
@@ -1835,17 +2015,7 @@
     });
 
     on('saveSettingsBtn', () => {
-      saveSettings({
-        defaultInstrument: q('defaultInstrument').value,
-        defaultSession: q('defaultSession').value,
-        theme: q('themeMode') ? q('themeMode').value : getSettings().theme,
-        watchlist: arrayText(q('watchlist').value),
-        riskDefaults: {
-          plannedRiskPct: q('defaultRiskPct').value,
-          plannedR: q('defaultPlannedR').value,
-          maxLoss: q('defaultMaxLoss').value
-        }
-      });
+      saveSettings(profileFormSettings(q));
       notice = 'Settings saved.';
       render();
     });
@@ -1853,7 +2023,7 @@
     const themeMode = q('themeMode');
     if(themeMode){
       themeMode.onchange = () => {
-        saveSettings({theme: themeMode.value});
+        saveSettings(profileFormSettings(q, themeMode.value));
         notice = 'Theme updated.';
         render();
       };
@@ -1863,13 +2033,12 @@
       if(confirm('Clear all local cards, settings and bias metadata?')){
         const store = storage();
         if(store){
-          [KEY, SETTINGS_KEY, 'ict_bias_card_meta_v1'].concat(LEGACY).forEach(k => store.removeItem(k));
+          [KEY, SETTINGS_KEY, DRAFT_KEY, 'ict_bias_card_meta_v1'].concat(LEGACY).forEach(k => store.removeItem(k));
         }
         cards = [];
-        startDraft();
-        route = 'home';
+        startDraft(null, {persist: false});
         notice = 'Local data cleared.';
-        render();
+        go('home', {replace: true});
       }
     });
   }
@@ -1877,7 +2046,7 @@
   function addConcept(idx){
     const item = conceptLibrary[idx];
     if(!item) return;
-    if(!Object.values(f).some(Boolean)) startDraft();
+    if(!plannerHasInput(f, marketContextDraft, plannerCardId)) startDraft();
     if(item.cat === 'DOL'){
       const slot = [1,2,3].find(i => !f['dol' + i + 'Draw']) || 1;
       f['dol' + slot + 'Draw'] = item.name;
@@ -1892,17 +2061,21 @@
     } else if(item.cat === 'Killzone'){
       f.session = 'New York AM';
     }
-    route = 'planner';
     notice = item.name + ' added to draft.';
-    render();
+    persistPlannerDraft();
+    go('planner');
   }
 
   function go(next, params){
     if(route === 'planner') sync();
+    const target = normaliseRoute(next || 'home');
     if(params && params.id) reviewId = params.id;
-    if(next === 'review') next = 'focus';
-    if(next === 'planner' && params && params.new) startDraft();
-    route = next || 'home';
+    if(target === 'planner'){
+      if(params && params.new) startDraft();
+      else ensurePlannerDraft();
+    }
+    route = target;
+    writeRouteHash(params && params.replace);
     render();
   }
 
@@ -1936,6 +2109,12 @@
     });
   }
 
+  restorePlannerDraft();
+  restoreRouteFromHash();
+  if(root.addEventListener){
+    root.addEventListener('popstate', handleRouteChangeFromHash);
+    root.addEventListener('hashchange', handleRouteChangeFromHash);
+  }
   applyTheme(getSettings().theme);
   if(typeof setInterval === 'function') setInterval(tick, 1000);
   tick();

@@ -1131,7 +1131,7 @@ Auto-detect targets the current working API.
 What should not happen:
 
 ```text
-Auto-detect targets old ict-2mrz.vercel.app endpoint.
+Auto-detect targets a retired hosted endpoint.
 ```
 
 ### 7. Constraints
@@ -1360,4 +1360,3 @@ Exit criteria:
   - Clear local data clears only app keys.
   - Mobile 320px and 390px no horizontal overflow.
   - Axe/accessibility pass for contrast and landmarks.
-

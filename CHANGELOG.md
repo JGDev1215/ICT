@@ -12,12 +12,16 @@
 - Added optional local yfinance price-helper support for planner price auto-detect while keeping GitHub Pages manual-only.
 - Added Timeframe Used and Taken status to DOL and Sweep stack records, with DOL timeframe required for complete records.
 - Added the Price Map ladder visual with a CURRENT PRICE divider, DOL/Sweep rows, signed distance labels, empty/loading/error states, and yfinance/manual price source display.
+- Added planner draft autosave/restore and hash-based tab/page routing for refresh and browser back/forward support.
 - Expanded smoke coverage for the normalized saved-card shape, route rendering, export/import round trip, import deduplication, invalid import no-op behavior, and final-save analytics boundaries.
 
 ### Changed
 
 - Reworked the planner into a deterministic AI-style Trade Plan Builder while keeping the app static, local-only, and educational.
 - Reworked saved-card review into a Focus Card Details screen while preserving Save changes, Final save, Copy, Share, Delete, export/import, and final hit-rate behavior.
+- Added the current Vercel live domain to the price API CORS allow-list and clarified same-origin Vercel versus static-host price API setup in the README.
+- Tightened price parsing so comma-thousands values keep their meaning while malformed, negative, scientific-notation, or ambiguous prices are rejected instead of silently rewritten.
+- Improved light/dark contrast, chip touch targets, and the app landmark structure.
 - Changed bias copy to “Bias Determination For Session” and added the before-10:30am NY warning that full-day prediction is not supported by this tool.
 - Removed Validation of Bias and Invalidation of Bias from the planner and Focus Card Details workflow while preserving legacy data in normalized cards and JSON exports.
 - Simplified visible DOL records to Price Level and Draw Rationale while preserving confidence and hit-time compatibility fields in normalized cards and exports.

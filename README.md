@@ -19,7 +19,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 - Build step: none
 - Runtime dependencies: none
 - Data storage: browser localStorage and sessionStorage
-- Current app version: v0.7.9
+- Current app version: v0.8.0
 - Main entrypoint: index.html
 - Stylesheet: assets/styles.css
 - App logic: assets/app.js
@@ -88,23 +88,30 @@ And returns:
 }
 ```
 
-The API includes a short in-memory cache and CORS allow-list for `https://jgdev1215.github.io`, `localhost:8000`, and `localhost:8888`.
+The API includes a short in-memory cache and a CORS allow-list for the current hosted/static deployment path:
 
-By default, the frontend points at:
+- `https://ictict-lake.vercel.app`
+- `https://jgdev1215.github.io`
+- `localhost:8000`
+- `localhost:8888`
+- `127.0.0.1:8000`
+- `127.0.0.1:8888`
+
+Same-origin Vercel use does not need a cross-origin fallback. When the app is opened from the current Vercel deployment, the frontend resolves the price helper to:
 
 ```text
-https://ict-2mrz.vercel.app/api/price
+https://ictict-lake.vercel.app/api/price
 ```
 
-If the Vercel project uses a different production URL, set this before `assets/app.js` loads:
+For GitHub Pages or any other static host, set the API base explicitly before `assets/app.js` loads so auto-detect uses the current Vercel function:
 
 ```html
 <script>
-window.ICT_PRICE_API_BASE = 'https://your-vercel-project.vercel.app/api/price';
+window.ICT_PRICE_API_BASE = 'https://ictict-lake.vercel.app/api/price';
 </script>
 ```
 
-Or update `HOSTED_PRICE_API_BASE` in `assets/app.js`. Manual price entry remains the fallback.
+Requests without an `Origin` header receive wildcard CORS for direct/no-origin clients such as curl or local tooling; browser requests must come from an allowed origin. Manual price entry remains the fallback.
 
 Deploy the API to Vercel:
 
@@ -218,7 +225,7 @@ The Saved Cards page includes:
 - Export JSON
 - Import JSON
 
-The v0.7.9 JSON export schema is:
+The v0.8.0 JSON export schema is:
 
 ```text
 ict_dol_sweep_export_v7
