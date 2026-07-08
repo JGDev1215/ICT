@@ -1,9 +1,11 @@
-const CACHE_NAME = 'ict-sweep-tracker-v080-audit-fixes-20260708';
+const CACHE_NAME = 'ict-sweep-tracker-v080-checklist-fixes-20260708';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './favicon.svg',
+  './icon-192.svg',
+  './icon-512.svg',
   './assets/styles.css?v=0.8.0-concept-improvements-20260708',
   './assets/app.js?v=0.8.0-concept-improvements-20260708'
 ];

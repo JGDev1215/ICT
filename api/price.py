@@ -45,6 +45,9 @@ STATIC_FILES = {
     "/index.html": ROOT_DIR / "index.html",
     "/manifest.webmanifest": ROOT_DIR / "manifest.webmanifest",
     "/service-worker.js": ROOT_DIR / "service-worker.js",
+    "/favicon.svg": ROOT_DIR / "favicon.svg",
+    "/icon-192.svg": ROOT_DIR / "icon-192.svg",
+    "/icon-512.svg": ROOT_DIR / "icon-512.svg",
 }
 
 

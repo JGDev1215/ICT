@@ -507,6 +507,15 @@ textarea.in,.textarea{min-height:104px;resize:vertical;line-height:1.45}
 .bull{color:var(--confirmed);font-weight:800}
 .bear{color:var(--danger);font-weight:800}
 
+.draft-state{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  align-items:center;
+  gap:var(--space-3);
+}
+.draft-state p{margin:4px 0 0}
+
 .price-map{
   display:grid;
   gap:var(--space-3);

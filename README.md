@@ -50,12 +50,12 @@ The planner captures:
 3. Bias Determination For Session: Bullish or Bearish.
 4. Market Context phases and notes for only the timeframes the user chooses from the Phase Map dropdown.
 5. Up to three draw-on-liquidity records using Price Level, Draw Rationale, and Timeframe Used.
-6. Up to three potential sweep records with Timeframe Used and Sweep Taken.
+6. Up to three potential sweep records using Price Level, Sweep Liquidity, and Timeframe Used, with optional Sweep Taken, confidence, and hit-time context.
 7. FVG formation and timeframe.
 8. Generated preview with DOL distance from the current price where numeric.
 9. Save Draft or Generate Focus Plan.
 
-Missing inputs are shown as Draft, and the user can still save an incomplete draft card.
+Missing required inputs are shown as Draft, and the user can still save an incomplete draft card. Sweep confidence and hit time are optional detail fields and do not decide Complete/Draft status.
 
 Current price can be entered manually. The app can also call an optional hosted yfinance price API on Vercel. Manual entry remains the fallback when the hosted API is unavailable.
 
@@ -91,6 +91,7 @@ And returns:
 The API includes a short in-memory cache and a CORS allow-list for the current hosted/static deployment path:
 
 - `https://ictict-lake.vercel.app`
+- `https://ict-2mrz.vercel.app`
 - `https://jgdev1215.github.io`
 - `localhost:8000`
 - `localhost:8888`
@@ -254,6 +255,8 @@ ict_slips_v1
 
 Data is not sent to a backend server. Clearing browser storage may remove saved cards, so users should use JSON export for backup.
 
+The Profile page also includes a local-data backup reminder beside the Export JSON / Import JSON tools.
+
 ## How to Run Locally
 
 No installation is required for normal use.
@@ -299,6 +302,9 @@ ICT/
 ├── index.html
 ├── manifest.webmanifest
 ├── service-worker.js
+├── favicon.svg
+├── icon-192.svg
+├── icon-512.svg
 ├── api/
 │   └── price.py
 ├── assets/
@@ -335,4 +341,4 @@ ICT/
 - Saved cards are browser-local only and are not synced across devices.
 - Screenshot support is metadata-only for v1.
 - The smoke test is static; it does not replace full browser automation or real-device QA.
-- iOS/Android responsive checks and PWA/offline install behavior still need manual verification before a public release.
+- A linked PWA manifest and install icons are included, but iOS/Android responsive checks and PWA/offline install behavior still need manual verification before a public release.

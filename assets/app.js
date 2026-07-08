@@ -20,7 +20,7 @@
   const PRICE_REFRESH_SECONDS = 30;
   const MAX_PRICE_INTEGER_DIGITS = 12;
   const MAX_PRICE_DECIMALS = 8;
-  const ROUTES = ['home','planner','saved','journal','profile','focus','review','timeline','liquidity-map','risk'];
+  const ROUTES = ['home','planner','saved','journal','profile','focus','review','timeline','liquidity-map','risk','component-gallery'];
 
   const instruments = ['MNQ','NQ','MES','ES','MYM','YM','RTY','M2K','MGC','GC','CL','BTCUSD','ETHUSD','EURUSD','GBPUSD'];
   const draws = [
@@ -604,9 +604,7 @@
       let part = 0;
       for(let i = 1; i <= 3; i++){
         const any = x[p + i + 'Level'] || x[p + i + 'Draw'] || x[p + i + 'Tf'] || x[p + i + 'Taken'] || x[p + i + 'Confidence'] || x[p + i + 'HitTime'];
-        const ok = p === 'dol'
-          ? x[p + i + 'Level'] && x[p + i + 'Draw'] && x[p + i + 'Tf']
-          : x[p + i + 'Level'] && x[p + i + 'Draw'] && x[p + i + 'Tf'] && x[p + i + 'Confidence'] && x[p + i + 'HitTime'];
+        const ok = x[p + i + 'Level'] && x[p + i + 'Draw'] && x[p + i + 'Tf'];
         if(ok) done++;
         else if(any) part++;
       }
@@ -914,15 +912,27 @@
 
   function persistPlannerDraft(){
     const store = storage();
-    if(!store) return true;
+    if(!store){
+      lastDraftState = 'Autosave unavailable in this browser.';
+      return false;
+    }
     try {
-      if(!plannerHasInput(f, marketContextDraft, plannerCardId)){
+      if(plannerDraftDiscarded){
         store.removeItem(DRAFT_KEY);
+        lastDraftSavedAt = '';
+        lastDraftState = 'Draft discarded.';
         return true;
       }
+      if(!plannerHasInput(f, marketContextDraft, plannerCardId)){
+        store.removeItem(DRAFT_KEY);
+        lastDraftSavedAt = '';
+        lastDraftState = 'No active planner draft.';
+        return true;
+      }
+      const savedAt = isoNow();
       store.setItem(DRAFT_KEY, JSON.stringify({
         version: VERSION,
-        savedAt: isoNow(),
+        savedAt,
         fields: normFields(f),
         marketContext: normMarketContext(marketContextDraft),
         marketContextOpenTimeframes: marketTimeframes.filter(tf => marketContextOpenTimeframes.includes(tf)),
@@ -931,8 +941,11 @@
         lastPriceSource,
         lastPriceFetchAt
       }));
+      lastDraftSavedAt = savedAt;
+      lastDraftState = 'Autosaved locally at ' + nyTimestamp(savedAt) + '.';
       return true;
     } catch(e) {
+      lastDraftState = 'Unsaved changes. Browser storage is unavailable or full.';
       return false;
     }
   }
@@ -940,6 +953,9 @@
   function clearPlannerDraft(){
     const store = storage();
     if(store) store.removeItem(DRAFT_KEY);
+    lastDraftSavedAt = '';
+    lastDraftState = 'Draft discarded.';
+    plannerDraftDiscarded = true;
   }
 
   function restorePlannerDraft(){
@@ -955,6 +971,9 @@
     lastPriceSource = asText(payload.lastPriceSource) || 'manual';
     lastPriceFetchAt = Number(payload.lastPriceFetchAt) || 0;
     priceFetchState = '';
+    lastDraftSavedAt = asText(payload.savedAt);
+    lastDraftState = lastDraftSavedAt ? 'Restored autosaved draft from ' + nyTimestamp(lastDraftSavedAt) + '.' : 'Restored autosaved draft.';
+    plannerDraftDiscarded = false;
     return true;
   }
 
@@ -1029,6 +1048,9 @@
   let priceFetchState = '';
   let lastPriceSource = 'manual';
   let lastPriceFetchAt = 0;
+  let lastDraftState = '';
+  let lastDraftSavedAt = '';
+  let plannerDraftDiscarded = false;
 
   const api = {
     KEY,
@@ -1065,6 +1087,10 @@
     selectedMarketTimeframes,
     focusReviewFields,
     plannerHasInput,
+    comp,
+    clearPlannerDraft,
+    discardPlannerDraft,
+    draftState: () => ({message: lastDraftState, savedAt: lastDraftSavedAt}),
     priceMapLevels,
     priceMapHtml,
     getCards,
@@ -1415,8 +1441,14 @@
     plannerCardId = '';
     priceFetchState = '';
     lastPriceSource = 'manual';
+    plannerDraftDiscarded = opts.discarded === true;
     step = 0;
     if(opts.persist !== false) persistPlannerDraft();
+  }
+
+  function discardPlannerDraft(){
+    clearPlannerDraft();
+    startDraft(null, {persist: false, discarded: true});
   }
 
   function statusPill(c){
@@ -1466,7 +1498,7 @@
     if(['home','planner','saved','journal','profile'].includes(route)) return route;
     if(['focus','review','timeline'].includes(route)) return 'saved';
     if(route === 'liquidity-map') return 'planner';
-    if(route === 'risk') return 'profile';
+    if(route === 'risk' || route === 'component-gallery') return 'profile';
     return 'home';
   }
 
@@ -1491,7 +1523,8 @@
     const c = comp(f);
     const instrumentInput = `<label class='label' for='instrument'>Instrument</label><input class='in' id='instrument' list='inst' value='${esc(f.instrument)}' placeholder='Select or type instrument'><datalist id='inst'>${instruments.map(x => `<option value='${esc(x)}'>`).join('')}</datalist>`;
     const status = raw('Status', c.ok ? pill('Complete', 'ok') : pill('Draft', 'warn'));
-    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats your inputs only. It does not call external AI, forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button>${priceCountdownHtml()}</div><p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the hosted yfinance price API when configured, then falls back to the local helper at 127.0.0.1:8765.</p><label class='label'>Bias Determination For Session</label><div class='segmented' role='group' aria-label='Bias Determination For Session'>${biasOptions.map(b => `<button class='segmented-option' data-bias='${b}' aria-pressed='${f.bias === b ? 'true' : 'false'}'>${esc(b)}</button>`).join('')}</div><p class='hint'>Session bias is a planning label for the selected session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Market Context</div><h3>Phase map by timeframe</h3><p class='sub'>Record observed context only. Potential next phase is a conservative planning note, not a trade signal or forecast.</p>${marketContextPlanner(marketContextDraft)}</div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}<div class='panel'><h3>FVG Formation</h3><label class='check-row'><input type='checkbox' id='fvg' ${f.fvg ? 'checked' : ''}> <span>FVG formed after sweep</span></label>${selectDisabled('fvgTf', 'FVG timeframe', tfs, '- FVG timeframe -', !f.fvg)}</div></div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' style='bottom:var(--bottom-nav-height)'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
+    const draftMessage = lastDraftState || (plannerHasInput(f, marketContextDraft, plannerCardId) ? 'Autosave ready. Planner changes are kept locally before you save a card.' : 'No active planner draft.');
+    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats your inputs only. It does not call external AI, forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button>${priceCountdownHtml()}</div><p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the hosted yfinance price API when configured, then falls back to the local helper at 127.0.0.1:8765.</p><label class='label'>Bias Determination For Session</label><div class='segmented' role='group' aria-label='Bias Determination For Session'>${biasOptions.map(b => `<button class='segmented-option' data-bias='${b}' aria-pressed='${f.bias === b ? 'true' : 'false'}'>${esc(b)}</button>`).join('')}</div><p class='hint'>Session bias is a planning label for the selected session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Market Context</div><h3>Phase map by timeframe</h3><p class='sub'>Record observed context only. Potential next phase is a conservative planning note, not a trade signal or forecast.</p>${marketContextPlanner(marketContextDraft)}</div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}<div class='panel'><h3>FVG Formation</h3><label class='check-row'><input type='checkbox' id='fvg' ${f.fvg ? 'checked' : ''}> <span>FVG formed after sweep</span></label>${selectDisabled('fvgTf', 'FVG timeframe', tfs, '- FVG timeframe -', !f.fvg)}</div></div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div class='panel draft-state'><div><strong>Draft state</strong><p class='hint' id='draftState'>${esc(draftMessage)}</p></div><button class='btn ghost' id='discardDraftBtn'>Discard draft</button></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' style='bottom:var(--bottom-nav-height)'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
   }
 
   function saved(){
@@ -1565,11 +1598,25 @@
     return `<section class='screen'>${pageHead('Trade journal', 'Journal', entries.length + ' reviewed entries', '')}<div class='card-dashed card'><div class='progress'>Screenshots</div><h3>Screenshot metadata placeholder</h3><p class='sub'>Image uploads are left out of v1 to avoid storing large files in localStorage.</p></div><button class='btn' id='exportJsonBtn'>Export journal data</button>${list}</section>`;
   }
 
+  function componentGallery(){
+    const sampleFields = normFields({
+      instrument: 'MNQ',
+      currentPrice: '20000',
+      dol1Level: '20250',
+      dol1Draw: 'Previous day high (PDH)',
+      dol1Tf: 'Daily',
+      sweep1Level: '19850',
+      sweep1Draw: 'Asia low',
+      sweep1Tf: '15m'
+    });
+    return `<section class='screen'>${pageHead('Design system', 'Component Gallery', 'Internal preview for reusable UI states.', 'profile')}<div class='card'><h3>Buttons</h3><div class='row-actions'><button class='btn primary'>Primary</button><button class='btn'>Default</button><button class='btn ghost'>Ghost</button><button class='btn good'>Success</button><button class='btn danger'>Danger</button><button class='btn btn-icon ghost' aria-label='Icon button'>${icon('star')}</button></div></div><div class='card'><h3>Chips and pills</h3><div class='status-row'><button class='chip chip-active'>Active chip</button><button class='chip'>Neutral chip</button>${pill('Complete', 'ok')}${pill('Draft', 'warn')}${pill('Final saved', 'info')}${pill('Miss', 'bad')}</div></div><div class='card'><h3>Form controls</h3><div class='grid'><div><label class='label' for='galleryInput'>Input</label><input class='in' id='galleryInput' value='MNQ'></div><div><label class='label' for='gallerySelect'>Select</label><select class='in' id='gallerySelect'><option>New York AM</option></select></div></div><label class='check-row'><input type='checkbox' checked> <span>Checked state</span></label></div><div class='card'><h3>Cards and empty states</h3><div class='panel'><p class='hint'>Panel / empty state copy remains compact and instructional.</p></div></div><div class='card-dashed card'><div class='progress'>Dashed card</div><h3>Screenshot placeholder</h3><p class='sub'>Local-only metadata state.</p></div><div class='card'><h3>Timeline nodes</h3><div class='timeline'><div class='timeline-node complete'><div class='progress'>Complete</div><h3>Bias mapped</h3><p class='sub'>Completed state.</p></div><div class='timeline-node live'><div class='progress'>Live</div><h3>Sweep watch</h3><p class='sub'>Current state.</p></div><div class='timeline-node pending'><div class='progress'>Pending</div><h3>Outcome review</h3><p class='sub'>Pending state.</p></div></div></div><div class='card'><h3>Price map states</h3>${priceMapHtml(sampleFields)}<div class='price-map price-map-empty'><p>No numeric current price yet.</p></div><div class='price-map price-map-loading'><p>Loading price update...</p></div><div class='price-map price-map-error'><p>Price helper unavailable.</p></div></div></section>`;
+  }
+
   function profile(){
     const settings = getSettings();
     const m = getMetrics(cards);
     const recent = latestCard();
-    return `<section class='screen'>${pageHead('Trader profile', 'Profile', 'Local settings and portable data tools.', '')}<div class='card'><h3>Local summary</h3>${line('Saved cards', m.total)}${line('Final saved', m.finalSaved)}${line('Favorites', m.favorites)}${line('Recent plan', recent ? (recent.fields.instrument || 'No instrument') : '')}</div><div class='card'><h3>Settings</h3><label class='label' for='defaultInstrument'>Default instrument</label><input class='in' id='defaultInstrument' value='${esc(settings.defaultInstrument)}' placeholder='MNQ'><label class='label' for='defaultSession'>Default session</label><select class='in' id='defaultSession'>${options(sessions, settings.defaultSession, 'No default')}</select><label class='label' for='themeMode'>Theme</label><select class='in' id='themeMode'><option value='light'${settings.theme === 'light' ? ' selected' : ''}>Light mode</option><option value='dark'${settings.theme === 'dark' ? ' selected' : ''}>Dark mode</option></select><label class='label' for='watchlist'>Watchlist</label><input class='in' id='watchlist' value='${esc(settings.watchlist.join(', '))}' placeholder='MNQ, ES, GC'><div class='grid'><div><label class='label' for='defaultRiskPct'>Default risk %</label><input class='in' id='defaultRiskPct' value='${esc(settings.riskDefaults.plannedRiskPct)}'></div><div><label class='label' for='defaultPlannedR'>Default planned R</label><input class='in' id='defaultPlannedR' value='${esc(settings.riskDefaults.plannedR)}'></div></div><label class='label' for='defaultMaxLoss'>Default max loss</label><input class='in' id='defaultMaxLoss' value='${esc(settings.riskDefaults.maxLoss)}'><button class='btn primary' id='saveSettingsBtn'>Save settings</button></div><div class='card'><h3>Data tools</h3><div class='row-actions'><button class='btn' id='exportJsonBtn'>Export data</button><button class='btn' id='importJsonBtn'>Import data</button><button class='btn danger' id='clearDataBtn'>Clear all local data</button><input class='file-input' id='importFile' type='file' accept='application/json,.json'></div></div></section>`;
+    return `<section class='screen'>${pageHead('Trader profile', 'Profile', 'Local settings and portable data tools.', '')}<div class='card'><h3>Local summary</h3>${line('Saved cards', m.total)}${line('Final saved', m.finalSaved)}${line('Favorites', m.favorites)}${line('Recent plan', recent ? (recent.fields.instrument || 'No instrument') : '')}</div><div class='card'><h3>Settings</h3><label class='label' for='defaultInstrument'>Default instrument</label><input class='in' id='defaultInstrument' value='${esc(settings.defaultInstrument)}' placeholder='MNQ'><label class='label' for='defaultSession'>Default session</label><select class='in' id='defaultSession'>${options(sessions, settings.defaultSession, 'No default')}</select><label class='label' for='themeMode'>Theme</label><select class='in' id='themeMode'><option value='light'${settings.theme === 'light' ? ' selected' : ''}>Light mode</option><option value='dark'${settings.theme === 'dark' ? ' selected' : ''}>Dark mode</option></select><label class='label' for='watchlist'>Watchlist</label><input class='in' id='watchlist' value='${esc(settings.watchlist.join(', '))}' placeholder='MNQ, ES, GC'><div class='grid'><div><label class='label' for='defaultRiskPct'>Default risk %</label><input class='in' id='defaultRiskPct' value='${esc(settings.riskDefaults.plannedRiskPct)}'></div><div><label class='label' for='defaultPlannedR'>Default planned R</label><input class='in' id='defaultPlannedR' value='${esc(settings.riskDefaults.plannedR)}'></div></div><label class='label' for='defaultMaxLoss'>Default max loss</label><input class='in' id='defaultMaxLoss' value='${esc(settings.riskDefaults.maxLoss)}'><button class='btn primary' id='saveSettingsBtn'>Save settings</button></div><div class='card'><h3>Data tools</h3><p class='hint'>Saved cards live only in this browser. Export JSON regularly before clearing browser data, changing devices or testing beta builds.</p><div class='row-actions'><button class='btn primary' id='exportJsonBtn'>Export data</button><button class='btn' id='importJsonBtn'>Import data</button><button class='btn' data-route='component-gallery'>Component gallery</button><button class='btn danger' id='clearDataBtn'>Clear all local data</button><input class='file-input' id='importFile' type='file' accept='application/json,.json'></div></div></section>`;
   }
 
   function sync(){
@@ -1595,7 +1642,24 @@
       }
     });
     marketContextDraft = normMarketContext(marketContextDraft);
+    if(plannerDraftDiscarded && !plannerHasOnlyDefaultPrefill()) plannerDraftDiscarded = false;
     persistPlannerDraft();
+    const draftState = doc.getElementById('draftState');
+    if(draftState) draftState.textContent = lastDraftState || 'Autosave ready.';
+  }
+
+  function plannerHasOnlyDefaultPrefill(){
+    if(plannerCardId || marketContextText(marketContextDraft)) return false;
+    const settings = getSettings();
+    const baseDate = today();
+    return Object.keys(f).every(k => {
+      const value = f[k];
+      if(k === 'date') return !value || value === baseDate;
+      if(k === 'instrument') return value === (settings.defaultInstrument || '');
+      if(k === 'session') return value === (settings.defaultSession || '');
+      if(typeof value === 'boolean') return value === false;
+      return !value;
+    });
   }
 
   function savePlanner(openDetails){
@@ -1710,6 +1774,12 @@
     });
     on('saveDraftBtn', () => savePlanner(false));
     on('nextBtn', () => savePlanner(true));
+    on('discardDraftBtn', () => {
+      if(plannerHasInput(f, marketContextDraft, plannerCardId) && !confirm('Discard the current planner draft?')) return;
+      discardPlannerDraft();
+      notice = 'Planner draft discarded.';
+      render();
+    });
     on('autoPriceBtn', () => {
       sync();
       const symbol = f.instrument;
@@ -2126,6 +2196,7 @@
     else if(route === 'risk') content = risk();
     else if(route === 'journal') content = journal();
     else if(route === 'profile') content = profile();
+    else if(route === 'component-gallery') content = componentGallery();
     app.innerHTML = renderShell(content);
     notice = '';
     bind();

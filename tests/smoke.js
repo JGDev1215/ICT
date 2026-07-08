@@ -20,6 +20,7 @@ const serviceWorker = read('service-worker.js');
 const priceApi = read('api/price.py');
 const requirements = read('requirements.txt');
 const vercelConfig = read('vercel.json');
+const pagesWorkflow = read('.github/workflows/pages.yml');
 const readme = read('README.md');
 const changelog = read('CHANGELOG.md');
 
@@ -40,6 +41,7 @@ ok(styleAsset.includes(`v=${appVersionNumber}`), 'style asset cache key should i
 ok(serviceWorker.includes(`'./${appAsset}'`), 'service worker app cache does not match index');
 ok(serviceWorker.includes(`'./${styleAsset}'`), 'service worker style cache does not match index');
 ok(cacheName.includes(appVersionNumber.replaceAll('.', '')), 'service worker cache name should include app version');
+ok(index.includes('rel="manifest" href="manifest.webmanifest"'), 'manifest link missing from index');
 ok(index.includes('href="favicon.svg"'), 'favicon link missing');
 ok(index.includes("navigator.serviceWorker.register('./service-worker.js')"), 'service worker registration missing');
 ok(appSource.includes("const KEY = 'ict_cards_v078'"), 'storage key missing');
@@ -75,6 +77,7 @@ ok(appSource.includes('Before 10:30am NY'), 'pre-10:30 NY warning missing');
 ok(appSource.includes('Start new analysis'), 'home action missing');
 ok(appSource.includes('function renderShell'), 'app shell renderer missing');
 ok(appSource.includes('function renderTabBar'), 'tab bar renderer missing');
+ok(appSource.includes('component-gallery'), 'component gallery route missing');
 ok(appSource.includes('AI Trade Plan Builder'), 'planner screen missing');
 ok(appSource.includes('Saved focus cards'), 'saved screen missing');
 ok(appSource.includes('Focus card details'), 'focus card details screen missing');
@@ -102,6 +105,7 @@ ok(css.includes('.audit-strip'), 'audit strip css missing');
 ok(css.includes('.snapshot-card'), 'snapshot card css missing');
 ok(css.includes('.override-panel'), 'override panel css missing');
 ok(css.includes('.price-history-compact'), 'compact price history css missing');
+ok(css.includes('.draft-state'), 'visible draft-state styling missing');
 ok(readme.includes('## Price Map Ladder'), 'README price map section missing');
 ok(readme.includes('CURRENT PRICE divider'), 'README current price divider contract missing');
 ok(readme.includes('DOL and Sweep rows'), 'README DOL/Sweep row contract missing');
@@ -115,7 +119,12 @@ ok(changelog.includes('Price Map ladder'), 'changelog price map support entry mi
 const manifestJson = JSON.parse(manifest);
 ok(manifestJson.name === 'ICT DOL Sweep Tracker', 'manifest name invalid');
 ok(manifestJson.theme_color === '#FAFAF8', 'manifest theme color invalid');
+ok(manifestJson.scope === './', 'manifest scope missing');
+ok(Array.isArray(manifestJson.icons), 'manifest icons missing');
+ok(manifestJson.icons.some(icon => icon.src === 'icon-192.svg' && icon.sizes === '192x192' && icon.purpose.includes('maskable')), 'manifest 192 maskable icon missing');
+ok(manifestJson.icons.some(icon => icon.src === 'icon-512.svg' && icon.sizes === '512x512' && icon.purpose.includes('maskable')), 'manifest 512 maskable icon missing');
 ok(serviceWorker.includes('./favicon.svg'), 'service worker favicon cache missing');
+ok(serviceWorker.includes('./icon-192.svg') && serviceWorker.includes('./icon-512.svg'), 'service worker app icons cache missing');
 ok(serviceWorker.includes("url.pathname.startsWith('/api/')"), 'service worker should bypass API requests');
 ok(serviceWorker.includes("event.request.mode === 'navigate'"), 'service worker should network-first navigations');
 ok(serviceWorker.includes('Response.error()'), 'service worker should fail missing asset requests instead of returning HTML');
@@ -123,9 +132,11 @@ ok(!/cached => cached \|\| fetch\(event\.request\)[\s\S]*?caches\.match\('\.\/in
 ok(!serviceWorker.includes('assets/bias-extension.js'), 'service worker should not cache obsolete bias extension');
 ok(priceApi.includes('class handler(BaseHTTPRequestHandler)'), 'Vercel Python handler missing');
 ok(priceApi.includes('STATIC_FILES'), 'Vercel static-file serving missing');
+ok(priceApi.includes('"/favicon.svg"') && priceApi.includes('"/icon-192.svg"') && priceApi.includes('"/icon-512.svg"'), 'Vercel static-file icon serving missing');
 ok(priceApi.includes('def send_static'), 'Vercel static handler missing');
 ok(priceApi.includes('ALLOWED_ORIGINS'), 'price API CORS allow-list missing');
 ok(priceApi.includes(`"${hostedPriceUrl.origin}"`), 'price API Vercel origin missing');
+ok(readme.includes('https://ict-2mrz.vercel.app'), 'README CORS allow-list should include legacy Vercel deployment');
 ok(priceApi.includes('CACHE_TTL_SECONDS = 30'), 'price API cache TTL missing');
 ok(priceApi.includes('"MNQ": "MNQ=F"') && priceApi.includes('"M2K": "M2K=F"'), 'price API futures aliases missing');
 ok(priceApi.includes('"EURUSD": "EURUSD=X"') && priceApi.includes('"GBPUSD": "GBPUSD=X"'), 'price API FX aliases missing');
@@ -137,7 +148,8 @@ ok(requirements.includes('yfinance=='), 'requirements should pin yfinance');
 const parsedVercelConfig = JSON.parse(vercelConfig);
 ok(parsedVercelConfig.framework === null, 'vercel framework should be disabled');
 ok(parsedVercelConfig.outputDirectory === '_site', 'vercel output directory invalid');
-ok(parsedVercelConfig.buildCommand.includes('cp index.html') && parsedVercelConfig.buildCommand.includes('favicon.svg') && parsedVercelConfig.buildCommand.includes('_site/assets'), 'vercel static build command invalid');
+ok(parsedVercelConfig.buildCommand.includes('cp index.html') && parsedVercelConfig.buildCommand.includes('favicon.svg') && parsedVercelConfig.buildCommand.includes('icon-192.svg') && parsedVercelConfig.buildCommand.includes('icon-512.svg') && parsedVercelConfig.buildCommand.includes('_site/assets'), 'vercel static build command invalid');
+ok(pagesWorkflow.includes('icon-192.svg') && pagesWorkflow.includes('icon-512.svg'), 'GitHub Pages workflow should copy app icons');
 
 new vm.Script(appSource, {filename: 'assets/app.js'});
 new vm.Script(biasSource, {filename: 'Legacy/assets/bias-extension.js'});
@@ -316,6 +328,26 @@ ok(api.priceNumber('-1') === null, 'negative market price should be rejected');
 ok(api.priceNumber('1e3') === null, 'scientific notation price should be rejected');
 ok(api.priceNumber('1.2.3') === null, 'multiple-decimal price should be rejected');
 ok(api.priceNumber('20,123,50') === null, 'ambiguous comma price should be rejected');
+const optionalSweepCompletion = api.comp({
+  instrument: 'MNQ',
+  dol1Level: '20250',
+  dol1Draw: 'Previous day high (PDH)',
+  dol1Tf: 'Daily',
+  sweep1Level: '20100',
+  sweep1Draw: 'Relative equal lows (REL)',
+  sweep1Tf: '15m',
+  sweep1Taken: false
+});
+ok(optionalSweepCompletion.ok === true, 'sweep confidence and hit time should not block completion');
+const partialSweepCompletion = api.comp({
+  instrument: 'MNQ',
+  dol1Level: '20250',
+  dol1Draw: 'Previous day high (PDH)',
+  dol1Tf: 'Daily',
+  sweep1Level: '20100',
+  sweep1Draw: 'Relative equal lows (REL)'
+});
+ok(partialSweepCompletion.ok === false && partialSweepCompletion.sweep.part === 1, 'partial sweep records should keep card in draft status');
 
 const settingsFixture = runApp();
 const settingsApi = settingsFixture.context.ICTSweepState;
@@ -348,6 +380,16 @@ ok(reloadedSettingsFixture.appNode.innerHTML.includes('Planned risk') && reloade
 reloadedSettingsApi.go('planner', {new: true});
 ok(reloadedSettingsFixture.appNode.innerHTML.includes("id='instrument'") && reloadedSettingsFixture.appNode.innerHTML.includes("value='NQ'"), 'new planner draft did not inherit default instrument');
 ok(reloadedSettingsFixture.appNode.innerHTML.includes("<option value='New York AM' selected>New York AM</option>"), 'new planner draft did not inherit default session');
+ok(reloadedSettingsApi.draftState().message.includes('Autosaved locally'), 'planner should expose autosaved draft state');
+ok(!!reloadedSettingsFixture.storage.getItem(reloadedSettingsApi.DRAFT_KEY), 'planner draft autosave was not stored');
+reloadedSettingsApi.clearPlannerDraft();
+ok(!reloadedSettingsFixture.storage.getItem(reloadedSettingsApi.DRAFT_KEY), 'clearPlannerDraft should remove stored planner draft');
+ok(reloadedSettingsApi.draftState().message === 'Draft discarded.', 'clearPlannerDraft should expose discarded state');
+reloadedSettingsApi.go('planner', {new: true});
+ok(!!reloadedSettingsFixture.storage.getItem(reloadedSettingsApi.DRAFT_KEY), 'new planner draft should autosave defaults before discard');
+reloadedSettingsApi.discardPlannerDraft();
+reloadedSettingsApi.go('home');
+ok(!reloadedSettingsFixture.storage.getItem(reloadedSettingsApi.DRAFT_KEY), 'discarded planner draft should not be recreated by default profile values');
 const riskDefaultDraft = reloadedSettingsApi.createBlankDraft({
   fields: {
     instrument: 'NQ',
@@ -534,6 +576,12 @@ const failedImport = quotaApi.importCards({cards: [quotaApi.normaliseCard({id: '
 ok(failedImport.imported === 0 && failedImport.error, 'importCards should report failed durable writes');
 quotaApi.saveSettings({defaultInstrument: 'ES'});
 ok(quotaApi.lastSettingsError().includes('Settings could not be saved'), 'settings write failure should be surfaced');
+const failingDraftSeed = {};
+failingDraftSeed[quotaApi.SETTINGS_KEY] = JSON.stringify({defaultInstrument: 'MNQ'});
+const failingDraftFixture = runApp(failingDraftSeed, {failWrites: true});
+const failingDraftApi = failingDraftFixture.context.ICTSweepState;
+failingDraftApi.go('planner', {new: true});
+ok(failingDraftApi.draftState().message.includes('Unsaved changes'), 'planner autosave failure should be user-visible');
 
 const blankDraft = api.createBlankDraft();
 ok(blankDraft.outcome === 'Open', 'blank draft outcome invalid');
@@ -556,6 +604,8 @@ ok(malformedHash.appNode.innerHTML.includes('ICT Sweep Tracker'), 'malformed has
 routeApi.go('planner');
 ok(routes.appNode.innerHTML.includes('AI Trade Plan Builder'), 'planner route did not render');
 ok(routes.appNode.innerHTML.includes('Generate Focus Plan'), 'planner CTA did not render');
+ok(routes.appNode.innerHTML.includes('Draft state'), 'planner visible draft state missing');
+ok(routes.appNode.innerHTML.includes("id='discardDraftBtn'"), 'planner discard draft action missing');
 ok(routes.appNode.innerHTML.includes('Bias Determination For Session'), 'planner session bias label missing');
 ok(routes.appNode.innerHTML.includes('Before 10:30am NY'), 'planner pre-10:30 warning missing');
 ok(routes.appNode.innerHTML.includes('Market Context'), 'planner market context section missing');
@@ -581,6 +631,26 @@ ok(!routes.appNode.innerHTML.includes('Validation of bias'), 'planner should not
 ok(!routes.appNode.innerHTML.includes('Invalidation of bias'), 'planner should not render invalidation of bias label');
 ok(routes.appNode.innerHTML.includes('dol1Level'), 'planner DOL field missing');
 ok(routes.appNode.innerHTML.includes('sweep1Level'), 'planner sweep field missing');
+
+const restoreSeed = {};
+restoreSeed[routeApi.DRAFT_KEY] = JSON.stringify({
+  version: appVersion,
+  savedAt: '2026-07-08T10:00:00.000Z',
+  fields: {
+    instrument: 'MNQ',
+    dol1Level: '20250',
+    dol1Draw: 'Previous day high (PDH)',
+    dol1Tf: 'Daily',
+    sweep1Level: '20100',
+    sweep1Draw: 'Relative equal lows (REL)',
+    sweep1Tf: '15m'
+  }
+});
+const restoredDraftFixture = runApp(restoreSeed);
+const restoredDraftApi = restoredDraftFixture.context.ICTSweepState;
+restoredDraftApi.go('planner');
+ok(restoredDraftApi.draftState().message.includes('Restored autosaved draft'), 'planner should expose restored draft state');
+ok(restoredDraftFixture.appNode.innerHTML.includes('Restored autosaved draft'), 'planner should render restored draft state');
 
 const routeCard = routeApi.createBlankDraft({
   id: 'route-card',
@@ -696,7 +766,18 @@ ok(routes.appNode.innerHTML.includes('Wait for confirmation.'), 'journal lesson 
 
 routeApi.go('profile');
 ok(routes.appNode.innerHTML.includes('Profile'), 'profile route did not render');
+ok(routes.appNode.innerHTML.includes('Saved cards live only in this browser'), 'profile backup reminder missing');
+ok(routes.appNode.innerHTML.includes("id='exportJsonBtn'>Export data"), 'profile primary JSON export action missing');
+ok(routes.appNode.innerHTML.includes("data-route='component-gallery'"), 'profile component gallery link missing');
 ok(routes.appNode.innerHTML.includes('Clear all local data'), 'profile clear action missing');
+
+routeApi.go('component-gallery');
+ok(routes.appNode.innerHTML.includes('Component Gallery'), 'component gallery route did not render');
+ok(routes.appNode.innerHTML.includes('Buttons'), 'component gallery button examples missing');
+ok(routes.appNode.innerHTML.includes('Chips and pills'), 'component gallery chip examples missing');
+ok(routes.appNode.innerHTML.includes('Form controls'), 'component gallery form examples missing');
+ok(routes.appNode.innerHTML.includes('Timeline nodes'), 'component gallery timeline examples missing');
+ok(routes.appNode.innerHTML.includes('price-map-loading') && routes.appNode.innerHTML.includes('price-map-error'), 'component gallery price-map states missing');
 
 routeApi.toggleFavorite('route-card');
 ok(routeApi.getCards()[0].favorite === false, 'route favorite flow failed');

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — 2026-07-07
+## v0.8.0 — 2026-07-08
 
 ### Added
 
@@ -13,6 +13,10 @@
 - Added Timeframe Used and Taken status to DOL and Sweep stack records, with DOL timeframe required for complete records.
 - Added the Price Map ladder visual with a CURRENT PRICE divider, DOL/Sweep rows, signed distance labels, empty/loading/error states, and yfinance/manual price source display.
 - Added planner draft autosave/restore and hash-based tab/page routing for refresh and browser back/forward support.
+- Added visible planner draft autosave state plus a discard-draft action.
+- Added an internal Component Gallery route reachable from Profile for reusable UI state review.
+- Added a linked PWA manifest with install icons for installed-app presentation.
+- Added a Profile backup reminder that tells beta users to export JSON before clearing browser data or changing devices.
 - Expanded smoke coverage for the normalized saved-card shape, route rendering, export/import round trip, import deduplication, invalid import no-op behavior, and final-save analytics boundaries.
 
 ### Changed
@@ -28,6 +32,7 @@
 - Updated DOL/Sweep review displays to show timeframe and taken/not-taken data points.
 - Changed the Market Context Phase Map so timeframe inputs are added from a dropdown instead of forcing every timeframe row into the planner.
 - Moved DOL Taken confirmation out of the planner and into Focus Card Details review.
+- Made sweep confidence and hit time optional detail fields; Complete/Draft status now follows the visible required sweep fields: price level, sweep liquidity, and timeframe.
 - Moved the Planner Price Map into a standalone visible ladder card instead of hiding it inside the generated text preview.
 - Updated README documentation for the completed mobile UI redesign and remaining QA gaps.
 
