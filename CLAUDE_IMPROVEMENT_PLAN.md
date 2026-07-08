@@ -76,6 +76,23 @@ ICT/
 3. **Planning documents are scattered across the root.**
    `ISSUE_FIX_PLAN.md`, `PREMIUM_MOBILE_APP_UI_PLAN.md`, `saved-setups-tab-update-plan.md`, `ict-framework-handover.md`, and this file are all root-level, while other plans live in `docs/ui-redesign/` and `docs/fix-lists/`. Consolidate under `docs/plans/` so the root contains only app files, config, README, and CHANGELOG.
 
+3a. **Stale fix-lists read as live TODOs — a documentation hazard.**
+   `docs/fix-lists/7-7 AM SESSION.md` is a pre-redesign audit written the morning of 2026-07-07, formatted as an urgent P0/P1/P2 list ("Do not start UI screen building yet", "biggest technical risk before the UI redesign"). Cross-checking it against the current tree shows the completed v0.7.9 redesign has **already resolved ~90% of it**:
+
+   | Fix-list item | Current state |
+   |---|---|
+   | P0-01 core app still `v0.7.8` / schema `v6` | Resolved — `app.js` is `v0.7.9`, `SCHEMA = ict_dol_sweep_export_v7` |
+   | P0-02 bias not in core card model | Resolved — bias lives in core `blank()`/`normFields()`/`normaliseCard()` (27 refs) |
+   | P0-03 `Storage.prototype.setItem` monkey-patch | Resolved — patch exists only in `Legacy/assets/bias-extension.js`, not loaded by `index.html` |
+   | P0-04 review-card lookup by DOM text | Resolved — `data-ict-review-id` wired through `render()` (12 refs) |
+   | P1-08 "app.js is effectively one line" | Resolved — 1,829 readably-formatted lines |
+   | P1-09 core/extension duplicate responsibilities | Resolved — bias merged into core; extension retired to `Legacy/` |
+   | P2-01 / P2-02 dark theme, Space Grotesk / JetBrains fonts | Resolved — Manrope loaded, token-driven light CSS |
+   | P2-03 no bottom-tab app shell | Resolved — `renderTabBar()` / `renderShell()` |
+
+   Only two threads remain open, and both **independently confirm findings below**: P1-08's "split into `state.js`/`data.js`/`ui.js`/`screens/*`" → finding **#7** (modularize `app.js`); P0-06's "smoke test only does static string/syntax checks" → finding **#9** (partially addressed since — the test now executes `app.js` in a `vm`, but ~57 raw source-greps remain).
+   **Action:** when moving plan docs (item 3), mark finished fix-lists as historical — either move them to `docs/plans/archive/` or add a `> Status: superseded by v0.7.9 (YYYY-MM-DD)` banner at the top — so no future contributor or agent treats a done list as a live P0 queue.
+
 4. **No agent/contributor guidance.** `AGENTS.md` is an empty stub and there is no `CLAUDE.md`. Any assistant (or new contributor) must rediscover the version-bump ritual, storage-key conventions, and no-build constraint from scratch every session. See §4 for proposed content.
 
 5. **Version strings are duplicated in five places and asserted verbatim by tests.**
