@@ -1,5 +1,7 @@
 # 04 — Agent Workstreams
 
+> Current-status note — 2026-07-08: this workstream pack is historical. Any items requiring visible validation/invalidation inputs or cards are superseded by the current v0.8 workflow, which preserves those fields only for compatibility and export.
+
 ## How to use this file
 
 Assign one workstream per agent. Agents should not edit files outside their ownership unless they explicitly coordinate through a PR or handoff note.

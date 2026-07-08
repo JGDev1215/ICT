@@ -1,5 +1,7 @@
 # Saved Setups Tab Update Plan
 
+> Historical/superseded note — 2026-07-08: this plan targeted the legacy `ict-framework.html` single-file app and its `ict_slips_v1` journal. The current app uses route-based Home/Planner/Saved/Journal/Profile screens, primary storage key `ict_cards_v078`, legacy migration from `ict_slips_v1`, and JSON schema `ict_dol_sweep_export_v7`. Do not implement `setView()`, `updateSavedCount()`, `normalizeSlip()`, or the exact in-page Planner/Saved ARIA tablist unless the legacy app is explicitly revived.
+
 ## Summary
 
 Add an in-page `Planner / Saved` tab system to `ict-framework.html`. The app should remain a single standalone HTML file using the existing `localStorage` key, `ict_slips_v1`.
@@ -218,4 +220,3 @@ Do not infer missing ICT rules. Use `[NO CANONICAL SOURCE FOUND]` where the refe
 - Keyboard tab navigation works.
 - `aria-selected`, `tabindex`, and `hidden` states update correctly.
 - Mobile layout does not overflow with expanded saved cards.
-

@@ -91,14 +91,14 @@ ICT/
 
    Migrate one seam at a time (constants → storage → price → views), keeping the smoke test green at each step.
 
-8. **Configuration is hardcoded in app code.** `HOSTED_PRICE_API_BASE` and `LOCAL_PRICE_API_BASE` live inside `app.js`; the README documents a `window.ICT_PRICE_API_BASE` override. Move the defaults into a small config block at the top of `index.html` (or `assets/js/config.js`) so deploy targets change without touching app logic.
+8. **Configuration is hardcoded in app code.** Resolved 2026-07-08: runtime price-helper defaults now live in `assets/config.js`, which loads before `assets/app.js`. The legacy `window.ICT_PRICE_API_BASE` override remains available for one-off embeds.
 
 ### P3 — Testing and hygiene
 
-9. **The smoke test is brittle by design.** It string-matches exact source snippets (e.g. `"const KEY = 'ict_cards_v078'"`, exact `?v=` strings), so legitimate refactors break it even when behavior is unchanged. Keep the valuable behavioral parts (it executes `app.js` in a `vm` sandbox and exercises migration, export/import round-trips, and analytics) and thin out raw string assertions. Longer-term, add one Playwright happy-path test (create plan → save → reload → verify) since the repo already targets mobile PWA behavior the static test cannot see.
+9. **The smoke test is brittle by design.** It string-matches exact source snippets (e.g. `"const KEY = 'ict_cards_v078'"`, exact `?v=` strings), so legitimate refactors break it even when behavior is unchanged. Keep the valuable behavioral parts (it executes `app.js` in a `vm` sandbox and exercises migration, export/import round-trips, and analytics) and thin out raw string assertions over time. Resolved 2026-07-08 for browser coverage: Playwright now covers create plan → save → reload → verify, Planner skip-link behavior, and Home session filters.
 
 10. **Misc hygiene.**
-    - No `LICENSE` file — intentional or not, decide and record it.
+    - `LICENSE` now exists as MIT as of 2026-07-08.
     - `docs/fix-lists/7-7 AM SESSION.md` has spaces in the filename; use kebab-case (`2026-07-07-am-session.md`) and date-prefix fix-lists.
     - The service worker is cache-first for everything including `index.html`; updates depend entirely on remembering the `CACHE_NAME` bump. Consider network-first for navigation requests to reduce stale-shell risk.
     - `.python-version`/`requirements.txt` pin only `yfinance`; fine, but note in CLAUDE.md that Python exists solely for the Vercel function.

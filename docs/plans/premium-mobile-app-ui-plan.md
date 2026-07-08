@@ -1,5 +1,7 @@
 # Premium Mobile App UI Roadmap for ICT DOL Sweep Tracker
 
+> Current-status note — 2026-07-08: this roadmap is historical. References to visible validation/invalidation UI are superseded by the current v0.8 workflow, which preserves those fields only for compatibility and export.
+
 ## Purpose
 
 This plan adapts the supplied premium travel-app framework into the existing **ICT DOL Sweep Tracker** product.

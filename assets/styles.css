@@ -397,6 +397,23 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   outline:3px solid rgba(58,134,255,.35);
   outline-offset:3px;
 }
+.skip-link{
+  position:fixed;
+  left:50%;
+  top:12px;
+  transform:translate(-50%,-160%);
+  z-index:60;
+  background:var(--primary);
+  color:var(--on-primary);
+  border-radius:var(--radius-pill);
+  padding:10px 14px;
+  font-weight:800;
+  text-decoration:none;
+  box-shadow:var(--shadow-soft);
+}
+.skip-link:focus{
+  transform:translate(-50%,0);
+}
 .btn-row-between{
   display:flex;
   justify-content:space-between;
@@ -515,6 +532,19 @@ textarea.in,.textarea{min-height:104px;resize:vertical;line-height:1.45}
   gap:var(--space-3);
 }
 .draft-state p{margin:4px 0 0}
+
+.price-validation{
+  display:grid;
+  gap:4px;
+  margin:var(--space-3) 0;
+  padding:10px 12px;
+  border:1px solid rgba(255,92,122,.35);
+  border-radius:var(--radius-md);
+  background:rgba(255,92,122,.09);
+  color:var(--danger);
+  font-weight:800;
+}
+.price-validation p{margin:0}
 
 .price-map{
   display:grid;

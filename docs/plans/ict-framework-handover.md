@@ -1,5 +1,7 @@
 # ICT Framework Tool — Project Handover Report
 
+> Historical/superseded note — 2026-07-08: this handover describes the legacy single-file `Legacy/ict-framework.html` workflow, not the current route-based v0.8 app in `index.html` plus `assets/app.js`. Current v0.8 intentionally includes Focus Card Details, price snapshots, route evidence, and potential R:R. The old source-citation UI and monitoring-cadence requirements are formally retired unless a new product decision revives the legacy file.
+
 **Deliverable:** `ict-framework.html` (single self-contained file, ~860 lines, no build step, no dependencies beyond Google Fonts CDN)
 **Status:** Working product, v-current as of 2026-07-05
 **Owner:** Dan

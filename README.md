@@ -18,21 +18,24 @@ A lightweight browser-based ICT planning tool for one focused job:
 - App type: static HTML/CSS/JavaScript
 - Build step: none
 - Runtime dependencies: none
+- Dev QA dependencies: Playwright, installed only through `npm install`
 - Data storage: browser localStorage and sessionStorage
 - Current app version: v0.8.0
 - Main entrypoint: index.html
+- Runtime config: assets/config.js
 - Stylesheet: assets/styles.css
 - App logic: assets/app.js
 - Optional hosted price API: api/price.py for Vercel Python Functions
 - Legacy compatibility file: Legacy/assets/bias-extension.js is retained but no longer loaded by index.html
 - Deployment support: GitHub Pages workflow included
+- License: MIT
 
 ## Main Page
 
 The redesigned main page is a mobile-first dashboard with:
 
 - Bottom tab navigation for Home, Planner, Saved, Journal, and Profile.
-- A planning prompt, session chips, and plan-assistant card.
+- A planning prompt, session-filter chips, and plan-assistant card.
 - Today's focus card from the latest draft or saved plan.
 - Review metrics based on final-saved cards.
 - Watchlist preview from local Profile settings.
@@ -57,7 +60,7 @@ The planner captures:
 
 Missing required inputs are shown as Draft, and the user can still save an incomplete draft card. Sweep confidence and hit time are optional detail fields and do not decide Complete/Draft status.
 
-Current price can be entered manually. The app can also call an optional hosted yfinance price API on Vercel. Manual entry remains the fallback when the hosted API is unavailable.
+Current price can be entered manually. The app can also call an optional hosted yfinance price API on Vercel. Manual entry remains the fallback when the hosted API is unavailable. Zero, negative, malformed, scientific-notation, and ambiguous prices are rejected for price-map math.
 
 Use `Auto-detect price` in the Planner after the Vercel API is deployed.
 
@@ -104,7 +107,18 @@ Same-origin Vercel use does not need a cross-origin fallback. When the app is op
 https://ictict-lake.vercel.app/api/price
 ```
 
-For GitHub Pages or any other static host, set the API base explicitly before `assets/app.js` loads so auto-detect uses the current Vercel function:
+For GitHub Pages or any other static host, update `assets/config.js` so auto-detect uses the current Vercel function:
+
+```js
+window.ICT_CONFIG = Object.assign({
+  hostedPriceApiBase: 'https://ictict-lake.vercel.app/api/price',
+  localPriceApiBase: 'http://127.0.0.1:8765/price',
+  priceTimeoutMs: 8000,
+  priceRefreshSeconds: 30
+}, window.ICT_CONFIG || {});
+```
+
+For one-off embeds, the legacy override still works when it is defined before `assets/app.js` loads:
 
 ```html
 <script>
@@ -257,6 +271,12 @@ Data is not sent to a backend server. Clearing browser storage may remove saved 
 
 The Profile page also includes a local-data backup reminder beside the Export JSON / Import JSON tools.
 
+The Profile page includes a Beta feedback link to:
+
+```text
+https://github.com/JGDev1215/ICT/issues/new
+```
+
 ## How to Run Locally
 
 No installation is required for normal use.
@@ -283,6 +303,27 @@ node tests/smoke.js
 
 The test checks the main files, app syntax, bias extension syntax, storage keys, migration, normalized card shape including Market Context, export/import round trip, import deduplication, final-save analytics, and primary mobile routes.
 
+## Browser E2E Tests
+
+Playwright tests cover the core browser flows on desktop Chrome and mobile Chrome emulation:
+
+```bash
+npm install
+npm run test:e2e
+```
+
+The browser tests check Planner to Focus Card persistence, reload behavior, the Planner skip link, and Home session filtering.
+
+## Version Bump Helper
+
+Use the version helper when changing shipped JS/CSS behavior:
+
+```bash
+node tools/bump-version.js v0.8.1 release 20260708
+```
+
+It updates the visible app version, cache-busted asset URLs, service-worker cache name, and current-version docs.
+
 ## GitHub Pages Deployment
 
 This repository includes a GitHub Pages workflow:
@@ -308,6 +349,7 @@ ICT/
 ├── api/
 │   └── price.py
 ├── assets/
+│   ├── config.js
 │   ├── app.js
 │   └── styles.css
 ├── Legacy/
@@ -322,13 +364,19 @@ ICT/
 │   ├── plans/
 │   └── ui-redesign/
 ├── tests/
-│   └── smoke.js
+│   ├── smoke.js
+│   └── e2e/
 ├── .github/
 │   └── workflows/
+│       ├── e2e.yml
 │       ├── pages.yml
 │       └── smoke.yml
+├── package.json
+├── package-lock.json
+├── playwright.config.js
 ├── requirements.txt
 ├── vercel.json
+├── LICENSE
 ├── CLAUDE.md
 ├── CHANGELOG.md
 ├── AGENTS.md
@@ -340,5 +388,5 @@ ICT/
 - Hosted yfinance lookup is optional; manual price entry remains the primary fallback.
 - Saved cards are browser-local only and are not synced across devices.
 - Screenshot support is metadata-only for v1.
-- The smoke test is static; it does not replace full browser automation or real-device QA.
-- A linked PWA manifest and install icons are included, but iOS/Android responsive checks and PWA/offline install behavior still need manual verification before a public release.
+- Automated browser coverage now exists, but it does not replace real-device QA.
+- A linked PWA manifest and install icons are included, but manual iOS Safari, Android Chrome, PWA install, and offline behavior still need verification before a public release.

@@ -5,7 +5,8 @@
 Run before every handoff and release:
 
 ```bash
-node tests/smoke.js
+npm test
+npm run test:e2e
 ```
 
 The smoke test must cover:
@@ -19,6 +20,18 @@ The smoke test must cover:
 - Export/import round trip.
 - Final hit-rate analytics.
 - Primary route/screen rendering.
+
+The Playwright E2E suite must cover:
+
+- Planner creates a Focus Card and preserves it after reload.
+- Planner keyboard skip link reaches sticky actions without route loss.
+- Home session chips filter the visible focus card on desktop and mobile Chrome projects.
+
+### Recorded Automated Result - 2026-07-08
+
+- `npm test` passed.
+- `npm run test:e2e` passed: 6 browser tests across desktop Chrome and mobile Chrome emulation.
+- Syntax checks passed for `assets/config.js`, `assets/app.js`, `tests/smoke.js`, and `tools/bump-version.js`.
 
 ## Manual Mobile QA
 
@@ -64,7 +77,17 @@ Test at 390px and 430px wide viewports, then on real devices where available.
 ## Release Gate
 
 - Smoke test passes.
+- Playwright E2E passes.
 - Manual iOS or responsive Safari check passes.
 - Manual Android or responsive Chrome check passes.
 - README and CHANGELOG mention the redesign scope.
 - Known gaps are documented before pushing to `main`.
+
+### Current Release Status - 2026-07-08
+
+- Automated release gate: PASS.
+- Manual iOS Safari: PENDING real-device check.
+- Manual Android Chrome: PENDING real-device check.
+- PWA install: PENDING device/browser check.
+- Offline/service-worker behavior: PENDING device/browser check.
+- Public release recommendation: beta-only until the manual device/PWA/offline checks above are recorded.

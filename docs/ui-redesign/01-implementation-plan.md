@@ -1,5 +1,7 @@
 # 01 — UI Redesign Implementation Plan
 
+> Current-status note — 2026-07-08: this plan is historical where it describes visible validation/invalidation UI. v0.8 preserves `biasValidation` and `biasInvalidation` for migration, JSON export, and text export, but the active Planner and Focus Card Details screens no longer show those fields.
+
 ## Objective
 
 Bring the uploaded premium mobile UI design into the live ICT Sweep Tracker while preserving the existing static-site architecture, browser-local data, export/import support and educational-only positioning.

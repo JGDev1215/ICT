@@ -1,5 +1,7 @@
 # 05 — Agent Prompt Pack
 
+> Current-status note — 2026-07-08: this prompt pack is historical. References to visible validation/invalidation UI are superseded by the v0.8 workflow; use `docs/ui-redesign/08-qa-release-checklist.md` or `docs/ui-redesign/06-manual-qa-checklist.md` for current QA references.
+
 Use these prompts with local Codex/coding agents. Run one agent per workstream where possible.
 
 ## Global agent rules

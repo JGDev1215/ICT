@@ -1,5 +1,7 @@
 # 03 — Screen Specifications
 
+> Current-status note — 2026-07-08: visible validation/invalidation textarea and card requirements in this spec are superseded by the v0.8 session-bias workflow. Compatibility fields remain in stored cards and exports; the active UI emphasizes Bias Determination For Session, DOL, sweep, FVG, market context, route evidence, and risk review.
+
 ## Purpose
 
 This file maps each screen from the uploaded UI canvas to production behaviour in the ICT Sweep Tracker app.

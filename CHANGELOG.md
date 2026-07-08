@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.8.0 checklist follow-up — 2026-07-08
+
+### Added
+
+- Added `assets/config.js` for runtime price-helper defaults and included it in static, service-worker, and Vercel deployment paths.
+- Added visible price validation for zero/non-positive numeric levels in Planner and Focus Card Details.
+- Added a keyboard skip link for Planner sticky actions and guarded the hash router so in-page anchors do not navigate away from the active route.
+- Added active Home session filtering so session chips control the visible focus card and metrics.
+- Added legacy bias validation/invalidation lines to text export while keeping those fields out of the active Planner/Focus UI.
+- Added a Profile beta feedback link to GitHub Issues.
+- Added `tools/bump-version.js` for coordinated visible-version, cache-key, service-worker, and docs updates.
+- Added Playwright browser E2E coverage for Planner persistence, reload behavior, skip-link keyboard access, and Home session filters on desktop and mobile Chrome.
+- Added an MIT `LICENSE`.
+
+### Decisions
+
+- Kept export schema `ict_dol_sweep_export_v7`; no incompatible saved-data shape change was introduced.
+- Deferred real screenshot upload/preview and share-as-image because the current metadata-only screenshot field has lower beta risk and the image workflow needs product design.
+- Deferred `assets/app.js` modularization because it is high-change-risk for the current static beta and now has stronger smoke plus browser coverage.
+
 ## v0.8.0 — 2026-07-08
 
 ### Added

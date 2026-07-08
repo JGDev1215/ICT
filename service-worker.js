@@ -6,6 +6,7 @@ const STATIC_ASSETS = [
   './favicon.svg',
   './icon-192.svg',
   './icon-512.svg',
+  './assets/config.js?v=0.8.0-concept-improvements-20260708',
   './assets/styles.css?v=0.8.0-concept-improvements-20260708',
   './assets/app.js?v=0.8.0-concept-improvements-20260708'
 ];

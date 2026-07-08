@@ -1,5 +1,7 @@
 # ICT Sweep Tracker Mobile UI Redesign
 
+> Current-status note — 2026-07-08: this folder is retained as historical design and implementation context. The live app contract is in the root README, CHANGELOG, smoke tests, and Playwright tests.
+
 This folder contains the implementation plan and agent workpack for bringing the uploaded mobile UI design to life in the ICT Sweep Tracker project.
 
 ## Source design

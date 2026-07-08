@@ -12,6 +12,7 @@ const match = (source, pattern, message) => {
 };
 
 const index = read('index.html');
+const configSource = read('assets/config.js');
 const appSource = read('assets/app.js');
 const biasSource = read('Legacy/assets/bias-extension.js');
 const css = read('assets/styles.css');
@@ -21,23 +22,33 @@ const priceApi = read('api/price.py');
 const requirements = read('requirements.txt');
 const vercelConfig = read('vercel.json');
 const pagesWorkflow = read('.github/workflows/pages.yml');
+const e2eWorkflow = read('.github/workflows/e2e.yml');
 const readme = read('README.md');
 const changelog = read('CHANGELOG.md');
+const bumpVersionScript = read('tools/bump-version.js');
+const license = read('LICENSE');
+const packageJson = JSON.parse(read('package.json'));
+const playwrightConfig = read('playwright.config.js');
+const e2eTest = read('tests/e2e/planner.spec.js');
 
 const appVersion = match(appSource, /const VERSION = '([^']+)'/, 'app version constant missing')[1];
 const appVersionNumber = appVersion.replace(/^v/, '');
+const configAsset = match(index, /<script src="([^"]*assets\/config\.js\?v=[^"]+)"><\/script>/, 'cache-safe config reference missing')[1];
 const appAsset = match(index, /<script src="([^"]*assets\/app\.js\?v=[^"]+)"><\/script>/, 'cache-safe app reference missing')[1];
 const styleAsset = match(index, /<link rel="stylesheet" href="([^"]*assets\/styles\.css\?v=[^"]+)">/, 'cache-safe style reference missing')[1];
 const cacheName = match(serviceWorker, /const CACHE_NAME = '([^']+)'/, 'service worker cache name missing')[1];
-const hostedPriceApiBase = match(appSource, /const HOSTED_PRICE_API_BASE = '([^']+)'/, 'hosted price API base missing')[1];
+const hostedPriceApiBase = match(configSource, /hostedPriceApiBase: '([^']+)'/, 'hosted price API base missing')[1];
 const hostedPriceUrl = new URL(hostedPriceApiBase);
 
 ok(appVersion.startsWith('v0.8.'), 'app version should be v0.8.x');
 ok(index.includes(`<title>ICT DOL Sweep Tracker ${appVersion}</title>`), 'index title version missing');
 ok(index.includes(`ICT DOL Sweep Tracker ${appVersion} · Educational planning tool only. Not financial advice.`), 'index footer version missing');
 ok(!index.includes('assets/bias-extension.js'), 'obsolete bias extension should not be loaded');
+ok(configAsset.includes(`v=${appVersionNumber}`), 'config asset cache key should include app version');
 ok(appAsset.includes(`v=${appVersionNumber}`), 'app asset cache key should include app version');
 ok(styleAsset.includes(`v=${appVersionNumber}`), 'style asset cache key should include app version');
+ok(index.indexOf(configAsset) < index.indexOf(appAsset), 'runtime config should load before app bundle');
+ok(serviceWorker.includes(`'./${configAsset}'`), 'service worker config cache does not match index');
 ok(serviceWorker.includes(`'./${appAsset}'`), 'service worker app cache does not match index');
 ok(serviceWorker.includes(`'./${styleAsset}'`), 'service worker style cache does not match index');
 ok(cacheName.includes(appVersionNumber.replaceAll('.', '')), 'service worker cache name should include app version');
@@ -57,7 +68,9 @@ ok(appSource.includes('function calculateRiskPlan'), 'risk-to-reward helper miss
 ok(appSource.includes('function routeEvidenceHtml'), 'route evidence UI missing');
 ok(appSource.includes('PRICE_DELAY_DISCLAIMER'), 'price delay disclaimer missing');
 ok(appSource.includes('Auto-detect price'), 'price auto-detect button missing');
-ok(appSource.includes('HOSTED_PRICE_API_BASE'), 'hosted price API base missing');
+ok(appSource.includes('root.ICT_CONFIG'), 'app should read runtime config');
+ok(configSource.includes('localPriceApiBase'), 'local price API config missing');
+ok(configSource.includes('priceTimeoutMs') && configSource.includes('priceRefreshSeconds'), 'price runtime tuning config missing');
 ok(hostedPriceUrl.pathname === '/api/price', 'default hosted price API URL invalid');
 ok(appSource.includes("root.location.origin") && appSource.includes("/api/price"), 'same-origin Vercel price API fallback missing');
 ok(appSource.includes('priceHelperUrl'), 'price helper URL boundary missing');
@@ -77,6 +90,7 @@ ok(appSource.includes('Before 10:30am NY'), 'pre-10:30 NY warning missing');
 ok(appSource.includes('Start new analysis'), 'home action missing');
 ok(appSource.includes('function renderShell'), 'app shell renderer missing');
 ok(appSource.includes('function renderTabBar'), 'tab bar renderer missing');
+ok(appSource.includes('ROUTES.includes(routeName)'), 'hash router should ignore non-route anchors');
 ok(appSource.includes('component-gallery'), 'component gallery route missing');
 ok(appSource.includes('AI Trade Plan Builder'), 'planner screen missing');
 ok(appSource.includes('Saved focus cards'), 'saved screen missing');
@@ -106,6 +120,8 @@ ok(css.includes('.snapshot-card'), 'snapshot card css missing');
 ok(css.includes('.override-panel'), 'override panel css missing');
 ok(css.includes('.price-history-compact'), 'compact price history css missing');
 ok(css.includes('.draft-state'), 'visible draft-state styling missing');
+ok(css.includes('.skip-link'), 'skip link styling missing');
+ok(css.includes('.price-validation'), 'price validation styling missing');
 ok(readme.includes('## Price Map Ladder'), 'README price map section missing');
 ok(readme.includes('CURRENT PRICE divider'), 'README current price divider contract missing');
 ok(readme.includes('DOL and Sweep rows'), 'README DOL/Sweep row contract missing');
@@ -116,6 +132,7 @@ ok(readme.includes('Vercel Python Function'), 'README Vercel API contract missin
 ok(readme.includes('window.ICT_PRICE_API_BASE'), 'README price API override missing');
 ok(readme.includes('Planner generated preview') && readme.includes('Focus Card Details'), 'README price map integration contract missing');
 ok(changelog.includes('Price Map ladder'), 'changelog price map support entry missing');
+ok(license.includes('MIT License') && license.includes('WITHOUT WARRANTY'), 'MIT license file missing expected terms');
 const manifestJson = JSON.parse(manifest);
 ok(manifestJson.name === 'ICT DOL Sweep Tracker', 'manifest name invalid');
 ok(manifestJson.theme_color === '#FAFAF8', 'manifest theme color invalid');
@@ -148,12 +165,20 @@ ok(requirements.includes('yfinance=='), 'requirements should pin yfinance');
 const parsedVercelConfig = JSON.parse(vercelConfig);
 ok(parsedVercelConfig.framework === null, 'vercel framework should be disabled');
 ok(parsedVercelConfig.outputDirectory === '_site', 'vercel output directory invalid');
-ok(parsedVercelConfig.buildCommand.includes('cp index.html') && parsedVercelConfig.buildCommand.includes('favicon.svg') && parsedVercelConfig.buildCommand.includes('icon-192.svg') && parsedVercelConfig.buildCommand.includes('icon-512.svg') && parsedVercelConfig.buildCommand.includes('_site/assets'), 'vercel static build command invalid');
+ok(parsedVercelConfig.buildCommand.includes('cp index.html') && parsedVercelConfig.buildCommand.includes('favicon.svg') && parsedVercelConfig.buildCommand.includes('icon-192.svg') && parsedVercelConfig.buildCommand.includes('icon-512.svg') && parsedVercelConfig.buildCommand.includes('assets/config.js') && parsedVercelConfig.buildCommand.includes('_site/assets'), 'vercel static build command invalid');
 ok(pagesWorkflow.includes('icon-192.svg') && pagesWorkflow.includes('icon-512.svg'), 'GitHub Pages workflow should copy app icons');
+ok(bumpVersionScript.includes('config') && bumpVersionScript.includes('service-worker.js') && bumpVersionScript.includes('README.md'), 'version bump script should update cache and docs targets');
+ok(packageJson.scripts.test === 'node tests/smoke.js', 'npm test should run smoke suite');
+ok(packageJson.scripts['test:e2e'] === 'playwright test', 'npm test:e2e should run Playwright');
+ok(playwrightConfig.includes('mobile-chrome') && playwrightConfig.includes('python3 -m http.server 4173'), 'Playwright config should cover mobile and static server');
+ok(e2eTest.includes('planner creates a focus card') && e2eTest.includes('planner skip link') && e2eTest.includes('home session chips'), 'E2E tests should cover planner, skip link and Home filters');
+ok(e2eWorkflow.includes('npm ci') && e2eWorkflow.includes('playwright install --with-deps chromium'), 'E2E workflow should install dependencies and Chromium');
 
+new vm.Script(configSource, {filename: 'assets/config.js'});
 new vm.Script(appSource, {filename: 'assets/app.js'});
 new vm.Script(biasSource, {filename: 'Legacy/assets/bias-extension.js'});
 new vm.Script(serviceWorker, {filename: 'service-worker.js'});
+new vm.Script(bumpVersionScript, {filename: 'tools/bump-version.js'});
 
 function makeStorage(seed, options){
   const data = Object.assign({}, seed || {});
@@ -244,6 +269,7 @@ function runApp(seed, options){
   context.window = context;
   context.globalThis = context;
   vm.createContext(context);
+  new vm.Script(configSource, {filename: 'assets/config.js'}).runInContext(context);
   new vm.Script(appSource, {filename: 'assets/app.js'}).runInContext(context);
   return {context, storage, appNode};
 }
@@ -325,9 +351,21 @@ ok(api.priceNumber('20123.50') === 20123.5, 'plain decimal price should parse');
 ok(api.priceNumber('20,123.50') === 20123.5, 'comma thousands price should parse without changing meaning');
 ok(api.priceNumber('N/A') === null, 'N/A price should not parse as numeric');
 ok(api.priceNumber('-1') === null, 'negative market price should be rejected');
+ok(api.priceNumber('0') === null, 'zero market price should be rejected');
 ok(api.priceNumber('1e3') === null, 'scientific notation price should be rejected');
 ok(api.priceNumber('1.2.3') === null, 'multiple-decimal price should be rejected');
 ok(api.priceNumber('20,123,50') === null, 'ambiguous comma price should be rejected');
+const priceValidation = api.priceValidationMessages({
+  currentPrice: '0',
+  dol1Level: '0',
+  dol1Draw: 'Previous day high (PDH)',
+  dol1Tf: 'Daily',
+  sweep1Level: '-10',
+  sweep1Draw: 'Asia low',
+  sweep1Tf: '15m'
+});
+ok(priceValidation.some(message => message.includes('Current price')), 'price validation should flag zero current price');
+ok(priceValidation.some(message => message.includes('DOL 1')), 'price validation should identify zero objective levels');
 const optionalSweepCompletion = api.comp({
   instrument: 'MNQ',
   dol1Level: '20250',
@@ -603,7 +641,9 @@ ok(malformedHash.appNode.innerHTML.includes('ICT Sweep Tracker'), 'malformed has
 
 routeApi.go('planner');
 ok(routes.appNode.innerHTML.includes('AI Trade Plan Builder'), 'planner route did not render');
+ok(routes.appNode.innerHTML.includes("class='skip-link' href='#plannerActions'"), 'planner skip link missing');
 ok(routes.appNode.innerHTML.includes('Generate Focus Plan'), 'planner CTA did not render');
+ok(routes.appNode.innerHTML.includes("id='plannerActions'"), 'planner sticky action target missing');
 ok(routes.appNode.innerHTML.includes('Draft state'), 'planner visible draft state missing');
 ok(routes.appNode.innerHTML.includes("id='discardDraftBtn'"), 'planner discard draft action missing');
 ok(routes.appNode.innerHTML.includes('Bias Determination For Session'), 'planner session bias label missing');
@@ -619,7 +659,7 @@ ok(!routes.appNode.innerHTML.includes('ctx_m15_next'), 'planner should not force
 ok(routes.appNode.innerHTML.includes('currentPrice'), 'planner current price field missing');
 ok(routes.appNode.innerHTML.includes('Current price / tool-entry price'), 'planner current price label missing');
 ok(routes.appNode.innerHTML.includes('Auto-detect price'), 'planner auto price button missing');
-ok(routes.appNode.innerHTML.includes('hosted yfinance price API'), 'planner hosted price API note missing');
+ok(routes.appNode.innerHTML.includes('configured yfinance price API'), 'planner configured price API note missing');
 ok(routes.appNode.innerHTML.includes('127.0.0.1:8765'), 'planner local price fallback note missing');
 ok(!routes.appNode.innerHTML.includes('DOL confidence'), 'planner DOL confidence should not be emphasized');
 ok(routes.appNode.innerHTML.includes('dol1Tf'), 'planner DOL timeframe field missing');
@@ -698,7 +738,39 @@ const routeCard = routeApi.createBlankDraft({
   journal: {tags: ['patient'], lesson: 'Wait for confirmation.'},
   risk: {plannedRiskPct: '0.5', plannedR: '2R', maxLoss: '$50'}
 });
-routeApi.saveCards([routeCard]);
+const londonCard = routeApi.createBlankDraft({
+  id: 'london-card',
+  savedAt: '2026-07-07T07:30:00.000Z',
+  fields: {
+    date: '2026-07-07',
+    time: '07:30',
+    instrument: 'ES',
+    session: 'London',
+    currentPrice: '5500',
+    bias: 'Bearish',
+    dol1Level: '5450',
+    dol1Draw: 'Previous day low (PDL)',
+    dol1Tf: 'Daily',
+    sweep1Level: '5520',
+    sweep1Draw: 'Asia high',
+    sweep1Tf: '15m'
+  },
+  outcome: 'Miss',
+  finalSaved: true
+});
+routeApi.saveCards([routeCard, londonCard]);
+
+routeApi.go('home');
+ok(routes.appNode.innerHTML.includes("data-session-chip='All'"), 'home All session filter missing');
+ok(routes.appNode.innerHTML.includes("data-session-chip='London'"), 'home London session filter missing');
+routeApi.setHomeSession('London');
+ok(routes.appNode.innerHTML.includes('Showing Home cards and metrics for London.'), 'home session filter hint missing');
+ok(routes.appNode.innerHTML.includes('<h2>ES</h2>'), 'home London filter should show London hero card');
+ok(!routes.appNode.innerHTML.includes('<h2>MNQ</h2>'), 'home London filter should hide New York hero card');
+routeApi.setHomeSession('New York AM');
+ok(routes.appNode.innerHTML.includes('<h2>MNQ</h2>'), 'home New York AM filter should show NY hero card');
+routeApi.setHomeSession('Invalid session');
+ok(routes.appNode.innerHTML.includes("data-session-chip='All' aria-pressed='true'"), 'invalid home session should reset to All');
 
 routeApi.go('saved');
 ok(routes.appNode.innerHTML.includes('Saved Cards'), 'saved route did not render');
@@ -768,6 +840,7 @@ routeApi.go('profile');
 ok(routes.appNode.innerHTML.includes('Profile'), 'profile route did not render');
 ok(routes.appNode.innerHTML.includes('Saved cards live only in this browser'), 'profile backup reminder missing');
 ok(routes.appNode.innerHTML.includes("id='exportJsonBtn'>Export data"), 'profile primary JSON export action missing');
+ok(routes.appNode.innerHTML.includes("id='feedbackLink'") && routes.appNode.innerHTML.includes('https://github.com/JGDev1215/ICT/issues/new'), 'profile beta feedback link missing');
 ok(routes.appNode.innerHTML.includes("data-route='component-gallery'"), 'profile component gallery link missing');
 ok(routes.appNode.innerHTML.includes('Clear all local data'), 'profile clear action missing');
 
@@ -781,5 +854,8 @@ ok(routes.appNode.innerHTML.includes('price-map-loading') && routes.appNode.inne
 
 routeApi.toggleFavorite('route-card');
 ok(routeApi.getCards()[0].favorite === false, 'route favorite flow failed');
+const routeTextExport = routeApi.text(routeCard);
+ok(routeTextExport.includes('Legacy bias validation: Displacement after sell-side sweep.'), 'text export should retain legacy bias validation');
+ok(routeTextExport.includes('Legacy bias invalidation: Acceptance below low.'), 'text export should retain legacy bias invalidation');
 
 console.log('Smoke test passed.');

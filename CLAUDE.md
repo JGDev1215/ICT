@@ -4,10 +4,11 @@ Contributor guidance for the ICT DOL Sweep Tracker.
 
 ## Project Shape
 
-- Static, no-build browser app. The main files are `index.html`, `assets/app.js`, `assets/styles.css`, `manifest.webmanifest`, and `service-worker.js`.
-- No frontend package manager or bundler is required for normal changes. Keep dependencies out unless the project intentionally changes architecture.
+- Static, no-build browser app. The main files are `index.html`, `assets/config.js`, `assets/app.js`, `assets/styles.css`, `manifest.webmanifest`, and `service-worker.js`.
+- No frontend package manager or bundler is required for normal runtime changes. `package.json` exists only for developer QA tooling such as Playwright.
 - Browser data is local-only. Do not add backend persistence, auth, analytics beacons, or remote sync without an explicit product decision.
 - `api/price.py` is the optional Vercel Python Function for yfinance price lookup. Manual price entry must remain usable when it is unavailable.
+- Runtime price-helper defaults live in `assets/config.js`; keep manual price entry as the fallback.
 
 ## Runtime Contracts
 
@@ -23,6 +24,7 @@ Contributor guidance for the ICT DOL Sweep Tracker.
 
 - Keep the app usable from a static file server and GitHub Pages. Do not require a build step.
 - Treat `tests/smoke.js` as the contract test for storage, migration, route rendering, export/import, cache references, and price API assumptions.
+- Treat `tests/e2e/*.spec.js` as browser-flow coverage for route persistence, Planner, keyboard skip-link behavior, and responsive/mobile regressions.
 - Update smoke coverage when changing storage keys, card shape, cache-busted asset URLs, service worker assets, export schema, routes, or price API behavior.
 - Keep manual current-price entry as the fallback path. yfinance data may be delayed or unavailable.
 - Preserve the educational-tool framing. Do not add predictive trade signals or financial advice wording.
@@ -32,10 +34,11 @@ Contributor guidance for the ICT DOL Sweep Tracker.
 When changing shipped JS/CSS behavior:
 
 1. Update visible version references in `index.html` and docs/changelog as needed.
-2. Change cache-busting query strings for `assets/app.js` and `assets/styles.css` in `index.html`.
-3. Update `CACHE_NAME` and `STATIC_ASSETS` in `service-worker.js`.
-4. Update matching expectations in `tests/smoke.js`.
-5. Run the smoke test before handoff.
+2. Prefer `node tools/bump-version.js vX.Y.Z release YYYYMMDD` for cache/version updates.
+3. Change cache-busting query strings for `assets/config.js`, `assets/app.js`, and `assets/styles.css` in `index.html` if not using the helper.
+4. Update `CACHE_NAME` and `STATIC_ASSETS` in `service-worker.js`.
+5. Update matching expectations in `tests/smoke.js`.
+6. Run smoke and relevant browser E2E tests before handoff.
 
 When changing stored data:
 
@@ -60,6 +63,13 @@ Run the smoke test:
 node tests/smoke.js
 ```
 
+Run browser E2E tests:
+
+```bash
+npm install
+npm run test:e2e
+```
+
 Optional Vercel price API dependencies:
 
 ```bash
@@ -72,4 +82,4 @@ python3 -m venv .venv
 - GitHub Pages serves the static app only. It cannot run `api/price.py`.
 - Vercel serves the optional price API at `/api/price?symbol=MNQ` and includes static files through `vercel.json`.
 - `api/price.py` has a CORS allow-list and a short in-memory cache. Update both deliberately if deployment domains change.
-- If the Vercel production URL changes, set `window.ICT_PRICE_API_BASE` before `assets/app.js` loads or update `HOSTED_PRICE_API_BASE`.
+- If the Vercel production URL changes, update `assets/config.js` or set `window.ICT_PRICE_API_BASE` before `assets/app.js` loads for a one-off override.

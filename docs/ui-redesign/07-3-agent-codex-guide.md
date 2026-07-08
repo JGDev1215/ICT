@@ -1,5 +1,7 @@
 # 07 — 3-Agent Codex Guide
 
+> Current-status note — 2026-07-08: this guide documents a historical multi-worktree execution approach. Branch/worktree evidence does not need to be retained as active release evidence; current implementation status is tracked in README, CHANGELOG, smoke tests, Playwright tests, and the docs implementation checklist.
+
 ## Purpose
 
 Use this guide when running three Codex agents locally from your Mac terminal against a GitHub-connected local folder.

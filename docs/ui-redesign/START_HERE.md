@@ -1,5 +1,7 @@
 # START HERE — Local Codex Agent Prompt
 
+> Current-status note — 2026-07-08: this start guide is historical for the v0.8 redesign work. Validation/invalidation fields mentioned below are preserved for compatibility/export but are no longer active visible Planner/Focus UI requirements.
+
 ## Purpose
 
 Use this file when you already have the `ICT` repository folder created locally and connected to GitHub.
