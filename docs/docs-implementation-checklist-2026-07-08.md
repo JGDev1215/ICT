@@ -10,19 +10,25 @@ This file tracks only items still open after the 2026-07-08 implementation and d
 
 ## External Release QA Still Required
 
-These require real devices or manual browser verification and cannot be completed from code alone.
+Agent-assisted browser QA is recorded in `docs/release-qa-evidence-2026-07-08.md`. The remaining items require real devices or manual browser verification and cannot be completed from code alone.
 
-- [ ] Record manual iOS Safari QA results.
-- [ ] Record manual Android Chrome QA results.
-- [ ] Record PWA install QA results.
-- [ ] Record offline/service-worker QA results.
-- [ ] Record accessibility/ARIA QA beyond smoke tests and the current Playwright keyboard skip-link check.
-- [ ] Record cross-screen manual acceptance results for Home, Planner, Saved, Focus Card, Timeline, Liquidity Map, Risk, Journal, Profile, and Component Gallery.
-- [ ] Update `docs/ui-redesign/08-qa-release-checklist.md` with the manual pass/fail evidence above.
+- [ ] Record physical iOS Safari safe-area, Add to Home Screen, and offline/PWA QA results.
+- [ ] Record physical Android Chrome install, file-picker/import, and offline/PWA QA results.
+- [ ] Record full screen-reader audit if moving from beta to public release.
+- [ ] Update `docs/ui-redesign/08-qa-release-checklist.md` with the physical device pass/fail evidence above.
 
 ## GitHub Housekeeping Still Required
 
-- [ ] Keep GitHub Issue `#7` open or update it until manual iOS/Android/PWA/offline release evidence is recorded.
+- [ ] Keep GitHub Issue `#7` open until physical iOS/Android/PWA/offline release evidence is recorded.
+
+## Completed By Agent-Assisted QA
+
+- Mobile Chrome emulation at 390px and 430px.
+- Mobile Safari/WebKit emulation at 390px and 430px.
+- Bottom nav and Planner sticky CTA visibility/tappability.
+- Cross-screen rendering for Home, Planner, Saved, Focus Card, Timeline, Liquidity Map, Risk, Journal, Profile, and Component Gallery.
+- Chromium/mobile Chrome offline service-worker shell reload.
+- Accessibility/ARIA spot check for skip link, focus styling, primary nav state, and filter chip selected state.
 
 ## Closed By This Pass
 

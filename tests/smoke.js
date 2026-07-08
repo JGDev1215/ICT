@@ -30,6 +30,7 @@ const license = read('LICENSE');
 const packageJson = JSON.parse(read('package.json'));
 const playwrightConfig = read('playwright.config.js');
 const e2eTest = read('tests/e2e/planner.spec.js');
+const releaseQaTest = read('tests/e2e/release-qa.spec.js');
 
 const appVersion = match(appSource, /const VERSION = '([^']+)'/, 'app version constant missing')[1];
 const appVersionNumber = appVersion.replace(/^v/, '');
@@ -170,9 +171,10 @@ ok(pagesWorkflow.includes('icon-192.svg') && pagesWorkflow.includes('icon-512.sv
 ok(bumpVersionScript.includes('config') && bumpVersionScript.includes('service-worker.js') && bumpVersionScript.includes('README.md'), 'version bump script should update cache and docs targets');
 ok(packageJson.scripts.test === 'node tests/smoke.js', 'npm test should run smoke suite');
 ok(packageJson.scripts['test:e2e'] === 'playwright test', 'npm test:e2e should run Playwright');
-ok(playwrightConfig.includes('mobile-chrome') && playwrightConfig.includes('python3 -m http.server 4173'), 'Playwright config should cover mobile and static server');
+ok(playwrightConfig.includes('mobile-chrome') && playwrightConfig.includes('mobile-safari') && playwrightConfig.includes('python3 -m http.server 4173'), 'Playwright config should cover mobile Chrome, mobile Safari and static server');
 ok(e2eTest.includes('planner creates a focus card') && e2eTest.includes('planner skip link') && e2eTest.includes('home session chips'), 'E2E tests should cover planner, skip link and Home filters');
-ok(e2eWorkflow.includes('npm ci') && e2eWorkflow.includes('playwright install --with-deps chromium'), 'E2E workflow should install dependencies and Chromium');
+ok(releaseQaTest.includes('[390, 430]') && releaseQaTest.includes('service worker serves cached app shell') && releaseQaTest.includes('filter chips expose selected state'), 'release QA E2E tests should cover mobile, offline and accessibility evidence');
+ok(e2eWorkflow.includes('npm ci') && e2eWorkflow.includes('playwright install --with-deps chromium webkit'), 'E2E workflow should install dependencies, Chromium and WebKit');
 
 new vm.Script(configSource, {filename: 'assets/config.js'});
 new vm.Script(appSource, {filename: 'assets/app.js'});
@@ -775,6 +777,7 @@ ok(routes.appNode.innerHTML.includes("data-session-chip='All' aria-pressed='true
 routeApi.go('saved');
 ok(routes.appNode.innerHTML.includes('Saved Cards'), 'saved route did not render');
 ok(routes.appNode.innerHTML.includes('MNQ'), 'saved route did not show card');
+ok(routes.appNode.innerHTML.includes("data-saved-filter='All' aria-pressed='true'"), 'saved filter active state ARIA missing');
 ok(routes.appNode.innerHTML.includes('star'), 'saved favorite affordance missing');
 ok(routes.appNode.innerHTML.includes('Export JSON'), 'saved export action missing');
 
@@ -826,6 +829,7 @@ ok(routes.appNode.innerHTML.includes('Market context'), 'timeline market context
 
 routeApi.go('liquidity-map');
 ok(routes.appNode.innerHTML.includes('Setup Library'), 'liquidity map route did not render');
+ok(routes.appNode.innerHTML.includes("data-liquidity-filter='All' aria-pressed='true'"), 'liquidity filter active state ARIA missing');
 ok(routes.appNode.innerHTML.includes('Add to plan'), 'liquidity add-to-plan action missing');
 
 routeApi.go('risk');

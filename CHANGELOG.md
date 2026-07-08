@@ -12,6 +12,7 @@
 - Added a Profile beta feedback link to GitHub Issues.
 - Added `tools/bump-version.js` for coordinated visible-version, cache-key, service-worker, and docs updates.
 - Added Playwright browser E2E coverage for Planner persistence, reload behavior, skip-link keyboard access, and Home session filters on desktop and mobile Chrome.
+- Expanded release QA browser coverage to include 390px/430px mobile layouts, mobile Safari/WebKit emulation, cross-screen rendering, filter-chip ARIA state, and Chromium offline service-worker reload.
 - Added an MIT `LICENSE`.
 
 ### Decisions

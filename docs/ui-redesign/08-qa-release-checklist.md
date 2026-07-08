@@ -30,8 +30,9 @@ The Playwright E2E suite must cover:
 ### Recorded Automated Result - 2026-07-08
 
 - `npm test` passed.
-- `npm run test:e2e` passed: 6 browser tests across desktop Chrome and mobile Chrome emulation.
+- `npm run test:e2e` passed: 23 passed, 1 skipped across desktop Chromium, mobile Chrome, and mobile Safari/WebKit emulation.
 - Syntax checks passed for `assets/config.js`, `assets/app.js`, `tests/smoke.js`, and `tools/bump-version.js`.
+- Detailed evidence is recorded in `docs/release-qa-evidence-2026-07-08.md`.
 
 ## Manual Mobile QA
 
@@ -86,8 +87,11 @@ Test at 390px and 430px wide viewports, then on real devices where available.
 ### Current Release Status - 2026-07-08
 
 - Automated release gate: PASS.
-- Manual iOS Safari: PENDING real-device check.
-- Manual Android Chrome: PENDING real-device check.
-- PWA install: PENDING device/browser check.
-- Offline/service-worker behavior: PENDING device/browser check.
-- Public release recommendation: beta-only until the manual device/PWA/offline checks above are recorded.
+- Mobile Chrome emulation: PASS at 390px and 430px.
+- Mobile Safari/WebKit emulation: PASS at 390px and 430px for layout, routing, and accessibility state checks.
+- Offline/service-worker behavior: PASS in Chromium/mobile Chrome; Playwright WebKit offline reload is skipped and remains a physical Safari/PWA manual gate.
+- Cross-screen acceptance: PASS in automated and agent route sweeps.
+- Accessibility/ARIA spot check: PASS after adding `aria-pressed` to filter chips; full screen-reader audit remains pending for public release.
+- Physical iOS Safari: PENDING real-device safe-area, Add to Home Screen, and offline/PWA check.
+- Physical Android Chrome: PENDING real-device install, file-picker/import, and offline/PWA check.
+- Public release recommendation: beta acceptable; public release should wait until physical device/PWA checks are recorded.

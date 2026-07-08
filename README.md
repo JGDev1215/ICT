@@ -305,14 +305,14 @@ The test checks the main files, app syntax, bias extension syntax, storage keys,
 
 ## Browser E2E Tests
 
-Playwright tests cover the core browser flows on desktop Chrome and mobile Chrome emulation:
+Playwright tests cover the core browser flows on desktop Chrome, mobile Chrome, and mobile Safari/WebKit emulation:
 
 ```bash
 npm install
 npm run test:e2e
 ```
 
-The browser tests check Planner to Focus Card persistence, reload behavior, the Planner skip link, and Home session filtering.
+The browser tests check Planner to Focus Card persistence, reload behavior, the Planner skip link, Home session filtering, 390px/430px mobile layout, cross-screen route rendering, filter-chip ARIA state, and Chromium offline service-worker shell reload.
 
 ## Version Bump Helper
 

@@ -24,7 +24,7 @@ Contributor guidance for the ICT DOL Sweep Tracker.
 
 - Keep the app usable from a static file server and GitHub Pages. Do not require a build step.
 - Treat `tests/smoke.js` as the contract test for storage, migration, route rendering, export/import, cache references, and price API assumptions.
-- Treat `tests/e2e/*.spec.js` as browser-flow coverage for route persistence, Planner, keyboard skip-link behavior, and responsive/mobile regressions.
+- Treat `tests/e2e/*.spec.js` as browser-flow coverage for route persistence, Planner, keyboard skip-link behavior, responsive/mobile regressions, ARIA state checks, and Chromium offline service-worker behavior.
 - Update smoke coverage when changing storage keys, card shape, cache-busted asset URLs, service worker assets, export schema, routes, or price API behavior.
 - Keep manual current-price entry as the fallback path. yfinance data may be delayed or unavailable.
 - Preserve the educational-tool framing. Do not add predictive trade signals or financial advice wording.
