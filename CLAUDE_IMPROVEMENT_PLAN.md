@@ -71,6 +71,15 @@ ICT/
 2. **GitHub Pages publishes the entire repository.**
    `pages.yml` uploads `path: .`, so every deploy publishes the 329-file `knowledge/` corpus (extracted private-mentorship content), `Legacy/`, all planning docs, and `docs/` as public web pages. `.vercelignore` protects the Vercel deploy but nothing protects Pages. At minimum, filter the Pages artifact to app files only (`index.html`, `assets/`, `manifest.webmanifest`, `service-worker.js`, `.nojekyll`). Separately, review whether the `knowledge/` material should be in a public repo at all.
 
+2b. **Data-corruption bug: comma-formatted prices are mangled.** *(Verified in code; independently raised as item #1 of `docs/fix-lists/8-7 To fix.md`.)*
+   `clean()` at `assets/app.js:152` does `s.replaceAll(',', '.')` before parsing digits, treating comma as a *European decimal separator*. But every instrument in this app is a US future/index quoted with `.` decimals, so a user typing `20,250.25` (thousands comma) gets:
+
+   ```text
+   "20,250.25" → replaceAll(',', '.') → "20.250.25" → keep first dot only → "20.25025"
+   ```
+
+   The current price silently becomes **20.25025 instead of 20250.25**, corrupting DOL distance, the Price Map ladder, and R:R for every card where a comma is typed — with no error shown. **Fix:** strip commas (`replace(/,/g, '')`) instead of converting them to dots; reject/annotate non-numeric input. Add smoke fixtures: `20,250.25 → 20250.25`, `20,000 → 20000`, `20250.25 → 20250.25`, `N/A → null` (no distance-math crash). This is the highest-severity *behavioral* defect found and should ship with the Phase 0 CI fix.
+
 ### P1 — Structural debt
 
 3. **Planning documents are scattered across the root.**
@@ -92,6 +101,16 @@ ICT/
 
    Only two threads remain open, and both **independently confirm findings below**: P1-08's "split into `state.js`/`data.js`/`ui.js`/`screens/*`" → finding **#7** (modularize `app.js`); P0-06's "smoke test only does static string/syntax checks" → finding **#9** (partially addressed since — the test now executes `app.js` in a `vm`, but ~57 raw source-greps remain).
    **Action:** when moving plan docs (item 3), mark finished fix-lists as historical — either move them to `docs/plans/archive/` or add a `> Status: superseded by v0.7.9 (YYYY-MM-DD)` banner at the top — so no future contributor or agent treats a done list as a live P0 queue.
+
+3b. **The current authoritative backlog is `docs/fix-lists/8-7 To fix.md`** (dated 2026-07-08), and unlike the 7-7 list it is *not* stale — its items describe the post-redesign code. Reconciling it against this review:
+   - **8-7 #1 (comma prices)** → **verified real; elevated to finding 2b (P0) above.** This is the most important thing in the file.
+   - **8-7 #6 (service-worker asset fallback)** → **verified real; folded into finding #10.**
+   - **8-7 #5 (section/module split of `app.js`)** → same as finding **#7**. Note the 8-7 guide asks only for *labelled sections within one file* as the first step, which is a safer intermediate than full module extraction — adopt that as Phase 3.0.
+   - **8-7 #4 (behavioral smoke tests)** → same as finding **#9**.
+   - **8-7 #2 (completion logic vs current fields), #3 (import validation)** → plausible correctness/robustness items; not independently re-verified in this pass but consistent with the code shape. Treat as P1.
+   - **8-7 #7–#12** (component gallery, safe-area QA, FAB, draft autosave, Web Share fallback, backup reminders) → product/UX enhancements, correctly ranked P2 there; they sit *after* this plan's Phases 0–2.
+   - **8-7 #13–#14** (close stale PR #3, Issues #4/#6/#7) → repo-hygiene housekeeping on GitHub, outside the code tree; track alongside Phase 1.
+   Net: the 8-7 guide and this review agree on direction. This document keeps the *structural* framing (CI, publishing, layout, modularization); the 8-7 guide is the *task-level* checklist. Keep them cross-referenced rather than duplicated — and treat finding 2b as belonging to Phase 0, since it is a silent data-corruption bug, not polish.
 
 4. **No agent/contributor guidance.** `AGENTS.md` is an empty stub and there is no `CLAUDE.md`. Any assistant (or new contributor) must rediscover the version-bump ritual, storage-key conventions, and no-build constraint from scratch every session. See §4 for proposed content.
 
@@ -126,7 +145,7 @@ ICT/
 10. **Misc hygiene.**
     - No `LICENSE` file — intentional or not, decide and record it.
     - `docs/fix-lists/7-7 AM SESSION.md` has spaces in the filename; use kebab-case (`2026-07-07-am-session.md`) and date-prefix fix-lists.
-    - The service worker is cache-first for everything including `index.html`; updates depend entirely on remembering the `CACHE_NAME` bump. Consider network-first for navigation requests to reduce stale-shell risk.
+    - The service worker is cache-first for everything including `index.html`; updates depend entirely on remembering the `CACHE_NAME` bump. Consider network-first for navigation requests to reduce stale-shell risk. **Related bug (verified; 8-7 #6):** the fetch handler's `.catch(() => caches.match('./index.html'))` at `service-worker.js:31` returns the HTML shell for *any* failed GET, including CSS/JS/fonts — so a cache-miss + network-fail on an asset yields HTML with the wrong MIME type. Scope the `index.html` fallback to navigation requests only (`event.request.mode === 'navigate'`); let asset requests fail cleanly.
     - `.python-version`/`requirements.txt` pin only `yfinance`; fine, but note in CLAUDE.md that Python exists solely for the Vercel function.
 
 ---
@@ -138,8 +157,9 @@ ICT/
 | # | Action | Files |
 |---|--------|-------|
 | 0.1 | Get CI green. Decide if the local price helper is supported: restore `tools/yfinance_price_server.py` from git (`git checkout bda9601 -- tools/yfinance_price_server.py`) **or** remove all 5 stale references | `tests/smoke.js:15`, `README.md:65,317`, `assets/app.js:1460`, `docs/focus-card-dol-risk-implementation-report.md:126` |
-| 0.2 | Filter the Pages artifact to app files only (`index.html`, `assets/`, `manifest.webmanifest`, `service-worker.js`, `.nojekyll`) | `.github/workflows/pages.yml:31` |
-| 0.3 | Decide whether `knowledge/` (8.7 MB, 329 files of extracted mentorship content) belongs in a public repo; if not, move it to a private repo/branch | `knowledge/` |
+| 0.2 | Fix the comma-price bug (finding 2b): strip commas instead of `replaceAll(',', '.')`; add smoke fixtures for `20,250.25`, `20,000`, `20250.25`, `N/A` | `assets/app.js:152` (`clean()`), `tests/smoke.js` |
+| 0.3 | Filter the Pages artifact to app files only (`index.html`, `assets/`, `manifest.webmanifest`, `service-worker.js`, `.nojekyll`) | `.github/workflows/pages.yml:31` |
+| 0.4 | Decide whether `knowledge/` (8.7 MB, 329 files of extracted mentorship content) belongs in a public repo; if not, move it to a private repo/branch | `knowledge/` |
 
 ### Phase 1 — Repo hygiene (1–2 sessions)
 
@@ -217,8 +237,8 @@ Vercel Python price function (api/price.py, yfinance).
 
 ## 5. Suggested Execution Order
 
-1. **0.1 + 0.2 first** — CI is currently failing and Pages is over-publishing; both are small, contained fixes.
+1. **All of Phase 0 first (0.1–0.4).** Three of these are urgent for different reasons: CI is red (0.1), the comma-price bug silently corrupts every card with a thousands separator (0.2), and Pages is publishing the private `knowledge/` corpus (0.3). All are small, contained fixes. Do 0.2 with a smoke fixture so the bug can't regress.
 2. **1.2 (CLAUDE.md)** next — it makes every subsequent Claude session cheaper and safer.
-3. Then Phases 1→2→3 in order; Phase 3 only after the smoke test is stable, since it is the safety net for the refactor.
+3. Then Phases 1→2→3 in order; Phase 3 only after the smoke test is stable, since it is the safety net for the refactor. Task-level items from `docs/fix-lists/8-7 To fix.md` (#2, #3, then #7–#12) slot into Phases 1–3 as noted in finding 3b.
 
 Each phase is independently shippable and keeps the app fully working at every step.
