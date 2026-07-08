@@ -34,6 +34,7 @@ Important context:
 - It stores saved cards locally in the browser.
 - It already has saved-card, bias, validation, invalidation, export/import and final-save logic.
 - The redesign must preserve all existing user data behaviour.
+- The old bias extension is retained only as `Legacy/assets/bias-extension.js` for compatibility reference and smoke-test coverage. It is not loaded by `index.html`.
 - This is an educational planning and review tool only. It must not become a signal service or financial advice tool.
 
 Read these files first, in this order:
@@ -51,7 +52,7 @@ Read these files first, in this order:
 Before changing code:
 
 1. Inspect the current repo structure.
-2. Inspect index.html, assets/app.js, assets/bias-extension.js, assets/styles.css and tests/smoke.js.
+2. Inspect index.html, assets/app.js, assets/styles.css, tests/smoke.js and Legacy/assets/bias-extension.js.
 3. Run node tests/smoke.js and confirm the current baseline.
 4. Summarise what currently works and where the redesign docs say the implementation should go.
 5. Identify which agent role you are acting as:
