@@ -1,7 +1,8 @@
 # Claude Improvement Plan — Repository Structure Review
 
-Date: 2026-07-07
+Date: 2026-07-07 (re-verified pass)
 Scope: full-repo structure review of `JGDev1215/ICT` at v0.7.9, with a phased improvement plan.
+Method: findings below were verified against the working tree and git history (smoke test executed, Pages publish scope enumerated, root-cause commit traced), not inferred from docs.
 
 ---
 
@@ -47,6 +48,9 @@ ICT/
 - **CI exists.** A smoke test runs on every push/PR, and Pages deploys are automated.
 - **Legacy is quarantined**, not deleted — old versions live under `Legacy/` instead of polluting the live app.
 - **Deliberate cache-busting.** Versioned query strings on assets plus a versioned service-worker cache name.
+- **CSS is token-driven and healthy.** `assets/styles.css` uses `var(--…)` design tokens in ~185 places against only ~28 raw color literals — a real design system, not scattered magic values. Not a problem area; left as-is by this plan.
+- **The monolith has clean internal seams.** Despite being one file, `app.js` is organized around a single `render()` dispatcher (`app.js:1800`) that routes to per-screen functions (`home()`, `planner()`, `saved()`, `focusCard()`, `timeline()`, `liquidityMap()`, `risk()`, `journal()`, `profile()`). Those function boundaries are exactly where module extraction (Phase 3) can cut.
+- **The smoke test genuinely executes the app**, not just greps it: it compiles `app.js`/`service-worker.js` with `new vm.Script(...)` and runs `app.js` in a sandboxed `vm` context (`tests/smoke.js:191`), then exercises migration, export/import round-trips, and analytics against the real code.
 
 ---
 
@@ -54,8 +58,15 @@ ICT/
 
 ### P0 — Broken or risky today
 
-1. **CI is red: the smoke test crashes on a missing file.**
-   `tests/smoke.js:15` does `read('tools/yfinance_price_server.py')`, but `tools/` was never committed (it is only referenced in `.vercelignore` and the README). Running `node tests/smoke.js` fails immediately with `ENOENT`, so the `smoke.yml` workflow fails on every push/PR. Either commit `tools/yfinance_price_server.py` or remove the reference from the smoke test (and the README's local-helper instructions).
+1. **CI is red: the smoke test crashes on a file that was deleted out from under it.**
+   `tests/smoke.js:15` does `read('tools/yfinance_price_server.py')` and `node tests/smoke.js` fails immediately with `ENOENT` — so `smoke.yml` fails on every push/PR.
+   **Root cause (traced through git history):** `tools/yfinance_price_server.py` *was* committed (added in `06c00b6` "Prepare static app for GitHub Pages", edited in `7ec9e6b`), then **deleted in `d392def` "Clarify Vercel Python entrypoint"** — 96 lines removed. That deletion broke CI and was never noticed because the smoke workflow was presumably already failing or unmonitored.
+   **The reference was never cleaned up in 5 places**, all of which now point at a nonexistent file:
+   - `tests/smoke.js:15` (crashes CI)
+   - `README.md:65` (local-helper run instructions) and `README.md:317` (structure tree)
+   - `assets/app.js:1460` (a *user-facing* error string telling users to "start tools/yfinance_price_server.py")
+   - `docs/focus-card-dol-risk-implementation-report.md:126`
+   **Fix:** decide whether the local price helper is a supported feature. If yes, restore `tools/yfinance_price_server.py` (it exists in git at `bda9601:tools/yfinance_price_server.py`). If no, remove all 5 references. Either way CI must go green.
 
 2. **GitHub Pages publishes the entire repository.**
    `pages.yml` uploads `path: .`, so every deploy publishes the 329-file `knowledge/` corpus (extracted private-mentorship content), `Legacy/`, all planning docs, and `docs/` as public web pages. `.vercelignore` protects the Vercel deploy but nothing protects Pages. At minimum, filter the Pages artifact to app files only (`index.html`, `assets/`, `manifest.webmanifest`, `service-worker.js`, `.nojekyll`). Separately, review whether the `knowledge/` material should be in a public repo at all.
@@ -75,7 +86,7 @@ ICT/
 
 ### P2 — Code architecture
 
-7. **`assets/app.js` is a 1,829-line monolithic IIFE** holding constants, storage/migration, normalization, price fetching, rendering for ~9 screens, routing, and export/import. It works, but every change forces whole-file reasoning and merge conflicts are guaranteed with parallel work. ES modules (`<script type="module">`) run fine on GitHub Pages with **no build step**, preserving the project philosophy:
+7. **`assets/app.js` is a 1,829-line monolithic IIFE** (121 top-level functions, ~439 declarations) holding constants, storage/migration, normalization, price fetching, rendering for 9 screens, routing, and export/import. It works and is internally organized (single `render()` dispatcher, one function per screen), but every change forces whole-file reasoning and merge conflicts are guaranteed with parallel work. Because the screen functions are already clean seams, ES modules (`<script type="module">`, which run on GitHub Pages with **no build step**) map onto them almost 1:1:
 
    ```text
    assets/js/
@@ -93,7 +104,7 @@ ICT/
 
 ### P3 — Testing and hygiene
 
-9. **The smoke test is brittle by design.** It string-matches exact source snippets (e.g. `"const KEY = 'ict_cards_v078'"`, exact `?v=` strings), so legitimate refactors break it even when behavior is unchanged. Keep the valuable behavioral parts (it executes `app.js` in a `vm` sandbox and exercises migration, export/import round-trips, and analytics) and thin out raw string assertions. Longer-term, add one Playwright happy-path test (create plan → save → reload → verify) since the repo already targets mobile PWA behavior the static test cannot see.
+9. **The smoke test mixes solid behavioral checks with brittle source-greps.** Of ~269 assertions, ~57 are raw `appSource.includes("…exact source text…")` (e.g. `"const KEY = 'ict_cards_v078'"`, exact `?v=` strings, literal UI copy like `"AI Trade Plan Builder"`), so legitimate refactors and copy edits break the test even when behavior is unchanged. **Keep** the genuinely valuable half — it runs `app.js` in a `vm` sandbox (`tests/smoke.js:191`) and exercises migration, export/import round-trips, and final-save analytics against the executed code — and **retire** the raw string greps in favor of asserting on behavior. Longer-term, add one Playwright happy-path test (create plan → save → reload → verify) since the repo targets mobile PWA behavior the static test cannot see.
 
 10. **Misc hygiene.**
     - No `LICENSE` file — intentional or not, decide and record it.
@@ -109,9 +120,9 @@ ICT/
 
 | # | Action | Files |
 |---|--------|-------|
-| 0.1 | Fix the smoke test: restore `tools/yfinance_price_server.py` or drop the reference | `tests/smoke.js`, `README.md` |
-| 0.2 | Filter the Pages artifact to app files only | `.github/workflows/pages.yml` |
-| 0.3 | Decide whether `knowledge/` belongs in a public repo; if not, move it to a private repo/branch | `knowledge/` |
+| 0.1 | Get CI green. Decide if the local price helper is supported: restore `tools/yfinance_price_server.py` from git (`git checkout bda9601 -- tools/yfinance_price_server.py`) **or** remove all 5 stale references | `tests/smoke.js:15`, `README.md:65,317`, `assets/app.js:1460`, `docs/focus-card-dol-risk-implementation-report.md:126` |
+| 0.2 | Filter the Pages artifact to app files only (`index.html`, `assets/`, `manifest.webmanifest`, `service-worker.js`, `.nojekyll`) | `.github/workflows/pages.yml:31` |
+| 0.3 | Decide whether `knowledge/` (8.7 MB, 329 files of extracted mentorship content) belongs in a public repo; if not, move it to a private repo/branch | `knowledge/` |
 
 ### Phase 1 — Repo hygiene (1–2 sessions)
 
