@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'v0.7.9';
+  const VERSION = 'v0.8.0';
   const KEY = 'ict_cards_v078';
   const SETTINGS_KEY = 'ict_settings_v1';
   const SCHEMA = 'ict_dol_sweep_export_v7';
@@ -16,6 +16,7 @@
   const HOSTED_PRICE_API_BASE = 'https://ict-2mrz.vercel.app/api/price';
   const LOCAL_PRICE_API_BASE = 'http://127.0.0.1:8765/price';
   const PRICE_TIMEOUT_MS = 8000;
+  const PRICE_REFRESH_SECONDS = 30;
 
   const instruments = ['MNQ','NQ','MES','ES','MYM','YM','RTY','M2K','MGC','GC','CL','BTCUSD','ETHUSD','EURUSD','GBPUSD'];
   const draws = [
@@ -88,6 +89,7 @@
   const defaultSettings = {
     defaultInstrument: '',
     defaultSession: '',
+    theme: 'light',
     watchlist: [],
     riskDefaults: {
       plannedRiskPct: '',
@@ -98,6 +100,19 @@
 
   function storage(){
     return typeof localStorage !== 'undefined' ? localStorage : null;
+  }
+
+  function normTheme(value){
+    return value === 'dark' ? 'dark' : 'light';
+  }
+
+  function applyTheme(theme){
+    if(!doc || !doc.documentElement) return;
+    const mode = normTheme(theme);
+    doc.documentElement.setAttribute('data-theme', mode);
+    if(doc.body) doc.body.setAttribute('data-theme', mode);
+    const meta = doc.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', mode === 'dark' ? '#101217' : '#FAFAF8');
   }
 
   function parse(s, d){
@@ -332,6 +347,22 @@
     const configured = priceApiBase();
     const hosted = configured === HOSTED_PRICE_API_BASE ? 'Vercel yfinance API' : 'configured yfinance API';
     return 'Manual/static entry; optional ' + hosted + ' with local helper fallback.';
+  }
+
+  function priceRefreshRemaining(){
+    if(!lastPriceFetchAt) return 0;
+    const elapsed = Math.floor((Date.now() - lastPriceFetchAt) / 1000);
+    return Math.max(0, PRICE_REFRESH_SECONDS - elapsed);
+  }
+
+  function priceCountdownText(){
+    if(priceFetchState === 'loading') return 'Updating now';
+    const remaining = priceRefreshRemaining();
+    return remaining ? 'Next price update in ' + remaining + 's' : 'Price update ready';
+  }
+
+  function priceCountdownHtml(){
+    return `<div class='price-countdown'>${esc(priceCountdownText())}</div>`;
   }
 
   function trimSlash(s){
@@ -781,6 +812,7 @@
     return {
       defaultInstrument: asText(saved.defaultInstrument || defaultSettings.defaultInstrument),
       defaultSession: asText(saved.defaultSession || defaultSettings.defaultSession),
+      theme: normTheme(saved.theme || defaultSettings.theme),
       watchlist: arrayText(saved.watchlist),
       riskDefaults: normRisk(saved.riskDefaults || defaultSettings.riskDefaults)
     };
@@ -788,10 +820,12 @@
 
   function saveSettings(settings){
     const next = Object.assign({}, getSettings(), isObject(settings) ? settings : {});
+    next.theme = normTheme(next.theme);
     next.watchlist = arrayText(next.watchlist);
     next.riskDefaults = normRisk(next.riskDefaults);
     const store = storage();
     if(store) store.setItem(SETTINGS_KEY, JSON.stringify(next));
+    applyTheme(next.theme);
     return next;
   }
 
@@ -833,6 +867,7 @@
   let notice = '';
   let priceFetchState = '';
   let lastPriceSource = 'manual';
+  let lastPriceFetchAt = 0;
 
   const api = {
     KEY,
@@ -862,8 +897,10 @@
     priceHelperUrl,
     localPriceHelperUrl,
     priceHelperUrls,
+    priceRefreshRemaining,
+    priceCountdownText,
     selectedMarketTimeframes,
-    focusDolTakenFields,
+    focusReviewFields,
     priceMapLevels,
     priceMapHtml,
     getCards,
@@ -961,16 +998,22 @@
     return marketTimeframes.filter(tf => marketContextOpenTimeframes.includes(tf) || hasMarketContextRow(context[tf]));
   }
 
-  function focusDolTakenFields(c, lookup){
+  function focusReviewFields(c, lookup){
     const out = {};
     const fields = c && c.fields ? c.fields : {};
     const findNode = typeof lookup === 'function'
       ? lookup
       : id => doc ? doc.getElementById(id) : null;
     for(let i = 1; i <= 3; i++){
-      const node = findNode('focus_dol' + i + 'Taken');
-      out['dol' + i + 'Taken'] = node ? !!node.checked : !!fields['dol' + i + 'Taken'];
+      for(const p of ['dol', 'sweep']){
+        const node = findNode('focus_' + p + i + 'Taken');
+        out[p + i + 'Taken'] = node ? !!node.checked : !!fields[p + i + 'Taken'];
+      }
     }
+    const fvgNode = findNode('focusFvg');
+    const fvgTfNode = findNode('focusFvgTf');
+    out.fvg = fvgNode ? !!fvgNode.checked : !!fields.fvg;
+    out.fvgTf = fvgTfNode ? asText(fvgTfNode.value) : asText(fields.fvgTf);
     return out;
   }
 
@@ -1056,7 +1099,7 @@
     const updated = x.time || (meta && meta.updatedAt) || 'Manual';
     const source = current == null ? 'Manual pending' : 'yfinance/manual';
     const liveClass = current == null ? 'pending' : 'live';
-    const header = `<div class='price-map-header'><div><div class='progress'>Price Map</div><h3 class='price-map-title'>${esc(instrument)}</h3><div class='price-map-meta'>${esc(session)} · Updated ${esc(updated)}</div><div class='price-map-source'>Source: ${esc(source)}</div></div><div class='price-map-live ${liveClass}'>${esc(current == null ? 'Manual needed' : 'Live')}</div></div>`;
+    const header = `<div class='price-map-header'><div><div class='progress'>Price Map</div><h3 class='price-map-title'>${esc(instrument)}</h3><div class='price-map-meta'>${esc(session)} · Updated ${esc(updated)}</div><div class='price-map-source'>Source: ${esc(source)}</div></div><div class='price-map-status'><div class='price-map-live ${liveClass}'>${esc(current == null ? 'Manual needed' : 'Live')}</div>${priceCountdownHtml()}</div></div>`;
     const notice = priceFetchState === 'loading'
       ? `<div class='price-map-loading'>Fetching ${esc(instrument)} price from yfinance...</div>`
       : priceFetchState === 'error'
@@ -1115,6 +1158,11 @@
   function priceHistoryHtml(c){
     const rows = (c.priceHistory || []).slice(-5).reverse().map(row => `<div class='price-history-row'><span>${esc(row.capturedAtNy || '-')} · ${esc(row.event)}</span><strong>${esc(row.price || '-')}</strong></div>`).join('');
     return `<details class='price-history-compact'><summary>Recent price captures</summary>${rows || `<p class='hint'>No price history saved yet.</p>`}</details>`;
+  }
+
+  function fvgReviewHtml(c){
+    const formed = !!(c.fields.fvg || c.markers.fvgFormed);
+    return `<label class='check-row'><input type='checkbox' id='focusFvg' ${formed ? 'checked' : ''}> <span>FVG formed after sweep</span></label><label class='label' for='focusFvgTf'>FVG timeframe</label><select class='in' id='focusFvgTf'>${options(tfs, c.fields.fvgTf, '- FVG timeframe -')}</select><p class='hint'>You can update this after the card is created because the FVG may form during the trade window.</p>`;
   }
 
   function summary(x, ctx){
@@ -1218,9 +1266,7 @@
         const body = p === 'dol'
           ? `<h3>${esc(x[p + i + 'Draw'] || 'Unspecified liquidity')}</h3><p class='sub'>Price level: ${esc(x[p + i + 'Level'] || 'No level')} · Timeframe: ${esc(x[p + i + 'Tf'] || 'No timeframe')}</p><p class='hint'>${esc(dolDistance(x[p + i + 'Level'], x.currentPrice).label)}</p>`
           : `<h3>${esc(x[p + i + 'Draw'] || 'Unspecified liquidity')}</h3><p class='sub'>${esc(x[p + i + 'Level'] || 'No level')} · Timeframe: ${esc(x[p + i + 'Tf'] || 'No timeframe')} · ${esc(x[p + i + 'Confidence'] || 'No confidence')} · ${esc(x[p + i + 'HitTime'] || 'No hit time')}</p>`;
-        const status = p === 'dol'
-          ? `<label class='check-row'><input type='checkbox' id='focus_${p + i}Taken' ${x[p + i + 'Taken'] ? 'checked' : ''}> <span>DOL taken</span></label>`
-          : pill(x[p + i + 'Taken'] ? 'Taken' : 'Not taken', x[p + i + 'Taken'] ? 'ok' : 'warn');
+        const status = `<label class='check-row compact'><input type='checkbox' id='focus_${p + i}Taken' ${x[p + i + 'Taken'] ? 'checked' : ''}> <span>${p === 'dol' ? 'DOL taken' : 'Sweep taken'}</span></label>`;
         rows.push(`<div class='card-row'><div><div class='progress'>${esc(label)} ${i}</div>${body}</div><div class='status-row'>${pill(x[p + i + 'Level'] || 'N/A', 'info')}${status}</div></div>`);
       }
     }
@@ -1271,7 +1317,7 @@
     const c = comp(f);
     const instrumentInput = `<label class='label' for='instrument'>Instrument</label><input class='in' id='instrument' list='inst' value='${esc(f.instrument)}' placeholder='Select or type instrument'><datalist id='inst'>${instruments.map(x => `<option value='${esc(x)}'>`).join('')}</datalist>`;
     const status = raw('Status', c.ok ? pill('Complete', 'ok') : pill('Draft', 'warn'));
-    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats your inputs only. It does not call external AI, forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button></div><p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the hosted yfinance price API when configured, then falls back to the local helper at 127.0.0.1:8765.</p><label class='label'>Bias Determination For Session</label><div class='segmented' role='group' aria-label='Bias Determination For Session'>${biasOptions.map(b => `<button class='segmented-option' data-bias='${b}' aria-pressed='${f.bias === b ? 'true' : 'false'}'>${esc(b)}</button>`).join('')}</div><p class='hint'>Session bias is a planning label for the selected session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Market Context</div><h3>Phase map by timeframe</h3><p class='sub'>Record observed context only. Potential next phase is a conservative planning note, not a trade signal or forecast.</p>${marketContextPlanner(marketContextDraft)}</div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}<div class='panel'><h3>FVG Formation</h3><label class='check-row'><input type='checkbox' id='fvg' ${f.fvg ? 'checked' : ''}> <span>FVG formed after sweep</span></label>${select('fvgTf', 'FVG timeframe', tfs, '- FVG timeframe -')}</div></div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' style='bottom:var(--bottom-nav-height)'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
+    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats your inputs only. It does not call external AI, forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button>${priceCountdownHtml()}</div><p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the hosted yfinance price API when configured, then falls back to the local helper at 127.0.0.1:8765.</p><label class='label'>Bias Determination For Session</label><div class='segmented' role='group' aria-label='Bias Determination For Session'>${biasOptions.map(b => `<button class='segmented-option' data-bias='${b}' aria-pressed='${f.bias === b ? 'true' : 'false'}'>${esc(b)}</button>`).join('')}</div><p class='hint'>Session bias is a planning label for the selected session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Market Context</div><h3>Phase map by timeframe</h3><p class='sub'>Record observed context only. Potential next phase is a conservative planning note, not a trade signal or forecast.</p>${marketContextPlanner(marketContextDraft)}</div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}<div class='panel'><h3>FVG Formation</h3><label class='check-row'><input type='checkbox' id='fvg' ${f.fvg ? 'checked' : ''}> <span>FVG formed after sweep</span></label>${select('fvgTf', 'FVG timeframe', tfs, '- FVG timeframe -')}</div></div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' style='bottom:var(--bottom-nav-height)'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
   }
 
   function saved(){
@@ -1305,7 +1351,8 @@
       const has = c.fields[id + 'Level'] || c.fields[id + 'Draw'];
       return has ? `<option value='${id}'${c.activeDolId === id ? ' selected' : ''}>${esc(dolLabel(c.fields, id))}</option>` : '';
     }).join('');
-    return `<section class='screen'>${pageHead('Focus card details', c.fields.instrument || 'No instrument', c.fields.session || 'No session', 'saved')}<div class='card-hero'><div class='progress'>${esc(c.fields.date || 'No date')}</div><h2>${esc(c.fields.instrument || 'No instrument')}</h2><p class='sub'>${esc(c.fields.session || 'No session')} · ${esc(c.fields.bias || 'No bias selected')}</p><div class='status-row'>${biasPill(c.fields.bias)}${c.finalSaved ? pill('Final saved', 'info') : pill(status === 'complete' ? 'Complete draft' : 'Draft', status === 'complete' ? 'ok' : 'warn')}${outcomePill(c.outcome)}</div><p class='hint'>Bias Determination For Session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div>${auditStripHtml(c)}<div class='card'><div class='progress'>Price Map Dashboard</div>${priceMapHtml(c.fields, {updatedAt: c.updatedAt})}<p class='hint'>${esc(PRICE_DELAY_DISCLAIMER)}</p></div><div class='card'><div class='progress'>Focus DOL</div><label class='label' for='activeDol'>Active draw on liquidity</label><select class='in' id='activeDol'><option value=''>- active DOL -</option>${activeOptions}</select>${activeDolHtml(c)}</div><div class='card snapshot-section'>${priceSnapshotCardHtml(c)}${priceOverrideHtml(c)}${priceHistoryHtml(c)}</div><div class='card'><div class='progress'>Potential risk-to-reward</div>${riskPlanHtml(c)}</div><div class='card'><div class='progress'>Route to DOL / PD array evidence</div>${routeEvidenceHtml(c)}</div><div class='card'><div class='progress'>Market Context</div>${marketContextRows(c.marketContext)}</div><div class='card'><div class='progress'>DOL stack</div>${stackRows(c.fields, 'dol', 'DOL')}</div><div class='card'><div class='progress'>Potential sweep stack</div>${stackRows(c.fields, 'sweep', 'Sweep')}</div><div class='card'><div class='progress'>FVG</div><h3>${c.fields.fvg || c.markers.fvgFormed ? 'FVG recorded' : 'No FVG recorded'}</h3><p class='sub'>${esc(c.fields.fvgTf || 'No timeframe')}</p></div><div class='card'><h3>Trade highlights</h3><div class='review-grid'>${check('mark_dolRespected', 'DOL respected', c.markers.dolRespected)}${check('mark_sweepConfirmed', 'LTF sweep confirmed', c.markers.sweepConfirmed)}${check('mark_fvgFormed', 'FVG formed after sweep', c.markers.fvgFormed)}${check('mark_planFollowed', 'Plan followed', c.markers.planFollowed)}</div><label class='label' for='reviewOutcome'>Outcome</label><select class='in' id='reviewOutcome'>${options(outcomes, c.outcome, '- outcome -')}</select><label class='label' for='reviewNotes'>Verification notes</label><textarea class='in' id='reviewNotes' placeholder='Add review notes'>${esc(c.notes)}</textarea><div class='grid'><div><label class='label' for='riskPct'>Planned risk %</label><input class='in' id='riskPct' value='${esc(c.risk.plannedRiskPct)}' placeholder='0.5'></div><div><label class='label' for='plannedR'>Planned R</label><input class='in' id='plannedR' value='${esc(c.risk.plannedR)}' placeholder='2R'></div></div><label class='label' for='maxLoss'>Max loss</label><input class='in' id='maxLoss' value='${esc(c.risk.maxLoss)}' placeholder='Optional amount'><label class='label' for='journalLesson'>Journal lesson</label><textarea class='in' id='journalLesson' placeholder='Lesson learned'>${esc(c.journal.lesson)}</textarea><label class='label' for='journalTags'>Behaviour tags</label><input class='in' id='journalTags' value='${esc(c.journal.tags.join(', '))}' placeholder='patient, followed plan'></div><div class='row-actions'><button class='btn' id='loadBtn'>Load to planner</button><button class='btn' data-route='timeline'>Timeline</button><button class='btn' id='copyBtn'>Copy</button><button class='btn' id='shareBtn'>Share</button><button class='btn' id='saveChangesBtn'>Save changes</button><button class='btn good' id='finalSaveBtn'>Final save</button><button class='btn danger' id='deleteBtn'>Delete</button></div></section>`;
+    return `<section class='screen'>${pageHead('Focus card details', c.fields.instrument || 'No instrument', c.fields.session || 'No session', 'saved')}<div class='card-hero'><div class='progress'>${esc(c.fields.date || 'No date')}</div><h2>${esc(c.fields.instrument || 'No instrument')}</h2><p class='sub'>${esc(c.fields.session || 'No session')} · ${esc(c.fields.bias || 'No bias selected')}</p><div class='status-row'>${biasPill(c.fields.bias)}${c.finalSaved ? pill('Final saved', 'info') : pill(status === 'complete' ? 'Complete draft' : 'Draft', status === 'complete' ? 'ok' : 'warn')}${outcomePill(c.outcome)}</div><p class='hint'>Bias Determination For Session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div>${auditStripHtml(c)}<div class='card'><div class='progress'>Price Map Dashboard</div>${priceMapHtml(c.fields, {updatedAt: c.updatedAt})}<p class='hint'>${esc(PRICE_DELAY_DISCLAIMER)}</p></div><div class='card'><div class='progress'>Focus DOL</div><label class='label' for='activeDol'>Active draw on liquidity</label><select class='in' id='activeDol'><option value=''>- active DOL -</option>${activeOptions}</select>${activeDolHtml(c)}</div><div class='card snapshot-section'>${priceSnapshotCardHtml(c)}${priceOverrideHtml(c)}${priceHistoryHtml(c)}</div><div class='card'><div class='progress'>Potential risk-to-reward</div>${riskPlanHtml(c)}</div><div class='card'><div class='progress'>Route to DOL / PD array evidence</div>${routeEvidenceHtml(c)}</div><div class='card'><div class='progress'>Market Context</div>${marketContextRows(c.marketContext)}</div><div class='card'><div class='progress'>DOL stack</div>${stackRows(c.fields, 'dol', 'DOL')}</div><div class='card'><div class='progress'>Potential sweep stack</div>${stackRows(c.fields, 'sweep', 'Sweep')}</div><div class='card'><div class='progress'>FVG</div>${fvgReviewHtml(c)}</div><div class='card'><h3>Trade highlights</h3><div class='review-grid'>${check('mark_dolRespected', 'DOL respected', c.markers.dolRespected)}${check('mark_sweepConfirmed', 'LTF sweep confirmed', c.markers.sweepConfirmed)}${check('mark_fvgFormed', 'FVG formed after sweep', c.markers.fvgFormed)}${check('mark_planFollowed', 'Plan followed', c.markers.planFollowed)}</div><label class='label' for='reviewOutcome'>Outcome</label><select class='in' id='reviewOutcome'>${options(outcomes, c.outcome, '- outcome -')}</select><label class='label' for='reviewNotes'>Verification notes</label><textarea class='in' id='reviewNotes' placeholder='Add review notes'>${esc(c.notes)}</textarea><div class='grid'><div><label class='label' for='riskPct'>Planned risk %</label><input class='in' id='riskPct' value='${esc(c.risk.plannedRiskPct)}' placeholder='0.5'></div><div><label class='label' for='plannedR'>Planned R</label><input class='in' id='plannedR' value='${esc(c.risk.plannedR)}' placeholder='2R'></div></div><label class='label' for='maxLoss'>Max loss</label><input class='in' id='maxLoss' value='${esc(c.risk.maxLoss)}' placeholder='Optional amount'><label class='label' for='journalLesson'>Journal lesson</label><textarea class='in' id='journalLesson' placeholder='Lesson learned'>${esc(c.journal.lesson)}</textarea><label class='label' for='journalTags'>Behaviour tags</label><input class='in' id='journalTags' value='${esc(c.journal.tags.join(', '))}' placeholder='patient, followed plan'></div><div class='row-actions'><button class='btn' id='loadBtn'>Load to planner</button><button class='btn' data-route='timeline'>Timeline</button><button class='btn' id='copyBtn'>Copy</button><button class='btn' id='shareBtn'>Share</button><button class='btn' id='saveChangesBtn'>Save changes</button><button class='btn good' id='finalSaveBtn'>Final save</button><button class='btn danger' id='deleteBtn'>Delete</button></div></section>`;
+
   }
 
   function timeline(){
@@ -1348,7 +1395,7 @@
     const settings = getSettings();
     const m = getMetrics(cards);
     const recent = latestCard();
-    return `<section class='screen'>${pageHead('Trader profile', 'Profile', 'Local settings and portable data tools.', '')}<div class='card'><h3>Local summary</h3>${line('Saved cards', m.total)}${line('Final saved', m.finalSaved)}${line('Favorites', m.favorites)}${line('Recent plan', recent ? (recent.fields.instrument || 'No instrument') : '')}</div><div class='card'><h3>Settings</h3><label class='label' for='defaultInstrument'>Default instrument</label><input class='in' id='defaultInstrument' value='${esc(settings.defaultInstrument)}' placeholder='MNQ'><label class='label' for='defaultSession'>Default session</label><select class='in' id='defaultSession'>${options(sessions, settings.defaultSession, 'No default')}</select><label class='label' for='watchlist'>Watchlist</label><input class='in' id='watchlist' value='${esc(settings.watchlist.join(', '))}' placeholder='MNQ, ES, GC'><div class='grid'><div><label class='label' for='defaultRiskPct'>Default risk %</label><input class='in' id='defaultRiskPct' value='${esc(settings.riskDefaults.plannedRiskPct)}'></div><div><label class='label' for='defaultPlannedR'>Default planned R</label><input class='in' id='defaultPlannedR' value='${esc(settings.riskDefaults.plannedR)}'></div></div><label class='label' for='defaultMaxLoss'>Default max loss</label><input class='in' id='defaultMaxLoss' value='${esc(settings.riskDefaults.maxLoss)}'><button class='btn primary' id='saveSettingsBtn'>Save settings</button></div><div class='card'><h3>Data tools</h3><div class='row-actions'><button class='btn' id='exportJsonBtn'>Export data</button><button class='btn' id='importJsonBtn'>Import data</button><button class='btn danger' id='clearDataBtn'>Clear all local data</button><input class='file-input' id='importFile' type='file' accept='application/json,.json'></div></div></section>`;
+    return `<section class='screen'>${pageHead('Trader profile', 'Profile', 'Local settings and portable data tools.', '')}<div class='card'><h3>Local summary</h3>${line('Saved cards', m.total)}${line('Final saved', m.finalSaved)}${line('Favorites', m.favorites)}${line('Recent plan', recent ? (recent.fields.instrument || 'No instrument') : '')}</div><div class='card'><h3>Settings</h3><label class='label' for='defaultInstrument'>Default instrument</label><input class='in' id='defaultInstrument' value='${esc(settings.defaultInstrument)}' placeholder='MNQ'><label class='label' for='defaultSession'>Default session</label><select class='in' id='defaultSession'>${options(sessions, settings.defaultSession, 'No default')}</select><label class='label' for='themeMode'>Theme</label><select class='in' id='themeMode'><option value='light'${settings.theme === 'light' ? ' selected' : ''}>Light mode</option><option value='dark'${settings.theme === 'dark' ? ' selected' : ''}>Dark mode</option></select><label class='label' for='watchlist'>Watchlist</label><input class='in' id='watchlist' value='${esc(settings.watchlist.join(', '))}' placeholder='MNQ, ES, GC'><div class='grid'><div><label class='label' for='defaultRiskPct'>Default risk %</label><input class='in' id='defaultRiskPct' value='${esc(settings.riskDefaults.plannedRiskPct)}'></div><div><label class='label' for='defaultPlannedR'>Default planned R</label><input class='in' id='defaultPlannedR' value='${esc(settings.riskDefaults.plannedR)}'></div></div><label class='label' for='defaultMaxLoss'>Default max loss</label><input class='in' id='defaultMaxLoss' value='${esc(settings.riskDefaults.maxLoss)}'><button class='btn primary' id='saveSettingsBtn'>Save settings</button></div><div class='card'><h3>Data tools</h3><div class='row-actions'><button class='btn' id='exportJsonBtn'>Export data</button><button class='btn' id='importJsonBtn'>Import data</button><button class='btn danger' id='clearDataBtn'>Clear all local data</button><input class='file-input' id='importFile' type='file' accept='application/json,.json'></div></div></section>`;
   }
 
   function sync(){
@@ -1498,6 +1545,7 @@
           f.currentPrice = clean(String(data.price));
           f.time = f.time || nyTimeInput();
           priceFetchState = 'ok';
+          lastPriceFetchAt = Date.now();
           lastPriceSource = data.helperUrl === localPriceHelperUrl(symbol) ? 'local-yfinance' : 'hosted-yfinance';
           const source = lastPriceSource === 'local-yfinance' ? 'local yfinance helper' : 'hosted yfinance API';
           notice = 'Price auto-detected from ' + source + '.';
@@ -1660,7 +1708,7 @@
         render();
         return;
       }
-      const fieldsPatch = Object.assign({}, focusDolTakenFields(c, q));
+      const fieldsPatch = Object.assign({}, focusReviewFields(c, q));
       const focusPrice = q('focusCurrentPrice') ? clean(q('focusCurrentPrice').value) : c.fields.currentPrice;
       if(focusPrice !== c.fields.currentPrice) fieldsPatch.currentPrice = focusPrice;
       const activeDolId = normActiveDolId(q('activeDol') ? q('activeDol').value : c.activeDolId, Object.assign({}, c.fields, fieldsPatch));
@@ -1696,7 +1744,7 @@
           biasInvalidated: q('mark_biasInvalidated') ? !!q('mark_biasInvalidated').checked : !!c.markers.biasInvalidated,
           dolRespected: !!q('mark_dolRespected').checked,
           sweepConfirmed: !!q('mark_sweepConfirmed').checked,
-          fvgFormed: !!q('mark_fvgFormed').checked,
+          fvgFormed: q('focusFvg') ? !!q('focusFvg').checked : !!q('mark_fvgFormed').checked,
           planFollowed: !!q('mark_planFollowed').checked
         },
         outcome,
@@ -1790,6 +1838,7 @@
       saveSettings({
         defaultInstrument: q('defaultInstrument').value,
         defaultSession: q('defaultSession').value,
+        theme: q('themeMode') ? q('themeMode').value : getSettings().theme,
         watchlist: arrayText(q('watchlist').value),
         riskDefaults: {
           plannedRiskPct: q('defaultRiskPct').value,
@@ -1800,6 +1849,15 @@
       notice = 'Settings saved.';
       render();
     });
+
+    const themeMode = q('themeMode');
+    if(themeMode){
+      themeMode.onchange = () => {
+        saveSettings({theme: themeMode.value});
+        notice = 'Theme updated.';
+        render();
+      };
+    }
 
     on('clearDataBtn', () => {
       if(confirm('Clear all local cards, settings and bias metadata?')){
@@ -1850,6 +1908,7 @@
 
   function render(){
     if(!app) return;
+    applyTheme(getSettings().theme);
     if(doc && doc.body && doc.body.setAttribute && doc.body.removeAttribute){
       if(['focus','review','timeline'].includes(route) && reviewId) doc.body.setAttribute('data-ict-review-id', reviewId);
       else doc.body.removeAttribute('data-ict-review-id');
@@ -1872,8 +1931,12 @@
     if(!doc) return;
     const c = doc.getElementById('nyClock');
     if(c) c.innerHTML = new Date().toLocaleTimeString('en-US', {timeZone: 'America/New_York', hour12: false}) + ` <span>NY</span>`;
+    doc.querySelectorAll('.price-countdown').forEach(n => {
+      n.textContent = priceCountdownText();
+    });
   }
 
+  applyTheme(getSettings().theme);
   if(typeof setInterval === 'function') setInterval(tick, 1000);
   tick();
   render();

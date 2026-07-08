@@ -1,11 +1,11 @@
-const CACHE_NAME = 'ict-sweep-tracker-v079-price-autodetect-fix-20260707';
+const CACHE_NAME = 'ict-sweep-tracker-v080-concept-improvements-20260708';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './favicon.svg',
-  './assets/styles.css?v=0.7.9-price-autodetect-fix-20260707',
-  './assets/app.js?v=0.7.9-price-autodetect-fix-20260707'
+  './assets/styles.css?v=0.8.0-concept-improvements-20260708',
+  './assets/app.js?v=0.8.0-concept-improvements-20260708'
 ];
 
 self.addEventListener('install', event => {
