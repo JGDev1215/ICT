@@ -1,12 +1,13 @@
 (function(){
   'use strict';
 
-  const VERSION = 'v0.8.0';
+  const VERSION = 'v0.8.1';
   const KEY = 'ict_cards_v078';
   const SETTINGS_KEY = 'ict_settings_v1';
   const DRAFT_KEY = 'ict_planner_draft_v1';
   const SYNC_QUEUE_KEY = 'ict_supabase_sync_queue_v1';
   const SYNC_TOMBSTONES_KEY = 'ict_supabase_tombstones_v1';
+  const SYNC_ACCOUNT_DECISIONS_KEY = 'ict_supabase_account_sync_v1';
   const SCHEMA = 'ict_dol_sweep_export_v7';
   const NL = String.fromCharCode(10);
   const DQ = String.fromCharCode(34);
@@ -946,6 +947,59 @@
     }));
   }
 
+  function syncQueueCount(queue){
+    const q = queue || getSyncQueue();
+    return Object.keys(q.cards || {}).length + Object.keys(q.deletes || {}).length + (q.settings ? 1 : 0);
+  }
+
+  function getSyncDecisionMap(){
+    const store = storage();
+    return store ? parse(store.getItem(SYNC_ACCOUNT_DECISIONS_KEY) || '{}', {}) : {};
+  }
+
+  function setSyncDecisionMap(map){
+    const store = storage();
+    if(store) store.setItem(SYNC_ACCOUNT_DECISIONS_KEY, JSON.stringify(isObject(map) ? map : {}));
+  }
+
+  function getUserSyncDecision(userId){
+    const id = userId || (supabaseUser && supabaseUser.id);
+    if(!id) return null;
+    const map = getSyncDecisionMap();
+    return isObject(map[id]) ? map[id] : null;
+  }
+
+  function setUserSyncDecision(decision){
+    if(!supabaseUser || !supabaseUser.id) return null;
+    const map = getSyncDecisionMap();
+    map[supabaseUser.id] = Object.assign({
+      decidedAt: isoNow()
+    }, isObject(decision) ? decision : {});
+    setSyncDecisionMap(map);
+    return map[supabaseUser.id];
+  }
+
+  function clearQueuedLocalUploads(){
+    const queue = getSyncQueue();
+    queue.cards = {};
+    queue.deletes = {};
+    queue.settings = null;
+    setSyncQueue(queue);
+  }
+
+  function shouldPauseFirstLocalUpload(remoteCards){
+    if(!supabaseUser || getUserSyncDecision()) return false;
+    if(!cards.length) return false;
+    return Array.isArray(remoteCards) && remoteCards.length === 0;
+  }
+
+  function signupErrorMessage(error){
+    const message = error && error.message ? error.message : 'Supabase account creation failed.';
+    return /rate limit/i.test(message)
+      ? 'Supabase email rate limit reached. Try again later, or configure SMTP/email limits in Supabase before inviting more users.'
+      : message;
+  }
+
   function getTombstones(){
     const store = storage();
     return store ? parse(store.getItem(SYNC_TOMBSTONES_KEY) || '{}', {}) : {};
@@ -983,6 +1037,7 @@
 
   function syncStatusLabel(){
     if(syncState.busy) return 'Syncing';
+    if(syncState.firstSyncPaused) return 'Review first sync';
     if(supabaseUser) return 'Connected';
     return getSupabaseClient() ? 'Login required' : 'Local only';
   }
@@ -1124,6 +1179,12 @@
     const opts = isObject(options) ? options : {};
     const client = getSupabaseClient();
     if(!client || !supabaseUser || (syncState.busy && !opts.force)) return Promise.resolve(false);
+    if(syncState.firstSyncPaused && !opts.allowFirstUpload){
+      setSyncStatus('Review first sync', 'Choose whether to upload existing local cards to this Supabase account.', false);
+      syncState.firstSyncPaused = true;
+      if(route === 'profile') render();
+      return Promise.resolve(false);
+    }
     const queue = getSyncQueue();
     const processedCardIds = Object.keys(queue.cards || {});
     const processedDeleteIds = Object.keys(queue.deletes || {});
@@ -1142,9 +1203,10 @@
       }
       setSyncQueue(latest);
       syncState.lastSyncAt = nyTimestamp();
+      syncState.firstSyncPaused = false;
       setSyncStatus('Connected', 'Supabase sync is up to date.', false);
       const remaining = Object.keys(latest.cards || {}).length + Object.keys(latest.deletes || {}).length + (latest.settings ? 1 : 0);
-      if(remaining) return flushSupabaseQueue();
+      if(remaining) return flushSupabaseQueue({allowFirstUpload: !!opts.allowFirstUpload});
       return true;
     }).catch(error => {
       setSyncStatus('Sync error', error && error.message ? error.message : 'Supabase sync failed. Local cards are still saved.', false);
@@ -1155,7 +1217,8 @@
     });
   }
 
-  function syncFromSupabase(){
+  function syncFromSupabase(options){
+    const opts = isObject(options) ? options : {};
     const client = getSupabaseClient();
     if(!client) {
       setSyncStatus('Local only', 'Supabase is not configured.', false);
@@ -1165,16 +1228,25 @@
       setSyncStatus('Login required', 'Login from Profile to sync Focus Cards.', false);
       return Promise.resolve(false);
     }
-    if(syncState.busy) return Promise.resolve(false);
+    if(syncState.busy && !opts.force) return Promise.resolve(false);
     setSyncStatus('Syncing', 'Loading Focus Cards from Supabase.', true);
     return Promise.all([loadRemoteCards(), loadRemoteSettings()])
       .then(([remoteCards, remoteSettings]) => {
+        syncState.remoteCardCount = Array.isArray(remoteCards) ? remoteCards.length : null;
+        if(shouldPauseFirstLocalUpload(remoteCards) && !opts.allowFirstUpload){
+          syncState.firstSyncPaused = true;
+          setSyncStatus('Review first sync', 'This browser has local cards and this Supabase account has no server cards yet. Choose whether to upload them.', false);
+          render();
+          return false;
+        }
+        syncState.firstSyncPaused = false;
         const merged = mergeCards(cards, remoteCards);
         saveCards(merged, {remote: false});
         if(remoteSettings) saveSettings(remoteSettings, {remote: false});
-        return flushSupabaseQueue({force: true});
+        return flushSupabaseQueue({force: true, allowFirstUpload: !!opts.allowFirstUpload});
       })
-      .then(() => {
+      .then(result => {
+        if(result === false) return false;
         syncState.lastSyncAt = nyTimestamp();
         setSyncStatus('Connected', 'Supabase sync is up to date.', false);
         render();
@@ -1187,6 +1259,41 @@
       });
   }
 
+  function installAuthListener(client){
+    if(authListenerInstalled || !client || !client.auth || !client.auth.onAuthStateChange) return;
+    authListenerInstalled = true;
+    client.auth.onAuthStateChange((event, session) => {
+      supabaseSession = session || null;
+      supabaseUser = supabaseSession ? supabaseSession.user : null;
+      if(event === 'SIGNED_IN') {
+        if(typeof setTimeout === 'function') setTimeout(() => syncFromSupabase({force: true}), 0);
+        else syncFromSupabase({force: true});
+      }
+      if(event === 'SIGNED_OUT') {
+        syncState.firstSyncPaused = false;
+        setSyncStatus('Login required', 'Logged out. Local cards remain on this device.', false);
+      }
+      render();
+    });
+  }
+
+  function validateSupabaseUser(client){
+    if(!client || !supabaseSession) return Promise.resolve(false);
+    if(!client.auth.getUser) return Promise.resolve(true);
+    return client.auth.getUser().then(({data, error}) => {
+      if(error || !data || !data.user) {
+        supabaseSession = null;
+        supabaseUser = null;
+        syncState.firstSyncPaused = false;
+        setSyncStatus('Login required', 'Saved session is no longer valid. Login again to sync Focus Cards.', false);
+        if(client.auth.signOut) return client.auth.signOut().catch(() => false).then(() => false);
+        return false;
+      }
+      supabaseUser = data.user;
+      return true;
+    });
+  }
+
   function initSupabase(){
     const client = getSupabaseClient();
     if(!client) {
@@ -1196,21 +1303,19 @@
     return client.auth.getSession().then(({data}) => {
       supabaseSession = data && data.session ? data.session : null;
       supabaseUser = supabaseSession ? supabaseSession.user : null;
-      setSyncStatus(supabaseUser ? 'Connected' : 'Login required', supabaseUser ? 'Ready to sync Focus Cards.' : 'Logged out. Local cards remain on this device.', false);
-      if(client.auth.onAuthStateChange){
-        client.auth.onAuthStateChange((event, session) => {
-          supabaseSession = session || null;
-          supabaseUser = supabaseSession ? supabaseSession.user : null;
-          if(event === 'SIGNED_IN') {
-            if(typeof setTimeout === 'function') setTimeout(() => syncFromSupabase(), 0);
-            else syncFromSupabase();
-          }
-          if(event === 'SIGNED_OUT') setSyncStatus('Login required', 'Logged out. Local cards remain on this device.', false);
-          render();
-        });
+      installAuthListener(client);
+      if(!supabaseUser) {
+        setSyncStatus('Login required', 'Logged out. Local cards remain on this device.', false);
+        return false;
       }
-      if(supabaseUser) return syncFromSupabase();
-      return false;
+      setSyncStatus('Syncing', 'Checking saved Supabase session.', true);
+      return validateSupabaseUser(client).then(valid => {
+        if(!valid) {
+          render();
+          return false;
+        }
+        return syncFromSupabase({force: true});
+      });
     }).catch(error => {
       setSyncStatus('Sync error', error && error.message ? error.message : 'Supabase initialisation failed.', false);
       return false;
@@ -1229,7 +1334,7 @@
       if(error) throw error;
       supabaseSession = data && data.session ? data.session : null;
       supabaseUser = supabaseSession ? supabaseSession.user : null;
-      return syncFromSupabase();
+      return syncFromSupabase({force: true});
     }).catch(error => {
       setSyncStatus('Login failed', error && error.message ? error.message : 'Supabase login failed.', false);
       render();
@@ -1253,15 +1358,45 @@
       if(error) throw error;
       supabaseSession = data && data.session ? data.session : null;
       supabaseUser = supabaseSession ? supabaseSession.user : null;
-      if(supabaseUser) return syncFromSupabase();
+      if(supabaseUser) return syncFromSupabase({force: true});
       setSyncStatus('Confirm email', 'Account created. Check your email, confirm the account, then login here.', false);
       render();
       return true;
     }).catch(error => {
-      setSyncStatus('Signup failed', error && error.message ? error.message : 'Supabase account creation failed.', false);
+      setSyncStatus('Signup failed', signupErrorMessage(error), false);
       render();
       return false;
     });
+  }
+
+  function approveFirstSyncUpload(){
+    if(!supabaseUser) {
+      setSyncStatus('Login required', 'Login before uploading local cards.', false);
+      render();
+      return Promise.resolve(false);
+    }
+    setUserSyncDecision({localUpload: 'approved'});
+    syncState.firstSyncPaused = false;
+    cards.forEach(queueCardSync);
+    return flushSupabaseQueue({force: true, allowFirstUpload: true}).then(ok => {
+      if(ok) return syncFromSupabase({force: true, allowFirstUpload: true});
+      return false;
+    });
+  }
+
+  function skipFirstSyncUpload(){
+    if(!supabaseUser) {
+      setSyncStatus('Login required', 'Login before changing sync settings.', false);
+      render();
+      return Promise.resolve(false);
+    }
+    setUserSyncDecision({localUpload: 'skipped'});
+    clearQueuedLocalUploads();
+    syncState.firstSyncPaused = false;
+    syncState.lastSyncAt = nyTimestamp();
+    setSyncStatus('Connected', 'Existing local cards will stay on this browser. New saved changes can sync to this account.', false);
+    render();
+    return Promise.resolve(true);
   }
 
   function supabaseLogout(){
@@ -1460,12 +1595,15 @@
   let supabaseClient = null;
   let supabaseSession = null;
   let supabaseUser = null;
+  let authListenerInstalled = false;
   let syncState = {
     configured: false,
     status: 'Local only',
     message: 'Supabase is not configured.',
     busy: false,
-    lastSyncAt: ''
+    lastSyncAt: '',
+    remoteCardCount: null,
+    firstSyncPaused: false
   };
 
   const api = {
@@ -1501,10 +1639,13 @@
     priceHelperUrls,
     supabaseConfig,
     getSyncQueue,
+    getUserSyncDecision,
     mergeCards,
     remoteCardPayload,
     syncFromSupabase,
     supabaseSignup,
+    approveFirstSyncUpload,
+    skipFirstSyncUpload,
     priceRefreshRemaining,
     priceCountdownText,
     selectedMarketTimeframes,
@@ -2052,12 +2193,24 @@
     const configured = !!getSupabaseClient();
     const email = supabaseUser && supabaseUser.email ? supabaseUser.email : '';
     const queue = getSyncQueue();
-    const pending = Object.keys(queue.cards || {}).length + Object.keys(queue.deletes || {}).length + (queue.settings ? 1 : 0);
-    const statusClass = supabaseUser ? 'good' : configured ? 'warn' : 'bad';
+    const pending = syncQueueCount(queue);
+    const decision = getUserSyncDecision();
+    const decisionLabel = decision && decision.localUpload === 'approved'
+      ? 'Local upload approved'
+      : decision && decision.localUpload === 'skipped'
+        ? 'Existing local cards kept local'
+        : supabaseUser && syncState.firstSyncPaused
+          ? 'Waiting for your choice'
+          : '-';
+    const serverCount = syncState.remoteCardCount == null ? '-' : syncState.remoteCardCount;
+    const statusClass = supabaseUser && !syncState.firstSyncPaused ? 'good' : configured ? 'warn' : 'bad';
+    const firstSyncActions = supabaseUser && syncState.firstSyncPaused
+      ? `<div class='panel'><h3>First sync choice</h3><p class='hint'>This browser has existing local cards and this Supabase account has no server cards yet. Choose before uploading anything to this account.</p><div class='row-actions'><button class='btn primary' id='approveFirstSyncBtn'>Upload local cards</button><button class='btn ghost' id='skipFirstSyncBtn'>Keep local only</button></div></div>`
+      : '';
     const login = supabaseUser
-      ? `<p class='hint good'>Signed in as ${esc(email || 'Supabase user')}.</p><div class='row-actions'><button class='btn' id='syncNowBtn'>Sync now</button><button class='btn ghost' id='supabaseLogoutBtn'>Logout</button></div>`
-      : `<label class='label' for='supabaseEmail'>Email</label><input class='in' id='supabaseEmail' type='email' autocomplete='email' placeholder='you@example.com'><label class='label' for='supabasePassword'>Password</label><input class='in' id='supabasePassword' type='password' autocomplete='current-password' placeholder='Supabase password'><p class='hint'>New accounts may need email confirmation before login.</p><div class='row-actions'><button class='btn primary' id='supabaseLoginBtn'>Login and sync</button><button class='btn' id='supabaseSignupBtn'>Create account</button><button class='btn' id='syncNowBtn'>Retry sync</button></div>`;
-    return `<div class='card'><div class='progress'>Server sync</div><h3>Supabase Focus Cards</h3><p class='hint ${statusClass}'>${esc(syncStatusLabel())}: ${esc(syncState.message)}</p><div class='line'><div class='k'>Project</div><div class='v'>${esc(cfg.url || 'Not configured')}</div></div><div class='line'><div class='k'>Pending local changes</div><div class='v'>${pending}</div></div><div class='line'><div class='k'>Last sync</div><div class='v'>${esc(syncState.lastSyncAt || '-')}</div></div>${configured ? login : `<p class='hint bad'>Set <code>window.ICT_SUPABASE_ANON_KEY</code> before app.js loads to enable Supabase Auth and server storage.</p>`}</div>`;
+      ? `<p class='hint good'>Signed in as ${esc(email || 'Supabase user')}.</p>${firstSyncActions}<div class='row-actions'><button class='btn' id='syncNowBtn'>Sync now</button><button class='btn ghost' id='supabaseLogoutBtn'>Logout</button></div>`
+      : `<label class='label' for='supabaseEmail'>Email</label><input class='in' id='supabaseEmail' type='email' autocomplete='email' placeholder='you@example.com'><label class='label' for='supabasePassword'>Password</label><input class='in' id='supabasePassword' type='password' autocomplete='current-password' placeholder='Supabase password'><p class='hint'>New accounts may need email confirmation before login. If signup is rate-limited, try again later or configure Supabase SMTP/email limits.</p><div class='row-actions'><button class='btn primary' id='supabaseLoginBtn'>Login and sync</button><button class='btn' id='supabaseSignupBtn'>Create account</button><button class='btn' id='syncNowBtn'>Retry sync</button></div>`;
+    return `<div class='card'><div class='progress'>Server sync</div><h3>Supabase Focus Cards</h3><p class='hint ${statusClass}'>${esc(syncStatusLabel())}: ${esc(syncState.message)}</p><div class='line'><div class='k'>Project</div><div class='v'>${esc(cfg.url || 'Not configured')}</div></div><div class='line'><div class='k'>Pending local changes</div><div class='v'>${pending}</div></div><div class='line'><div class='k'>Server cards confirmed</div><div class='v'>${esc(serverCount)}</div></div><div class='line'><div class='k'>First sync choice</div><div class='v'>${esc(decisionLabel)}</div></div><div class='line'><div class='k'>Last sync</div><div class='v'>${esc(syncState.lastSyncAt || '-')}</div></div>${configured ? login : `<p class='hint bad'>Set <code>window.ICT_SUPABASE_ANON_KEY</code> before app.js loads to enable Supabase Auth and server storage.</p>`}</div>`;
   }
 
   function profile(){
@@ -2619,8 +2772,20 @@
         render();
       });
     });
+    on('approveFirstSyncBtn', () => {
+      approveFirstSyncUpload().then(ok => {
+        notice = ok ? 'Local cards uploaded to Supabase.' : syncState.message;
+        render();
+      });
+    });
+    on('skipFirstSyncBtn', () => {
+      skipFirstSyncUpload().then(ok => {
+        notice = ok ? 'Existing local cards kept on this browser.' : syncState.message;
+        render();
+      });
+    });
     on('syncNowBtn', () => {
-      syncFromSupabase().then(ok => {
+      syncFromSupabase({force: true}).then(ok => {
         notice = ok ? 'Supabase sync complete.' : syncState.message;
         render();
       });

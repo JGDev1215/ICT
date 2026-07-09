@@ -20,7 +20,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 - Runtime dependencies: none
 - Dev QA dependencies: Playwright, installed only through `npm install`
 - Data storage: browser localStorage/sessionStorage with optional Supabase server sync for Focus Cards
-- Current app version: v0.8.0
+- Current app version: v0.8.1
 - Main entrypoint: index.html
 - Runtime config: assets/config.js
 - Stylesheet: assets/styles.css
@@ -176,6 +176,8 @@ window.ICT_SUPABASE_URL = 'https://cdcqklvvswzipmmvpzaj.supabase.co';
 Never expose the Supabase service-role key in the browser. See `docs/plans/supabase-focus-card-storage-plan.md` for the schema and validation checklist.
 
 If email confirmations are enabled in Supabase Auth, new users must confirm the email before `Login and sync` will succeed. The app keeps cards local-first while the account is pending confirmation.
+
+v0.8.1 adds a first-sync gate: if a signed-in Supabase account has no server cards and the browser already has local Focus Cards, the Profile tab asks whether to upload those local cards or keep them local. This prevents old browser-local cards from silently uploading into a newly logged-in account. The Profile tab also shows the server-confirmed card count and revalidates restored Supabase sessions on startup.
 
 ## Price Map Ladder
 

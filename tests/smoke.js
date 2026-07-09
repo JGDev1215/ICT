@@ -92,7 +92,11 @@ ok(appSource.includes('function flushSupabaseQueue'), 'Supabase queue flush help
 ok(appSource.includes('function supabaseSignup'), 'Supabase signup helper missing');
 ok(appSource.includes('auth.signUp'), 'Supabase signup API call missing');
 ok(appSource.includes("id='supabaseSignupBtn'") && appSource.includes('Create account'), 'Supabase signup UI missing');
-ok(appSource.includes('flushSupabaseQueue({force: true})'), 'Supabase session restore should flush queued changes while syncing');
+ok(appSource.includes('syncFromSupabase({force: true})'), 'Supabase auth actions should force sync after busy login state');
+ok(appSource.includes('auth.getUser'), 'Supabase restored sessions should revalidate the current user');
+ok(appSource.includes('SYNC_ACCOUNT_DECISIONS_KEY'), 'Supabase first-sync decision storage missing');
+ok(appSource.includes("id='approveFirstSyncBtn'") && appSource.includes('Upload local cards'), 'Supabase first-sync upload approval UI missing');
+ok(appSource.includes("id='skipFirstSyncBtn'") && appSource.includes('Keep local only'), 'Supabase first-sync skip UI missing');
 ok(appSource.includes('SUPABASE_CARDS_TABLE') && appSource.includes('focus_cards'), 'Supabase focus_cards table binding missing');
 ok(appSource.includes('favorite'), 'favorite field missing');
 ok(appSource.includes('journal'), 'journal field missing');

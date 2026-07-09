@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.8.1 — 2026-07-09
+
+### Fixed
+
+- Fixed first-login Supabase sync stalling in `Signing in to Supabase` until page reload.
+- Added startup Supabase user revalidation so stale or deleted-user sessions are forced back to login state.
+- Added a first-sync choice before existing browser-local Focus Cards upload to an empty Supabase account.
+- Added Profile sync visibility for server-confirmed card count and first-sync decision state.
+- Improved signup rate-limit copy so users know Supabase email limits may need retry or SMTP configuration.
+
 ## v0.8.0 checklist follow-up — 2026-07-08
 
 ### Added
