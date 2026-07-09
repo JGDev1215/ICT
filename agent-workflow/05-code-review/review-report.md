@@ -1,52 +1,53 @@
 # Code Review Report
 
 ## Review Decision
+
 PASS
 
 ## Score
+
 9/10
 
 ## Original Task Completed?
+
 YES
 
+The app is proven safe for single-user local-first deployment. Credential-independent Supabase RLS, signed-out backup behavior, and credentialed Account & Backup sync/reload behavior are verified.
+The deployed admin password has also been rotated and verified.
+
 ## Approved Plan Followed?
+
 YES
 
 ## Unrelated Changes?
+
 NO
 
 ## What Was Done Well
 
-- Kept the changes inside the static no-build app and avoided modularizing `assets/app.js`.
-- Removed user-facing Journal UI while preserving JSON/storage compatibility.
-- Added deterministic derived R:R behavior with smoke/unit/E2E coverage.
-- Added mirrored Price Map and DOL Stack DOL-taken behavior with E2E persistence coverage.
-- Preserved mobile bottom navigation and added desktop sidebar coverage.
-- Updated version/cache references through the helper and tightened smoke assertions.
-- Recorded production evidence and closed the superseded GitHub issue.
+- Current production evidence was gathered instead of relying on older QA notes.
+- The documentation now distinguishes proven v0.8.6 deployment readiness from the remaining credential-dependent Supabase gate.
+- Supabase anon write denial and signed-out optional-backup behavior are now recorded as partial safety evidence.
+- Credentialed admin Account & Backup QA is recorded as passing.
+- No runtime behavior, storage, API, or service-worker files were changed.
 
 ## Issues Found
 
-- No blocking implementation issues found after test fixes.
-- Live Supabase Account & Backup QA is unverified due to missing credentials/session.
-- v0.8.6 is local only until deployed.
+- Supabase leaked-password protection is disabled.
 
 ## Required Fixes
 
-None.
+None for local-first deployment readiness.
 
 ## Recommended Improvements
 
-- After deployment, repeat production UI QA against v0.8.6.
-- Perform live admin/Supabase sync QA with the real admin password or authenticated session.
-- Consider a future small refactor for the large one-line render templates, after a separate approved no-feature refactor plan.
+- Enable Supabase leaked-password protection before public release if the project plan supports it.
+- Run assistive-technology follow-up before moving from beta/single-user use to public release.
 
 ## Regression Risks
 
-- Existing cards with stored `journal` data should remain readable/exportable, covered by smoke tests.
-- Existing cards with old risk plans should normalize through the new ratio inference/default path, covered by unit/smoke tests for current helper behavior.
-- Desktop layout is CSS-only at the shell level and covered by Playwright, but should still be checked after deployment.
+Documentation-only change. Runtime regression risk is negligible.
 
 ## Final Reviewer Notes
 
-The work is safe to commit based on automated checks and scoped review. Remaining risks are external QA/deployment items, not local implementation blockers.
+The evidence supports single-user local-first deployment with JSON export/import as the recovery path and verifies authenticated cloud backup mechanics. Password rotation is complete; leaked-password protection remains a dashboard follow-up.

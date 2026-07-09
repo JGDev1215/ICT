@@ -6,33 +6,66 @@
 
 ## Scope
 
-Release-risk evidence for deployed v0.8.5 shell visibility plus local v0.8.6 automated web/mobile-site coverage.
+Release-risk evidence for deployed v0.8.6 shell visibility, current CI state, production price API behavior, local automated web/mobile-site coverage, and a credential-independent production browser smoke pass.
+
+## Current Commit And CI
+
+Latest local commit:
+
+```bash
+git log -1 --oneline
+```
+
+Result:
+
+```text
+1735654 feat: ship v0.8.6 planner and layout updates
+```
+
+GitHub Actions:
+
+```bash
+gh run list --repo JGDev1215/ICT --limit 12
+```
+
+Result: PASS for the v0.8.6 push on `main`.
+
+- Static smoke test: success
+- Browser E2E: success
+- Deploy static site to GitHub Pages: success
 
 ## Production Shell Checks
 
 Commands:
 
 ```bash
-curl -sS https://ictict-lake.vercel.app/ | rg -n "ICT DOL Sweep Tracker|assets/(app|styles|config)\\.js|assets/styles\\.css|service-worker"
-curl -sS https://jgdev1215.github.io/ICT/ | rg -n "ICT DOL Sweep Tracker|assets/(app|styles|config)\\.js|assets/styles\\.css|service-worker"
+curl -sS https://ictict-lake.vercel.app/ | rg -n "ICT DOL Sweep Tracker|v0\.|assets/(app|config)\.js|assets/styles\.css|service-worker|0\.8\."
+curl -sS https://jgdev1215.github.io/ICT/ | rg -n "ICT DOL Sweep Tracker|v0\.|assets/(app|config)\.js|assets/styles\.css|service-worker|0\.8\."
 ```
 
 Results:
 
-- Vercel `https://ictict-lake.vercel.app/`: PASS, title/footer reported `ICT DOL Sweep Tracker v0.8.5`; config, CSS, and app asset keys were `0.8.5-audit-fixes-20260709`.
-- GitHub Pages `https://jgdev1215.github.io/ICT/`: PASS, title/footer reported `ICT DOL Sweep Tracker v0.8.5`; config, CSS, and app asset keys were `0.8.5-audit-fixes-20260709`.
+- Vercel `https://ictict-lake.vercel.app/`: PASS, title/footer reported `ICT DOL Sweep Tracker v0.8.6`; config, CSS, and app asset keys were `0.8.6-release-20260709`.
+- GitHub Pages `https://jgdev1215.github.io/ICT/`: PASS, title/footer reported `ICT DOL Sweep Tracker v0.8.6`; config, CSS, and app asset keys were `0.8.6-release-20260709`.
 
 ## Production Price Endpoint
 
-Command:
+Commands:
 
 ```bash
-curl -sS -D /tmp/ict-prod-price-v086.headers \
+curl -sS -D /tmp/ict-v086-prod-price.headers \
   'https://ictict-lake.vercel.app/api/price?symbol=MNQ' \
-  -o /tmp/ict-prod-price-v086.json
+  -o /tmp/ict-v086-prod-price.json
+
+curl -sS -D /tmp/ict-v086-prod-price-unsupported.headers \
+  'https://ictict-lake.vercel.app/api/price?symbol=NOTAREALICTSYMBOL' \
+  -o /tmp/ict-v086-prod-price-unsupported.json
 ```
 
-Result: PASS. HTTP 200 returned JSON with `symbol: MNQ`, `yfSymbol: MNQ=F`, numeric `price`, `source: yfinance`, `cached: false`, and a UTC timestamp.
+Results:
+
+- Supported symbol `MNQ`: PASS. HTTP 200 returned `symbol: MNQ`, `yfSymbol: MNQ=F`, numeric `price`, `source: yfinance`, `cached: false`, and a UTC timestamp.
+- Unsupported symbol `NOTAREALICTSYMBOL`: PASS. HTTP 400 returned `error: unsupported symbol`, the requested symbol, and a supported-alias list.
 
 ## Local Automated Web/Mobile-Site QA
 
@@ -40,13 +73,13 @@ Commands:
 
 ```bash
 npm test
-npm run test:e2e
+npm run test:e2e -- --reporter=dot
 ```
 
 Results:
 
 - `npm test`: PASS. Smoke, unit, and API boundary tests passed.
-- `npm run test:e2e`: PASS. 65 passed, 1 skipped. The skipped case is the existing Playwright WebKit offline reload limitation.
+- `npm run test:e2e -- --reporter=dot`: PASS. 65 passed, 1 skipped. The skipped case is the existing Playwright WebKit offline reload limitation.
 
 Coverage recorded by local automation:
 
@@ -62,9 +95,98 @@ Coverage recorded by local automation:
 - Potential R:R derives invalidation/stop from current/entry, selected DOL, direction, and ratio.
 - Chromium offline service-worker shell reload remains covered; WebKit offline reload remains skipped as previously documented.
 
+## Production Browser Smoke
+
+A one-off Playwright smoke was run against the deployed sites without server writes. It cleared only the isolated test browser's localStorage/sessionStorage.
+
+Covered:
+
+- Vercel v0.8.6 home renders.
+- Vercel desktop New analysis action renders.
+- Vercel mobile primary nav renders.
+- Vercel mobile Planner renders.
+- GitHub Pages v0.8.6 home renders.
+- GitHub Pages desktop New analysis action renders.
+- GitHub Pages mobile primary nav renders.
+- GitHub Pages mobile Planner renders.
+- Vercel Planner creates a Focus Card from complete inputs.
+- Vercel Focus Card details and Price Map Dashboard render.
+- Vercel Focus Card persists after reload.
+- Vercel final-save succeeds after choosing a non-Open outcome.
+- Vercel Saved route renders and shows the saved `MNQ` card.
+
+Result: PASS.
+
+## Supabase Credential-Independent Checks
+
+These checks do not prove authenticated cloud sync, but they verify the production project is reachable, anonymous writes are blocked by RLS, and the deployed app keeps backup optional when signed out.
+
+Commands:
+
+```bash
+node <inline Supabase REST probe>
+node <inline Playwright Profile signed-out smoke>
+```
+
+Results:
+
+- Supabase Auth settings endpoint: PASS, HTTP 200.
+- `focus_cards` anon select: PASS, HTTP 200 with no visible rows in anon context.
+- `user_settings` anon select: PASS, HTTP 200 with no visible rows in anon context.
+- `focus_cards` anon insert: PASS, HTTP 401 with Postgres code `42501`, `new row violates row-level security policy for table "focus_cards"`.
+- `user_settings` anon insert: PASS, HTTP 401 with Postgres code `42501`, `new row violates row-level security policy for table "user_settings"`.
+- Production Profile signed-out Account & Backup smoke: PASS. The Profile page shows signed-out backup copy, local Planner draft save works without login, and Clear this device data clears local cards after warning that cloud backup is not deleted.
+
+These checks support the safety of optional backup in signed-out/local-first mode. They do not confirm the real admin user's password, authenticated merge, upload, reload, or second-browser restore behavior.
+
 ## Credential-Dependent QA
 
-Live admin login and Supabase Account & Backup sync/reload were not performed because the admin password or an already-authenticated production browser session was not available in this run. This is a credential limitation, not a product failure.
+Live admin login and Supabase Account & Backup sync/reload were performed against the production Vercel app with the real `admin` account.
+
+Production browser flow:
+
+1. Created a browser-local QA Focus Card while signed out.
+2. Signed in from Profile using username `admin`.
+3. Confirmed the local card backup queue flushed to Supabase.
+4. Reloaded the same browser context and confirmed the backed-up card remained visible.
+5. Opened a second clean browser context, signed in as `admin`, and confirmed the card restored from Supabase.
+6. Final-saved the card with outcome `Hit` while signed in.
+7. Confirmed the Supabase row had `instrument = MNQ-CODEX-QA`, `outcome = Hit`, and `final_saved = true`.
+8. Ran Clear this device data and confirmed the dialog warned that cloud backup is not deleted.
+9. Opened a third clean browser context, signed in as `admin`, and confirmed the final-saved card restored from Supabase after device-local clear.
+10. Deleted the QA card row from Supabase and confirmed no `MNQ-CODEX-QA` QA rows remained.
+
+Result: PASS.
+
+Security note:
+
+Supabase security advisor reports `auth_leaked_password_protection` is disabled. Remediation: <https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection>
+
+## Admin Password Rotation
+
+The deployed `admin@ict.local` Supabase Auth password was rotated after the credentialed QA pass.
+
+Rotation evidence:
+
+- `.env.local` is ignored and untracked; the rotated password was stored there under `ICT_ADMIN_SUPABASE_PASSWORD`.
+- The Supabase Auth `encrypted_password` hash for `admin@ict.local` was updated.
+- Existing admin refresh token/session state was revoked/deleted where exposed by the Auth schema.
+- The previous weak/default password was rejected by Supabase Auth after rotation.
+- The rotated password was accepted by Supabase Auth.
+- A focused production Account & Backup smoke signed in with the rotated password, backed up a temporary `MNQ-ROTATED-QA` Focus Card, reloaded the page, and restored the card.
+- The temporary rotated-password QA row was deleted from Supabase and cleanup was confirmed.
+
+Result: PASS.
+
+Remaining security advisor:
+
+- Leaked password protection remains disabled in Supabase Auth. The current connector exposes this advisor but does not expose an Auth config update tool. Enable it from the Supabase Dashboard before moving beyond private/single-user beta if the project plan supports it.
+
+## Deployment Readiness Decision
+
+v0.8.6 is safe for single-user, local-first web deployment where browser storage plus JSON export/import are the primary reliability path and Supabase is optional backup. Credential-independent Supabase checks passed for project reachability, anon RLS write denial, and signed-out optional-backup behavior. Credentialed Supabase Account & Backup QA also passed for sign-in, backup, reload, second-browser restore, final-save sync, clear-device local-only behavior, and cleanup. The deployed admin password has been rotated away from the weak/default value and verified through Supabase Auth plus production UI backup smoke.
+
+Enable Supabase leaked-password protection from the dashboard before public release if the project plan supports it.
 
 ## GitHub Issue
 

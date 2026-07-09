@@ -1,108 +1,38 @@
 # Approved Plan
 
-## Decision
+## Goal
 
-APPROVED WITH AMENDMENTS
+Update the current workflow and QA documentation with v0.8.6 deployment-readiness evidence, and close the remaining admin-password hardening item without changing runtime code.
 
-This is the only plan authorized for execution.
+## Approved Scope
 
-## Execution Scope
+- Record current safety checks, CI state, production host state, production price API checks, local test results, and production browser smoke results.
+- Record Supabase credential-independent evidence: REST reachability, anon insert denial by RLS, and signed-out Profile optional-backup behavior.
+- Record credentialed production Account & Backup evidence with the real admin account.
+- Rotate the deployed `admin@ict.local` Supabase Auth password away from the weak/default value.
+- Store the rotated admin password only in ignored local secret storage (`.env.local`) and do not commit it.
+- Update `docs/qa/production-web-mobile-qa-2026-07-09.md` from v0.8.5 shell evidence to v0.8.6 production evidence.
+- Update `docs/qa/docs-implementation-checklist-2026-07-08.md` so remaining gates are accurate.
+- Record leaked-password protection as an advisory item if it cannot be changed through the available connector.
 
-Implement CR-1 through CR-5, update tests and documentation, record production/web QA evidence, and run required checks. Do not commit or push.
+## Constraints
 
-## Authorized Runtime Changes
+- No runtime/app behavior changes.
+- No service-worker, version, storage, or API changes.
+- Claims that Supabase sync passed must be backed by the real credentialed QA evidence.
+- No changes to Supabase schema or app data except the intended admin password rotation.
+- Do not print or commit the rotated password.
+- No commit or push in this pass unless the user explicitly asks.
 
-### CR-1 - Remove User-Facing Journal
-
-- Remove `journal` from primary navigation.
-- Remove the Journal route/view and render branch.
-- Make old `journal` routes resolve to Home, including `go('journal')` and direct hash parsing.
-- Remove Focus Card Journal lesson and behaviour-tag controls.
-- Remove Journal references from current user-facing README sections, text export, saved-card search text, and tests.
-- Preserve storage compatibility:
-  - keep `normJournal`;
-  - keep `card.journal`;
-  - keep JSON export/import compatibility;
-  - do not change storage keys or export schema;
-  - do not break Supabase card payload compatibility.
-
-### CR-2 - Potential R:R Calculation
-
-- Add/normalize a `riskPlan.ratio` field.
-- Use current/entry price and selected target DOL.
-- Reward distance is `abs(target - entry)`.
-- Stop distance is `reward / selectedRatio`.
-- Long target must be above entry; invalidation is below entry.
-- Short target must be below entry; invalidation is above entry.
-- Display and save auto-derived target, risk points, reward points, potential R:R, and invalidation/stop.
-- Preserve invalid-side guard.
-
-### CR-3 - Concise Copy
-
-- Condense primary-flow copy in Home, Planner, Focus Card, Risk, Profile, and docs.
-- Replace the visible disclaimer with `Educational tool. Not financial advice.`
-- Remove duplicate delayed-price notices in Focus Card details while retaining one useful price-delay notice.
-
-### CR-4 - Desktop Layout
-
-- Preserve mobile layout below `1024px`.
-- At `>=1024px`, use a left sidebar style based on existing primary nav markup.
-- Hide the mobile FAB on desktop and show a labeled `New analysis` action.
-- Widen centered content to about `1200px`.
-- Add focused multi-column layout for dense detail/dashboard panels without changing mobile order.
-- Override bottom padding and sticky planner CTA behavior for desktop.
-
-### CR-5 - Price Map DOL Taken Mirror
-
-- Add DOL taken checkboxes to DOL rows in the editable Focus Card Price Map Dashboard.
-- Keep existing DOL Stack controls.
-- Add stable row metadata in `priceMapLevels()`.
-- Use stable IDs such as `priceMap_dol1Taken`.
-- Sync Price Map and DOL Stack checkbox state both ways before save.
-- Save one shared `dolNTaken` state and verify reload behavior.
-
-## Authorized Test Changes
-
-- Update smoke tests for:
-  - no user-facing Journal route/nav/fields/text export;
-  - `go('journal')` resolves Home;
-  - JSON/storage `journal` compatibility remains;
-  - editable Price Map includes DOL taken controls only in Focus Card context;
-  - version/cache alignment for `v0.8.6`.
-- Update unit tests for:
-  - Long derived stop/R:R;
-  - Short derived stop/R:R;
-  - invalid target side guard.
-- Update Playwright tests for:
-  - desktop sidebar layout at `>=1024px`;
-  - mobile bottom nav below `1024px`;
-  - R:R UI calculation;
-  - Price Map/DOL Stack mirrored DOL taken state.
-- Update release QA tests that currently expect Journal route.
-
-## Authorized Docs/QA Changes
-
-- Run `node tools/bump-version.js v0.8.6 release 20260709` after runtime changes.
-- Update README and CHANGELOG for current behavior.
-- Create or update `docs/qa/production-web-mobile-qa-2026-07-09.md`.
-- Update `docs/qa/docs-implementation-checklist-2026-07-08.md`.
-- Update or cross-reference stale `v0.8.4` note in `docs/qa/live-price-provider-qa-2026-07-09.md` because production now serves `v0.8.5`.
-- Record Supabase live QA as blocked by missing credentials/session if applicable.
-- Inspect or update GitHub Issue `#7` if authenticated tooling permits.
-
-## Required Checks
+## Verification
 
 - `npm test`
-- `npm run test:e2e`
+- `npm run test:e2e -- --reporter=dot`
+- Production shell and API `curl` checks
+- Production browser smoke
+- Supabase anon/RLS checks
+- Production Profile signed-out optional-backup smoke
+- Production credentialed admin Account & Backup smoke
+- Direct Supabase SQL verification and QA row cleanup
+- Admin password rotation verification: old password fails, rotated password succeeds, production Account & Backup still works.
 - `git diff --check`
-- `node tests/smoke.js` explicitly if needed for AGENTS.md handoff clarity.
-- `python3 -m py_compile api/price.py tests/api/test_price.py` only if API files are touched.
-
-## Stop Conditions
-
-- Path or remote changes unexpectedly.
-- Storage key/export schema changes become necessary without a tested migration.
-- Manual price entry stops working.
-- Supabase login becomes required for normal app use.
-- GitHub Pages runtime asset references drift from service worker cache entries.
-- Baseline passing tests regress and cannot be fixed within the approved scope.

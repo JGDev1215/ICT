@@ -1,11 +1,14 @@
 # Senior Decision
 
 ## Decision
+
 APPROVED
 
 ## Reasoning
 
-The approved plan was executed with focused changes. Automated smoke, unit, API, and browser E2E tests pass. The code preserves storage compatibility, manual price fallback, optional Supabase behavior, GitHub Pages asset alignment, and Vercel price API support.
+The v0.8.6 deployment is live on Vercel and GitHub Pages, current CI checks are green, local automated checks pass, production API checks pass, and production browser smoke validates the core local-first Focus Card flow. Credential-independent Supabase checks show the REST API is reachable, anon writes are denied by RLS, and signed-out Profile behavior keeps backup optional. Credentialed Account & Backup QA passes with the real admin account.
+
+The remaining hardening item is enabling leaked-password protection from the Supabase Dashboard if the project plan supports it. Password rotation and authenticated sync mechanics are verified.
 
 ## Required Fixes
 
@@ -13,4 +16,4 @@ None.
 
 ## Next Action
 
-Commit when ready, then deploy v0.8.6 and run production UI/Supabase credentialed QA.
+Run final static checks and report the deployment-readiness decision with the Supabase limitation.

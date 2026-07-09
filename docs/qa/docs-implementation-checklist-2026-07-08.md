@@ -17,10 +17,13 @@ This file tracks only items still open after the 2026-07-08 implementation and d
 
 Agent-assisted browser QA is recorded in `docs/qa/release-qa-evidence-2026-07-08.md`. Remaining checks should be recorded from the deployed web/mobile-site experience.
 
-- [x] Record v0.8.5 production web shell QA after deployment: visible version/assets on Vercel and GitHub Pages. See `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- [x] Record v0.8.6 production web shell QA after deployment: visible version/assets on Vercel and GitHub Pages. See `docs/qa/production-web-mobile-qa-2026-07-09.md`.
 - [x] Record automated mobile-site browser QA at supported responsive viewport widths, including bottom navigation, Planner sticky actions, import/export usability, touch targets, and offline shell reload where supported by the browser test context. See `docs/qa/production-web-mobile-qa-2026-07-09.md`.
-- [ ] Record live admin login / Supabase Account & Backup sync QA with the real admin password or authenticated browser session.
+- [x] Record credential-independent Supabase safety checks for project reachability, anon RLS write denial, and signed-out optional-backup behavior. See `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- [x] Record live admin login / Supabase Account & Backup sync QA with the real admin password. See `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- [x] Rotate the deployed Supabase admin password away from the weak/default value and verify old-password rejection plus rotated-password production backup smoke. See `docs/qa/production-web-mobile-qa-2026-07-09.md`.
 - [ ] Record assistive-technology/browser accessibility follow-up if moving from beta to public release.
+- [ ] Enable Supabase leaked-password protection before public release if the project plan supports it.
 
 ## GitHub Housekeeping Still Required
 
@@ -28,7 +31,11 @@ Agent-assisted browser QA is recorded in `docs/qa/release-qa-evidence-2026-07-08
 
 ## Completed By Agent-Assisted QA
 
-- Live production price-provider endpoint QA for one supported symbol and one unsupported symbol is recorded in `docs/qa/live-price-provider-qa-2026-07-09.md`. A later shell check confirmed v0.8.5 is deployed on Vercel and GitHub Pages; see `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- Live production price-provider endpoint QA for one supported symbol and one unsupported symbol is recorded in `docs/qa/live-price-provider-qa-2026-07-09.md`. A later shell check confirmed v0.8.6 is deployed on Vercel and GitHub Pages; see `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- Production browser smoke on v0.8.6 covered Vercel Focus Card create, reload, final-save, and saved-list visibility; see `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- Credential-independent Supabase checks confirmed anon writes are denied by RLS and signed-out Profile behavior keeps backup optional; see `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- Credentialed Supabase QA confirmed admin sign-in, backup upload, reload, second-browser restore, final-save sync, clear-device local-only behavior, and QA row cleanup; see `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- Admin password rotation confirmed old-password rejection, rotated-password sign-in, production backup smoke, and QA row cleanup; see `docs/qa/production-web-mobile-qa-2026-07-09.md`.
 - Mobile Chrome emulation at 390px and 430px.
 - Mobile Safari/WebKit emulation at 390px and 430px.
 - Bottom nav and Planner sticky CTA visibility/tappability.
