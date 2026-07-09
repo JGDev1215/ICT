@@ -2,15 +2,13 @@
 
 ## User Task
 
-PLEASE IMPLEMENT THIS PLAN:
+Implement the plan to make the docs folder structure easier for LLMs to understand and update `AGENTS.md` so agents know the correct documentation folder to read from and save files into.
 
-Replace the sloppy Supabase/Profile panel with a clean single-user `admin` access experience:
+## Required Outcome
 
-- Replace visible “Supabase Focus Cards” copy with “Account & Backup.”
-- Hide Supabase project URL, signup, retry sync, and technical account-copy.
-- Use username `admin` and password field in the UI.
-- Map `admin` to Supabase email `admin@ict.local` by default.
-- Keep Supabase sync internals for server-side Focus Card storage.
-- Create/ensure the confirmed Supabase Auth user `admin@ict.local` with password `admin`.
-- Update app code, config, README, CHANGELOG, tests, cache/version strings, workflow files.
-- Run smoke and local UI checks.
+- Add documentation routing rules to `AGENTS.md`.
+- Update `docs/README.md` with a clear save-location guide.
+- Clarify the difference between `agent-workflow/` task evidence and durable `docs/` project documentation.
+- Remove `docs/.DS_Store`.
+- Remove the empty `docs/archive/old-agent-prompts/` folder if it remains empty.
+- Run the requested documentation scans and smoke test.

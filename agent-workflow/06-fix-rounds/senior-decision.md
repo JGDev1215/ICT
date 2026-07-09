@@ -6,13 +6,12 @@ APPROVED
 
 ## Reasoning
 
-The implementation follows the approved plan and addresses the screenshot feedback directly. It removes AI-looking technical clutter from the Profile account card while preserving the server backup behavior.
+The change is documentation-only, follows the approved plan, and gives future agents clear routing rules.
 
-## Required Before Commit/Push
+## Required Fixes
 
-- Run final smoke test.
-- Confirm no unrelated local files are staged.
+None.
 
-## Release Note
+## Next Action
 
-After deployment, verify the live Vercel page no longer serves cached v0.8.1 assets.
+Run final checks and report results.

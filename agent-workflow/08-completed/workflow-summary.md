@@ -2,26 +2,50 @@
 
 ## User Task
 
-Implement the plan to replace the sloppy Supabase panel with single-user admin access.
+Make the docs folder structure easier for LLMs to understand and update `AGENTS.md` so agents use the correct documentation folders.
 
-## Result
+## Local Path
 
-Implemented locally.
+`/Users/soonjeongguan/Desktop/FRAMEWORK`
 
-## Key Outcomes
+## GitHub Remote
 
-- Profile now shows Account & Backup.
-- Login is username `admin` plus password.
-- `admin` maps to `admin@ict.local`.
-- Supabase account exists and password login works.
-- Old visible Supabase signup/project clutter is gone.
+`https://github.com/JGDev1215/ICT.git`
 
-## Checks
+## Stages Completed
 
-- Smoke passed.
-- Local browser UI check passed.
-- Admin sign-in check passed.
+- [x] Safety Check
+- [x] Intake
+- [x] Planning
+- [x] Senior Plan Review
+- [x] Approved Plan
+- [x] Execution
+- [x] Code Review
+- [x] Senior Decision
+- [x] Fix Round if required
+- [x] Final Approval
 
-## Next Step
+## Files Changed
 
-Stage, commit, push, and retest the deployed Vercel URL.
+- `AGENTS.md`
+- `docs/README.md`
+- `agent-workflow/*`
+
+## Workflow Files Created
+
+All required workflow files were updated for this task.
+
+## Checks Performed
+
+- `find docs -maxdepth 4 -type f | sort`
+- `rg -n "Documentation Routing Rules|Where To Save New Docs|docs/archive|docs/plans|docs/qa|docs/release|docs/database" AGENTS.md docs/README.md README.md`
+- `node tests/smoke.js`
+- Confirmed `docs/.DS_Store` and `docs/archive/old-agent-prompts/` are absent.
+
+## Final Decision
+
+SAFE TO COMMIT
+
+## Recommended Next Step
+
+Review the diff and commit documentation changes separately.

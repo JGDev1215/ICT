@@ -4,21 +4,39 @@
 
 SAFE TO COMMIT
 
-## Acceptance Criteria
+## Original Task Completed?
 
-- Account & Backup panel implemented.
-- Admin username/password UI implemented.
-- Supabase technical details hidden from normal Profile UI.
-- Admin backing user exists and login works.
-- Smoke passes.
+YES
 
-## Checks Completed
+## Approved Plan Followed?
 
-- `node tests/smoke.js`
-- Supabase Auth verification
-- local browser Profile render check
-- local browser admin sign-in check
+YES
 
-## Remaining Risk
+## Acceptance Criteria Met?
 
-Live Vercel retest is still required after push/deploy.
+YES
+
+## Review Passed?
+
+YES
+
+## Tests / Checks Completed
+
+- `find docs -maxdepth 4 -type f | sort`
+- Routing `rg` scan passed.
+- `node tests/smoke.js` passed.
+- Confirmed `docs/.DS_Store` and `docs/archive/old-agent-prompts/` are absent.
+
+## Files Changed
+
+- `AGENTS.md`
+- `docs/README.md`
+- `agent-workflow/*`
+
+## Remaining Risks
+
+Pre-existing unrelated dirty/untracked files remain outside this task.
+
+## Recommended Commit Message
+
+Clarify documentation routing for agents

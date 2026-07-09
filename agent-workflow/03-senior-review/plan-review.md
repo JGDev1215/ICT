@@ -2,35 +2,31 @@
 
 ## Plan Quality
 
-APPROVED WITH AMENDMENTS
+APPROVED
 
-The plan is focused and preserves the existing sync implementation while improving user-facing copy and controls.
+The plan is narrow, documentation-only, and directly addresses the LLM navigation problem.
 
 ## Missing Steps
 
-- Ensure smoke tests check absence of visible `Create account` and project URL in Profile output.
-- Ensure docs do not imply real security from static `admin/admin`.
-- Ensure existing first-sync queue behavior remains unchanged except copy.
+None.
 
 ## Risk Areas
 
-- Creating Auth users directly through SQL must avoid generated columns and keep identity rows valid.
-- Removing rendered signup controls should not break smoke tests that check `supabaseSignup` helper existence if retained.
-- Cache bump must be coordinated across `index.html`, `service-worker.js`, and `VERSION`.
+- `AGENTS.md` has pre-existing local edits, so changes must stay scoped to documentation routing.
+- Do not use the archive as an active source of truth.
 
 ## Overengineering Concerns
 
-Do not build a full role/user system. Single-user UX is enough.
+Avoid adding additional folders or complex taxonomy. The current structure is sufficient once routing rules exist.
 
 ## Simpler Alternatives
 
-Auto-login/no login was considered but rejected because the user explicitly requested username/password admin access.
+None needed. A concise routing section and docs index table are enough.
 
 ## Required Amendments
 
-- Keep Supabase terms out of normal visible Profile card, but retain technical docs in README.
-- Add config override for backing Supabase email.
+None.
 
 ## Decision
 
-APPROVED WITH AMENDMENTS
+APPROVED

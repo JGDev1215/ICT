@@ -1,5 +1,10 @@
 # Supabase Focus Card Storage Plan
 
+> Status: Current
+> Last reviewed: 2026-07-09
+> Source of truth: Yes
+
+
 ## Summary
 
 Supabase is the server-side source of truth for Focus Cards, while browser `localStorage` remains the immediate offline/cache layer. The app loads local cards first, then merges Supabase cards after login by newest `updatedAt`.
@@ -50,8 +55,10 @@ Do not expose the Supabase service-role key in the frontend.
 
 ## Runtime Behavior
 
-- Profile includes Supabase login/logout/sync controls.
-- Profile includes Supabase account creation. If email confirmation is enabled, the user must confirm email before login.
+- Profile shows a user-facing Account & Backup card, not Supabase implementation details.
+- The visible login is single-user admin access: username `admin`, password supplied by the user.
+- The frontend maps `admin` to the backing Supabase Auth email `admin@ict.local` unless `window.ICT_ADMIN_SUPABASE_EMAIL` / `adminSupabaseEmail` config overrides it.
+- Profile includes login/logout and manual backup controls for the authenticated admin user.
 - Card create/edit/final-save/favorite/delete updates localStorage first.
 - If logged in, the app syncs the change to Supabase.
 - If offline or unauthenticated, the change is queued locally and retried after login.
@@ -61,10 +68,9 @@ Do not expose the Supabase service-role key in the frontend.
 
 ## Validation Checklist
 
-- Create one Supabase Auth user manually in the Supabase dashboard.
-- Or create an account from Profile and confirm the email before login.
+- Confirm one Supabase Auth user exists and is confirmed: `admin@ict.local` with the deployment password.
 - Confirm the publishable key is present in `index.html` or an injected config script before `assets/app.js`.
-- Login from Profile.
+- Login from Profile with username `admin`.
 - Create a Focus Card and confirm a row appears in `public.focus_cards`.
 - Refresh the app and confirm the card reloads.
 - Open the app in a second browser, login, and confirm the card appears.

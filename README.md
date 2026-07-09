@@ -402,9 +402,16 @@ ICT/
 │       ├── app-v0.7.7.js
 │       └── bias-extension.js
 ├── docs/
-│   ├── fix-lists/
+│   ├── README.md
+│   ├── archive/
+│   │   ├── completed-fix-lists/
+│   │   ├── historical-plans/
+│   │   └── superseded-design/
+│   ├── database/
+│   ├── implementation-reports/
 │   ├── plans/
-│   └── ui-redesign/
+│   ├── qa/
+│   └── release/
 ├── tests/
 │   ├── smoke.js
 │   └── e2e/

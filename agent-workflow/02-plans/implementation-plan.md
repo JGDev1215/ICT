@@ -2,72 +2,60 @@
 
 ## Goal
 
-Replace the technical Supabase Profile panel with a clean single-user Account & Backup UI.
+Make repository documentation routing explicit for future agents and LLMs.
 
 ## Repo Findings
 
-- `supabasePanelHtml()` owns the visible panel.
-- Existing `supabaseLogin(email, password)` can remain as the internal backing login.
-- Existing first-sync gate and queue logic can remain, with copy rewritten.
-- Supabase project id is `cdcqklvvswzipmmvpzaj`.
+- Current docs are organized under `docs/database`, `docs/implementation-reports`, `docs/plans`, `docs/qa`, and `docs/release`.
+- Historical docs are archived under `docs/archive`.
+- `AGENTS.md` is the right durable place for agent save-location rules.
+- `docs/README.md` is the right human/LLM entry point for documentation navigation.
 
 ## Files Likely Affected
 
-- `assets/app.js`
-- `assets/config.js`
-- `index.html`
-- `service-worker.js`
-- `tests/smoke.js`
-- `README.md`
-- `CHANGELOG.md`
+- `AGENTS.md`
+- `docs/README.md`
 - `agent-workflow/*`
+- `docs/.DS_Store`
+- empty `docs/archive/old-agent-prompts/`
 
 ## Proposed Changes
 
-1. Add admin username/email constants and config helper.
-2. Rename visible sync status to backup status.
-3. Replace logged-out panel with username/password `Sign in`.
-4. Validate username is `admin`; call `supabaseLogin(adminSupabaseEmail(), password)`.
-5. Remove rendered signup/retry controls and obsolete signup handler assertions.
-6. Keep `supabaseSignup()` internally harmless but unused.
-7. Rewrite first-sync copy/buttons.
-8. Add Supabase Auth user `admin@ict.local` with password `admin`.
-9. Bump to `v0.8.2`.
-10. Update smoke/docs/changelog and verify.
+- Add `Documentation Routing Rules` to `AGENTS.md`.
+- Add `Before Creating A Doc` and `Where To Save New Docs` sections to `docs/README.md`.
+- Remove `docs/.DS_Store`.
+- Remove empty `docs/archive/old-agent-prompts/`.
+- Update workflow reports for this task.
 
 ## Step-by-Step Plan
 
-1. Patch `assets/config.js` to include `adminSupabaseEmail`.
-2. Patch `assets/app.js` constants/helpers and panel rendering.
-3. Patch Profile login event handler.
-4. Patch first-sync notices/button labels.
-5. Patch version/cache strings.
-6. Patch smoke tests.
-7. Patch README/CHANGELOG.
-8. Ensure Supabase admin user exists.
-9. Run smoke and static/local UI checks.
-10. Update workflow reports.
+1. Confirm repo path, remote, and dirty state.
+2. Remove docs folder noise.
+3. Patch `AGENTS.md` with documentation routing rules.
+4. Patch `docs/README.md` with a save-location table.
+5. Update required `agent-workflow/` files.
+6. Run the requested `find`, `rg`, and smoke checks.
 
 ## Acceptance Criteria
 
-- Profile UI is clean and user-facing.
-- Supabase implementation details are hidden from normal UI.
-- Existing sync internals still work.
-- Admin Supabase account is present.
-- Tests pass.
+- Agents can determine where to save current plans, reports, QA, release, database, and archived docs.
+- `docs/README.md` clearly distinguishes durable docs from `agent-workflow/`.
+- No docs `.DS_Store` remains.
+- Runtime smoke test passes.
 
 ## Test Plan
 
-- `node tests/smoke.js`
-- Local static server check for Profile HTML/source.
-- Supabase SQL verification for `admin@ict.local`.
+```bash
+find docs -maxdepth 4 -type f | sort
+rg -n "Documentation Routing Rules|Where To Save New Docs|docs/archive|docs/plans|docs/qa|docs/release|docs/database" AGENTS.md docs/README.md README.md
+node tests/smoke.js
+```
 
 ## Risks
 
-- Static admin credentials are not secure; document this clearly.
-- Supabase Auth still expects an email behind the scenes.
-- Login cannot be fully proven locally without a deployed browser/manual test, but database user and source behavior can be verified.
+- `AGENTS.md` was already dirty before this task; patch only the requested routing section.
+- Archived docs are numerous; avoid moving them again.
 
 ## Rollback Plan
 
-Revert `assets/app.js`, `assets/config.js`, version/cache/docs/test changes. Supabase admin user can remain harmless or be deleted if requested.
+Revert the `AGENTS.md` and `docs/README.md` documentation-routing additions and restore only the removed local noise if explicitly needed.

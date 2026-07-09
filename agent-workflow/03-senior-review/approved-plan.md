@@ -2,19 +2,25 @@
 
 ## Approved Scope
 
-Implement the single-user admin Account & Backup Profile panel and backing Supabase admin user.
+Implement documentation routing guidance and remove docs folder noise.
 
 ## Required Changes
 
-- `assets/app.js`: admin login helper, friendly backup panel, rewritten first-sync UI, version bump.
-- `assets/config.js`: `adminSupabaseEmail` config default.
-- `index.html` and `service-worker.js`: cache/version bump.
-- `tests/smoke.js`: admin-login and hidden-technical-UI assertions.
-- `README.md` and `CHANGELOG.md`: document v0.8.2 and static-auth limitation.
-- Supabase: ensure confirmed `admin@ict.local` auth user with password `admin`.
+- Add `Documentation Routing Rules` to `AGENTS.md`.
+- Add `Before Creating A Doc` and `Where To Save New Docs` to `docs/README.md`.
+- Remove `docs/.DS_Store`.
+- Remove empty `docs/archive/old-agent-prompts/`.
+- Update workflow reports for this task.
 
 ## Guardrails
 
-- Do not touch unrelated `AGENTS.md` change.
-- Do not remove local-first storage, export/import, manual price entry, or Supabase sync internals.
+- Do not change app runtime files.
+- Do not move archived documents again.
+- Do not touch unrelated untracked prompt/report files outside `docs/`.
 - Do not commit or push unless separately requested.
+
+## Required Checks
+
+- `find docs -maxdepth 4 -type f | sort`
+- Routing `rg` scan requested by the user.
+- `node tests/smoke.js`
