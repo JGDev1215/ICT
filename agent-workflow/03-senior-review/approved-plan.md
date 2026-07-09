@@ -2,29 +2,36 @@
 
 ## Goal
 
-Implement the v0.8.4 review feedback patch while preserving local-first behavior, storage/export compatibility, manual price fallback, and optional Supabase sync.
+Create `docs/daily-reports/2026-07-09-session-report-2.md` as a historical daily report and include a focused next-update plan for the app.
 
-## Approved Scope
+## Execution Scope
 
-- Device-local clear-data behavior and copy.
-- Notice severity and persistent live-region behavior.
-- Import reader error and unknown-schema warning.
-- Production HTTPS price fallback guard.
-- `api/price.py` static-serving comment only.
-- v0.8.4 version/cache/docs/tests.
+- Documentation and workflow evidence only.
+- No runtime code changes.
+- No version/cache changes.
+- No commit or push.
 
-## Execution Rules
+## Approved Steps
 
-- Do not modularize `assets/app.js`.
-- Do not delete `api/price.py` static serving.
-- Do not change storage key or export schema.
-- Do not make Supabase schema changes.
-- Preserve existing uncommitted workflow/report work.
-- Do not commit or push.
+1. Add a daily report with the required status block and sections from `docs/daily-reports/README.md`.
+2. Summarize the completed July 9 work:
+   - v0.8.3 planner validation and price auto-detect fix.
+   - live price-provider QA documentation.
+   - v0.8.4 local-clear, notices, live-region, import, and price fallback remediation.
+3. Record tests and checks actually performed during the day.
+4. Record open risks, especially that v0.8.4 production post-deployment QA remains pending.
+5. Add recommended next updates:
+   - production v0.8.4 QA;
+   - real-device iOS/Android and PWA/offline checks;
+   - backup/sync edge-case QA;
+   - accessibility pass for notices/live regions;
+   - defer `assets/app.js` modularization unless separately planned.
+6. Update execution, review, senior decision, final approval, and workflow summary files.
+7. Run `git diff --check` and `git status --short`.
 
-## Approved Tests
+## Acceptance Criteria
 
-- `node tests/smoke.js`
-- `npx playwright test tests/e2e/planner.spec.js`
-- `npx playwright test`
-- `python3 -m py_compile api/price.py`
+- The report follows the daily-report template.
+- Historical facts are separated from future recommendations.
+- The report does not overstate QA coverage.
+- The final working tree contains only the report and workflow evidence changes.

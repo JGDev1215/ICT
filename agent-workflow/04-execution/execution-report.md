@@ -2,45 +2,42 @@
 
 ## Summary of Changes
 
-Implemented the v0.8.4 review feedback remediation patch.
+Created a historical daily report for 2026-07-09 with a next-update plan for the app. Updated workflow evidence for the current documentation task.
 
 ## Files Changed
 
-- `assets/app.js`
-- `assets/styles.css`
-- `api/price.py`
-- `index.html`
-- `service-worker.js`
-- `README.md`
-- `CHANGELOG.md`
-- `CLAUDE.md`
-- `tests/smoke.js`
-- `tests/e2e/planner.spec.js`
-- `agent-workflow/*`
+- `docs/daily-reports/2026-07-09-session-report-2.md`
+- `agent-workflow/00-inbox/current-task.md`
+- `agent-workflow/01-intake/task-brief.md`
+- `agent-workflow/02-plans/implementation-plan.md`
+- `agent-workflow/03-senior-review/plan-review.md`
+- `agent-workflow/03-senior-review/approved-plan.md`
+- `agent-workflow/04-execution/execution-report.md`
+- `agent-workflow/05-code-review/review-report.md`
+- `agent-workflow/06-fix-rounds/senior-decision.md`
+- `agent-workflow/06-fix-rounds/fix-report.md`
+- `agent-workflow/07-final-review/final-approval.md`
+- `agent-workflow/08-completed/workflow-summary.md`
 
 ## Implementation Notes
 
-- `Clear this device data` is now explicitly device-local, clears local sync metadata, does not queue remote deletes, and warns that cloud backup is unchanged.
-- Notices now use `good`, `warn`, and `bad` severity with matching class and role.
-- A persistent hidden `#globalStatus` live region survives full app re-renders.
-- Planner price status remains visible but announcements now go through the persistent live region.
-- JSON import now reports file-read errors and warns on mismatched schemas without blocking valid cards.
-- Production HTTPS no longer tries the local `127.0.0.1:8765` price helper unless local fallback is explicitly enabled or the app is running locally.
-- `api/price.py` static serving was retained and documented as local single-function fallback.
-- App version/cache strings were bumped to v0.8.4 using `tools/bump-version.js`.
+- The report follows the `docs/daily-reports/README.md` template.
+- The report is marked Historical and not a source of truth.
+- The next-update plan is included as recommended follow-up work, not as an active implementation requirement.
+- v0.8.4 production post-deployment QA is explicitly marked pending.
 
 ## Deviations From Approved Plan
 
-None. The implementation intentionally did not modularize `assets/app.js`.
+None.
 
 ## Checks Performed
 
-- `node tests/smoke.js`
-- `npx playwright test tests/e2e/planner.spec.js`
-- `npx playwright test`
-- `python3 -m py_compile api/price.py`
+- Documentation routing reviewed.
+- Daily-report naming and template reviewed.
+- Recent git history reviewed.
 - `git diff --check`
+- `git status --short`
 
 ## Known Issues
 
-- Full physical-device iOS/Android PWA QA and full screen-reader audit remain external release gates from prior QA reports.
+- Runtime tests were not run for this task because no runtime code changed.

@@ -2,32 +2,29 @@
 
 ## Plan Quality
 
-The plan is focused on the approved v0.8.4 remediation scope and avoids broad modularization.
+The plan is appropriately scoped for a documentation-only task. It follows the daily-report routing rules and avoids runtime implementation work.
 
 ## Missing Steps
 
-No blocking missing steps. The execution must preserve existing uncommitted workflow/report work.
+None. The plan includes workflow updates, report creation, and static verification.
 
 ## Risk Areas
 
-- Notice severity conversion could miss some failure paths.
-- Persistent live-region implementation must not break route rendering or Playwright selectors.
-- Clear-device behavior must not accidentally queue remote deletes or trigger immediate restore.
-- Version/cache updates must stay aligned with service worker and smoke assertions.
+- The report must not claim v0.8.4 live production QA has passed unless that QA is actually performed.
+- Recommended next steps should be framed as follow-up work, not current source-of-truth requirements.
 
 ## Overengineering Concerns
 
-Do not split `assets/app.js` or redesign shell markup beyond the minimum needed for persistent live announcements.
+No concern. A single daily report is sufficient; a separate `docs/plans/` file is not needed until implementation of the next updates begins.
 
 ## Simpler Alternatives
 
-Use in-file helpers and existing test harness instead of introducing modules or dependencies.
+The only simpler alternative would be a chat-only summary, but AGENTS.md requires durable daily reports in `docs/daily-reports/` when requested.
 
 ## Required Amendments
 
-- Keep `api/price.py` static serving and only document/comment it.
-- Add explicit tests for local-only clear and production price fallback.
-- Use v0.8.4 cache/version updates because JS behavior changes are shipping.
+- Make the report explicit that this task itself is docs-only.
+- Mark production v0.8.4 post-deployment QA as pending.
 
 ## Decision
 

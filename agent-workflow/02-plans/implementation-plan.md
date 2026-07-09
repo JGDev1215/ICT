@@ -2,70 +2,66 @@
 
 ## Goal
 
-Implement the v0.8.4 review feedback remediation patch with focused runtime, documentation, and test changes.
+Create a concise, factual July 9, 2026 daily report and include a prioritized plan for the next app updates.
 
 ## Repo Findings
 
-- `docs/plans/review-fix-report-2026-07-09.md` confirms H1/M1/M2/M3/L1/L2/L3/L4/SW1 as the scoped remediation items.
-- Existing tests expose app internals through `window.ICTSweepState`, allowing targeted smoke tests.
-- Playwright already covers Planner and release QA flows and can add clear-device/notice/live-region tests.
+- `docs/daily-reports/README.md` defines the report filename convention and required sections.
+- Multiple reports already exist for 2026-07-09, so the next report should use a suffix.
+- `CHANGELOG.md` shows the latest app version is v0.8.4.
+- Recent git history shows the relevant completed work:
+  - `18c3149 fix: validate planner saves and price auto-detect`
+  - `a0716eb docs: record live price provider qa`
+  - `63f03d1 fix: address review feedback for local clear and notices`
 
 ## Files Likely Affected
 
-- `assets/app.js`
-- `api/price.py`
-- `index.html`
-- `service-worker.js`
-- `README.md`
-- `CHANGELOG.md`
-- `CLAUDE.md`
-- `tests/smoke.js`
-- `tests/e2e/planner.spec.js`
-- `agent-workflow/*`
+- `docs/daily-reports/2026-07-09-session-report-2.md`
+- `agent-workflow/00-inbox/current-task.md`
+- `agent-workflow/01-intake/task-brief.md`
+- `agent-workflow/02-plans/implementation-plan.md`
+- `agent-workflow/03-senior-review/plan-review.md`
+- `agent-workflow/03-senior-review/approved-plan.md`
+- `agent-workflow/04-execution/execution-report.md`
+- `agent-workflow/05-code-review/review-report.md`
+- `agent-workflow/06-fix-rounds/senior-decision.md`
+- `agent-workflow/07-final-review/final-approval.md`
+- `agent-workflow/08-completed/workflow-summary.md`
 
 ## Proposed Changes
 
-- Add notice severity and persistent live-region helpers.
-- Convert touched notices to `setNotice`.
-- Add local-only clear-device helper and UI copy.
-- Add import reader error handling and schema warnings.
-- Guard local price fallback by origin.
-- Add comment for `api/price.py` static serving.
-- Bump to v0.8.4 and update docs/tests.
+- Add a new historical daily report using the required template.
+- Summarize completed v0.8.3 and v0.8.4 work, live price-provider QA, tests run, commits pushed, and remaining risks.
+- Add a next-update plan focused on v0.8.4 production QA, real-device/PWA checks, backup/sync edge cases, and future refactor boundaries.
+- Update workflow evidence for the task.
 
 ## Step-by-Step Plan
 
-1. Update workflow evidence and approved plan.
-2. Inspect current functions around notices, clear data, import, price helpers, version/cache, and tests.
-3. Patch `assets/app.js` in small sections.
-4. Patch `api/price.py` comment.
-5. Run version bump tooling for v0.8.4 if safe, then adjust docs/tests.
-6. Add smoke and Playwright coverage.
-7. Run required checks.
-8. Review diff for unrelated changes and update final workflow evidence.
+1. Confirm documentation routing and existing report names.
+2. Create the required workflow intake, plan, senior review, and approved plan.
+3. Add `docs/daily-reports/2026-07-09-session-report-2.md`.
+4. Update execution, review, senior decision, final approval, and summary workflow files.
+5. Run docs/static checks appropriate for a documentation-only task.
+6. Report changed files, checks, review result, final decision, risks, and recommended next commands.
 
 ## Acceptance Criteria
 
-- Clear-device behavior cannot silently queue cloud deletes and does not leave stale sync metadata.
-- Error notices no longer render as success.
-- A persistent live region is present and updated after re-renders.
-- Manual price fallback remains available.
-- Storage/export compatibility is preserved.
-- v0.8.4 cache and docs are consistent.
+- The daily report has the required status block and sections.
+- The report is factual and distinguishes completed work from pending QA.
+- The next-update plan is actionable and does not imply unperformed QA passed.
+- No runtime files are changed.
 
 ## Test Plan
 
-- `node tests/smoke.js`
-- `npx playwright test tests/e2e/planner.spec.js`
-- `npx playwright test`
-- `python3 -m py_compile api/price.py`
+- Run `git diff --check`.
+- Run `git status --short`.
+- Do not run runtime smoke or Playwright tests because this task changes documentation and workflow evidence only.
 
 ## Risks
 
-- Shared notice rendering touches many flows.
-- Local clear while Supabase auth events are active may re-render unexpectedly.
-- Price helper URL tests require simulating different origins in the smoke harness.
+- Overstating production readiness if post-deployment v0.8.4 QA is not clearly marked pending.
+- Treating historical daily-report recommendations as current implementation requirements.
 
 ## Rollback Plan
 
-Revert this task's changes only. Existing workflow/report changes from before this task must not be reverted unless explicitly requested.
+- Remove the new daily report and restore the task workflow files to their previous contents if the report is not wanted.
