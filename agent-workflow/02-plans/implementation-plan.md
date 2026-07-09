@@ -2,124 +2,156 @@
 
 ## Goal
 
-Complete the first two safe remediation phases for the broad app-fix goal:
-
-1. Correct current documentation and release-plan contradictions that are already proven.
-2. Fix the concrete runtime defects found by the runtime audit agent without broad refactoring.
-3. Carry out safe refactor foundation items that do not move runtime files.
+Ship the requested v0.8.6 feature/update pass for the static local-first ICT app: remove user-facing Journal features, correct potential R:R behavior, tighten copy, add a desktop sidebar layout, mirror DOL taken controls in the Price Map Dashboard, update tests/docs, and record release-risk evidence without changing storage keys or requiring backend services.
 
 ## Repo Findings
 
-- `docs/README.md` says root docs, tests, and current code are source of truth; archived docs are context only.
-- Current QA/release docs still require physical iOS/Android or real-device/PWA evidence.
-- The user clarified the app only runs on the web or mobile site, so real-device testing is not necessary.
-- `README.md` Known Limitations is stale about saved-card sync and real-device QA.
-- Recent v0.8.4 work already implemented review findings for local clear, notices/live regions, import warnings, and price fallback.
-- Full `assets/app.js` modularization remains deferred and should not be done in this patch.
-- Runtime audit found focused defects in Planner completion status, draft restore of manual-price acknowledgement, price-map source labeling, import/export settings portability, localhost unsupported-symbol fallback, and README backend/runtime wording.
-- The safe refactor prompt calls for `Legacy/README.md`, `tests/unit/`, `test:smoke`, `test:unit`, `test:e2e`, and `npm test` running smoke plus unit tests before any extraction.
-- Test/QA audit identified missing browser UI coverage for JSON import/file-picker behavior.
-- Phase 6 of the safe refactor prompt calls for `/api/price` boundary tests covering missing symbol, unsupported symbol, provider unavailable, and successful mocked response shape without live yfinance calls.
+- `assets/app.js` contains the relevant runtime behavior:
+  - `ROUTES`, `normaliseRoute`, `render`, `renderTabBar`, `fabHtml`, and `renderShell` for routing/layout.
+  - `journal()` for the Journal route.
+  - `focusCard()`, `stackRows()`, and focus-card `read()` for Focus Card review/save behavior.
+  - `priceMapLevels()` and `priceMapHtml()` for Price Map Dashboard rows.
+  - `blankRiskPlan()`, `calculateRiskPlan()`, `normRiskPlan()`, and `riskPlanHtml()` for potential R:R.
+  - `text()` and import/export helpers for backup output.
+- `assets/styles.css` contains the bottom nav, sticky CTA, FAB, cards, grids, and responsive styling.
+- `index.html`, `service-worker.js`, `tests/smoke.js`, README, and CHANGELOG pin/cache current version strings.
+- `tools/bump-version.js` is the required version/cache helper.
+- `tests/unit/run-tests.js` already loads `assets/app.js` in a VM and can directly test helper behavior.
+- `tests/e2e/planner.spec.js` and `tests/e2e/release-qa.spec.js` cover routes, mobile widths, service worker, and focus-card flows.
 
 ## Files Likely Affected
 
-- `README.md`
-- `CHANGELOG.md`
-- `index.html`
-- `service-worker.js`
 - `assets/app.js`
 - `assets/styles.css`
+- `index.html`
+- `service-worker.js`
 - `tests/smoke.js`
-- `tests/e2e/planner.spec.js`
 - `tests/unit/run-tests.js`
-- `tests/api/test_price.py`
-- `package.json`
-- `Legacy/README.md`
-- `docs/qa/docs-implementation-checklist-2026-07-08.md`
-- `docs/qa/release-qa-evidence-2026-07-08.md`
-- `docs/release/release-decision-log-2026-07-08.md`
-- `docs/daily-reports/2026-07-09-session-report-2.md`
-- `agent-workflow/00-inbox/current-task.md`
-- `agent-workflow/01-intake/task-brief.md`
-- `agent-workflow/02-plans/implementation-plan.md`
-- `agent-workflow/03-senior-review/plan-review.md`
-- `agent-workflow/03-senior-review/approved-plan.md`
-- `agent-workflow/04-execution/execution-report.md`
-- `agent-workflow/05-code-review/review-report.md`
-- `agent-workflow/06-fix-rounds/senior-decision.md`
-- `agent-workflow/06-fix-rounds/fix-report.md`
-- `agent-workflow/07-final-review/final-approval.md`
-- `agent-workflow/08-completed/workflow-summary.md`
+- `tests/e2e/planner.spec.js`
+- `tests/e2e/release-qa.spec.js`
+- `README.md`
+- `CHANGELOG.md`
+- `docs/qa/*`
+- `docs/implementation-reports/*` or `docs/plans/*`
+- `agent-workflow/*`
 
 ## Proposed Changes
 
-- Replace physical/real-device QA gates in current docs with production web and mobile-site browser QA.
-- Preserve a clear requirement for responsive browser checks, offline/service-worker browser checks, import/export browser checks, and accessibility follow-up where practical.
-- Update README Known Limitations to accurately describe optional Supabase Account & Backup sync.
-- Preserve historical context in archived docs and avoid editing `docs/archive/`.
-- Do not change runtime code in this phase unless agent audits reveal a critical defect requiring a new approved plan.
-- Fix runtime audit findings:
-  - align `comp()`/card status with Generate Focus Plan requirements;
-  - persist and restore manual-price-needed acknowledgement;
-  - label Price Map source as manual vs hosted/local yfinance;
-  - import settings from JSON exports best-effort;
-  - allow local fallback after hosted unsupported-symbol responses when local fallback is available.
-- Bump app/cache/docs to v0.8.5 for JS behavior changes.
-- Add Playwright coverage for JSON import through the actual hidden file input.
-- Add a Node unit-test runner around current exported app helpers without extracting runtime code.
-- Update package scripts for `test:smoke`, `test:unit`, and `npm test` as required by the safe refactor prompt.
-- Add `Legacy/README.md` documenting the historical-only legacy folder policy.
-- Add Python API boundary coverage for `api/price.py` without changing the price handler or calling live yfinance.
-- Add `test:api` to `package.json` and include it in `npm test`.
+1. Preserve data shape but remove visible Journal UX:
+   - Remove `journal` from primary route list and tab/sidebar navigation.
+   - Make `normaliseRoute('journal')` resolve to Home.
+   - Remove `journal()` route rendering and `render()` branch.
+   - Remove Journal fields from Focus Card review UI.
+   - Stop including Journal fields in search text and user-facing text export.
+   - Keep `normJournal`, stored `card.journal`, and import/export compatibility.
+
+2. Revise potential R:R:
+   - Add a supported target ratio list, defaulting to existing/planned settings where possible.
+   - Interpret ratio as reward:risk, e.g. `2R` means stop distance is reward distance / 2.
+   - Use entry/current price from risk input or card current price.
+   - Use selected target DOL to populate target price.
+   - Derive reward points as `abs(target - entry)`.
+   - Derive invalidation/stop on the opposite side of entry from target direction.
+   - Preserve invalid guard: Long target must be above entry; Short target must be below entry.
+   - Render target/invalidation/risk/reward/R:R as auto-populated values while still saving the calculated plan.
+
+3. Reduce wordiness:
+   - Shorten Home, Planner, price, Market Context, Risk, Profile, and detail copy.
+   - Replace duplicate price-delay notices with a single concise notice per relevant detail area.
+   - Use the concise disclaimer: `Educational tool. Not financial advice.`
+
+4. Add responsive desktop layout:
+   - At `>=1024px`, widen `--app-max-width` to about `1200px`.
+   - Render a left sidebar-style primary nav using the existing `renderTabBar` output/classes with CSS layout changes.
+   - Use `New analysis` labeled action in desktop instead of floating icon-only FAB; keep mobile FAB/bottom nav below `1024px`.
+   - Add multi-column desktop layout classes for focus-card/dashboard dense panels without changing mobile order.
+
+5. Mirror DOL taken in Price Map Dashboard:
+   - Include checkbox controls for DOL rows in `priceMapHtml()` when rendered in editable focus-card context.
+   - Use IDs like `priceMap_dol1Taken`.
+   - Ensure focus-card `read()` reads either Price Map or DOL Stack checkbox state and saves one shared `dolNTaken` field.
+   - Ensure re-render updates both locations.
+
+6. Version/cache/docs:
+   - Run `node tools/bump-version.js v0.8.6 release 20260709` after runtime JS/CSS changes.
+   - Review generated changes to `index.html`, `service-worker.js`, README, and cache assertions.
+   - Update README and CHANGELOG for current behavior.
+
+7. Tests:
+   - Update smoke tests for Journal removal from user-facing routes/nav/text while retaining storage compatibility.
+   - Add/update unit tests for auto-derived R:R helper behavior.
+   - Add Playwright coverage for:
+     - desktop sidebar layout at `>=1024px`,
+     - mobile bottom navigation below `1024px`,
+     - R:R calculation,
+     - mirrored Price Map DOL taken state.
+   - Update release QA tests that currently expect Journal route.
+
+8. Release-risk evidence:
+   - Check production shell/version/assets with curl or browser automation.
+   - Record what can be verified in a new or updated `docs/qa/` file.
+   - Inspect GitHub Issue `#7` where credentials/tooling allow and record status.
+   - Record any Supabase live-login limitation if credentials are not available.
 
 ## Step-by-Step Plan
 
-1. Spawn independent audit agents for documentation/plans, runtime code, and test/QA coverage.
-2. Locally inspect current docs and searches for conflicting real-device/PWA language.
-3. Create and approve this Phase 1 plan before editing non-workflow docs.
-4. Patch current docs to align QA scope with web/mobile-site operation.
-5. Patch README Known Limitations to match optional Supabase sync and browser QA scope.
-6. Integrate audit-agent runtime findings into a scoped runtime patch.
-7. Run the version/cache bump process for v0.8.5 after JS behavior changes.
-8. Add/update smoke and Playwright coverage for the runtime fixes.
-9. Add import UI/file-picker Playwright coverage.
-10. Add `tests/unit/run-tests.js` and update package scripts.
-11. Add `Legacy/README.md` and keep current runtime references unchanged.
-12. Add API boundary tests for `/api/price` missing symbol, unsupported symbol, provider dependency unavailable, provider data unavailable, and mocked success response.
-13. Run required checks.
-14. Update execution, review, senior decision, final approval, and summary workflow files.
+1. Spawn four review subagents requested by the user:
+   - Runtime/product feature review.
+   - QA/release-risk review.
+   - UI/responsive layout review.
+   - Test coverage review.
+2. Incorporate their feedback into senior plan review and approved plan before runtime edits.
+3. Edit `assets/app.js` for Journal removal, R:R calculation, Price Map DOL taken controls, concise copy, and desktop-aware layout hooks.
+4. Edit `assets/styles.css` for desktop sidebar/wider layout and mobile preservation.
+5. Update tests.
+6. Run `node tools/bump-version.js v0.8.6 release 20260709`.
+7. Update README, CHANGELOG, docs QA/implementation report.
+8. Run required checks:
+   - `npm test`
+   - `npm run test:e2e`
+   - `git diff --check`
+   - `python3 -m py_compile api/price.py tests/api/test_price.py` only if API files are touched.
+9. Run local static server for manual/browser checks where useful, then stop it.
+10. Complete code review, fix round if needed, final approval, and workflow summary.
 
 ## Acceptance Criteria
 
-- Current docs no longer require physical device QA.
-- Current docs still require production web/mobile-site browser QA after deployment.
-- README no longer says saved cards cannot sync across devices without qualifying optional Supabase sync.
-- Existing uncommitted daily-report clarification is preserved.
-- Runtime fixes are limited to the approved audit findings.
-- Storage/export compatibility remains backward compatible.
-- `npm test` includes smoke and unit tests.
-- `/api/price` boundary tests run without live market data.
-- Legacy folder policy is documented and current runtime still does not load `Legacy/`.
+- User-facing app has no Journal nav/route/view/labels/copy.
+- Old `#journal` route lands on Home.
+- Saved card normalization/import/export still preserves existing `journal` objects.
+- Potential R:R is deterministic from current/entry, selected DOL target, selected ratio, direction, and derived invalidation/stop.
+- Price Map Dashboard DOL taken control and DOL Stack control share the same saved state.
+- Desktop `>=1024px` uses sidebar navigation and wider content; mobile widths keep bottom nav and mobile ergonomics.
+- Manual price entry and optional hosted/local price helper fallback remain available.
+- Supabase Account & Backup remains optional.
+- GitHub Pages and service worker runtime asset references remain aligned.
+- Required tests pass or blockers are clearly documented.
 
 ## Test Plan
 
-- `rg -n "physical|real-device|real devices|iOS Safari|Android Chrome|PWA install|Add to Home Screen" README.md docs/qa docs/release docs/daily-reports`
-- `git diff --check`
-- `git status --short`
-- `node tests/smoke.js`
 - `npm test`
-- `python3 tests/api/test_price.py`
-- `npx playwright test tests/e2e/planner.spec.js`
-- `npx playwright test`
+- `npm run test:e2e`
+- `git diff --check`
+- If API files are touched: `python3 -m py_compile api/price.py tests/api/test_price.py`
+- Static/manual checks via `python3 -m http.server 8000` if needed:
+  - Home, Planner, Saved, Profile.
+  - Create/save/final-save/reload Focus Card.
+  - Desktop sidebar at 1024+.
+  - Mobile bottom nav at 390/430.
+  - Price Map DOL taken mirror.
+  - R:R output.
 
 ## Risks
 
-- Removing physical-device gates could accidentally remove useful mobile-site QA. Mitigation: replace with production browser/mobile viewport QA rather than deleting the QA requirement.
-- Broad objective could encourage unrelated refactors. Mitigation: keep this phase documentation-only and use audit results for later scoped plans.
-- Runtime completion semantics could change saved-card Draft/Complete labels. Mitigation: align with the existing Generate Focus Plan validation rules and add tests.
-- Adding manual-price acknowledgement into normalized fields is a backward-compatible additive field; imports of older cards should still normalize safely.
+- `assets/app.js` is monolithic; edits must stay narrow.
+- Removing visible Journal while keeping stored/exported journal compatibility can confuse string-based tests if assertions are too broad.
+- Desktop layout must not break the existing mobile-first flow.
+- Supabase live QA may be impossible without the admin password or existing authenticated session.
+- Production deployment verification may show the old version until the user deploys these local changes.
 
 ## Rollback Plan
 
-- Revert this phase's documentation edits only.
-- Preserve prior committed app runtime state and do not revert unrelated uncommitted user work.
+- Use `git diff` to inspect each touched file.
+- Revert only this task's changes by applying reverse patches to touched files if a blocker appears.
+- Do not use destructive git commands.
+- If tests reveal a narrow regression, apply a focused fix round and rerun the relevant tests.

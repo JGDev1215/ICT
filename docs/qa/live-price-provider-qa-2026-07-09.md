@@ -10,13 +10,14 @@ Production endpoint verification for the hosted price provider at:
 
 `https://ictict-lake.vercel.app/api/price`
 
-This check verifies live provider behavior directly against production. It does not prove that the uncommitted local v0.8.5 app has been deployed, because the production app shell still reports v0.8.4 at the time of this QA pass.
+This check verifies live provider behavior directly against production. A later shell check on 2026-07-09 confirmed that production now serves the v0.8.5 app shell; see `docs/qa/production-web-mobile-qa-2026-07-09.md`.
 
 ## Environment
 
 - Local repo path: `/Users/soonjeongguan/Desktop/FRAMEWORK`
 - Production app: `https://ictict-lake.vercel.app`
-- Production shell observed: `ICT DOL Sweep Tracker v0.8.4`
+- Production shell observed during original endpoint check: `ICT DOL Sweep Tracker v0.8.4`
+- Later production shell check: `ICT DOL Sweep Tracker v0.8.5` on Vercel and GitHub Pages; see `docs/qa/production-web-mobile-qa-2026-07-09.md`
 - Check time: 2026-07-09 17:08 UTC
 
 ## Commands
@@ -67,5 +68,5 @@ Live production price-provider endpoint behavior passed for one supported symbol
 
 ## Remaining Work
 
-- Re-run production web QA after v0.8.5 is deployed because the live app shell still reports v0.8.4.
-- Re-run end-to-end price auto-detect through the production UI after v0.8.5 deployment if the app bundle or endpoint routing changes.
+- Production web shell QA after v0.8.5 deployment is recorded in `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- Re-run end-to-end price auto-detect through the production UI after the local v0.8.6 bundle is deployed if endpoint routing changes.

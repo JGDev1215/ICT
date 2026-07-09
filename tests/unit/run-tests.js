@@ -102,8 +102,11 @@ ok(api.comp({instrument: 'MNQ', session: 'New York AM', bias: 'Bullish'}).ok ===
 const distance = api.dolDistance('20250', '20000');
 ok(distance.absolute === '250' && distance.percent === '1.25%', 'DOL distance should calculate points and percent');
 
-const risk = api.calculateRiskPlan({direction: 'Long', entryPrice: '20000', targetPrice: '20250', invalidationPrice: '19950'}, {}, 'dol1');
-ok(risk.status === 'ready' && risk.rr === '5R', 'risk-to-reward should calculate valid long setup');
+const riskFields = {currentPrice: '20000', dol1Level: '20250', dol1Draw: 'Previous day high (PDH)', dol1Tf: 'Daily'};
+const risk = api.calculateRiskPlan({direction: 'Long', ratio: '2R', entryPrice: '20000'}, riskFields, 'dol1');
+ok(risk.status === 'ready' && risk.rr === '2R' && risk.invalidationPrice === '19875', 'risk-to-reward should calculate derived long setup');
+const shortRisk = api.calculateRiskPlan({direction: 'Short', ratio: '3R', entryPrice: '20000'}, Object.assign({}, riskFields, {dol1Level: '19850'}), 'dol1');
+ok(shortRisk.status === 'ready' && shortRisk.rr === '3R' && shortRisk.invalidationPrice === '20050', 'risk-to-reward should calculate derived short setup');
 
 const card = api.normaliseCard({
   id: 'unit-card',

@@ -27,6 +27,7 @@ function update(file, replacements){
   for(const [pattern, replacement, label] of replacements){
     const next = source.replace(pattern, replacement);
     if(next === source){
+      if(pattern.test && pattern.test(source)) continue;
       throw Error(`Could not update ${label} in ${file}`);
     }
     source = next;
@@ -41,7 +42,7 @@ update('assets/app.js', [
 
 update('index.html', [
   [/<title>ICT DOL Sweep Tracker v[^<]+<\/title>/, `<title>ICT DOL Sweep Tracker ${version}</title>`, 'title version'],
-  [/ICT DOL Sweep Tracker v[^ ]+ · Educational planning tool only\. Not financial advice\./, `ICT DOL Sweep Tracker ${version} · Educational planning tool only. Not financial advice.`, 'footer version'],
+  [/ICT DOL Sweep Tracker v[^ ]+ · Educational (?:planning )?tool(?: only)?\. Not financial advice\./, `ICT DOL Sweep Tracker ${version} · Educational tool. Not financial advice.`, 'footer version'],
   [/(assets\/config\.js\?v=)[^"]+/, `$1${cacheKey}`, 'config cache key'],
   [/(assets\/styles\.css\?v=)[^"]+/, `$1${cacheKey}`, 'style cache key'],
   [/(assets\/app\.js\?v=)[^"]+/, `$1${cacheKey}`, 'app cache key']

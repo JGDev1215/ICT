@@ -2,25 +2,25 @@
 
 ## Fixes Applied
 
-No fix round was required after review.
+No separate post-review fix round was required. Test-driven adjustments were completed during execution before final review:
+
+- Fixed ratio parsing to accept labels such as `2R`.
+- Updated smoke fixtures for derived R:R.
+- Tightened Playwright selectors for repeated numeric values.
 
 ## Files Changed
 
-None for a separate fix round.
+- `assets/app.js`
+- `tests/smoke.js`
+- `tests/e2e/planner.spec.js`
 
 ## Checks Performed
 
-- `npm ci`
-- `npm test`
-- `python3 tests/api/test_price.py`
-- `npm run test:e2e -- --reporter=dot`
-- `npx playwright test tests/e2e/planner.spec.js --reporter=line`
-- `npx playwright test --reporter=dot`
-- Production price-provider endpoint curl checks for `MNQ` and `NOTAREALICTSYMBOL`.
-- `git diff --check`
+- `npm test`: PASS.
+- `npm run test:e2e -- --reporter=dot`: PASS, 65 passed, 1 expected skip.
+- `git diff --check`: PASS.
 
 ## Remaining Issues
 
-- Live v0.8.5 production UI QA remains pending.
-- Live Supabase verification remains pending.
-- Phase 5 JavaScript extraction remains deferred pending a separate no-feature plan.
+- None blocking local commit.
+- Supabase live sync QA remains credential-dependent.

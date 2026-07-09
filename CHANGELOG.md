@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.8.6 — 2026-07-09
+
+### Changed
+
+- Removed user-facing Journal navigation, route, Focus Card fields, and text-export copy while preserving stored JSON `journal` data for compatibility.
+- Added a desktop sidebar layout at wider viewports with a labeled New analysis action, while preserving the mobile bottom navigation.
+- Reworked potential R:R to derive target, reward points, risk points, and invalidation/stop from current/entry price, selected DOL, selected ratio, and direction.
+- Added DOL taken controls to editable Price Map Dashboard rows and mirrored them with the DOL Stack controls.
+- Condensed primary-flow copy and the disclaimer to “Educational tool. Not financial advice.”
+
+### Tests
+
+- Added/updated smoke, unit, and Playwright coverage for Journal removal, legacy Journal route redirect, desktop/mobile layout, derived R:R, and mirrored DOL taken state.
+
 ## v0.8.5 — 2026-07-09
 
 ### Fixed

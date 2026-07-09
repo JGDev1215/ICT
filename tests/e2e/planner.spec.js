@@ -322,9 +322,76 @@ test('home session chips filter the visible focus card', async ({page}) => {
   });
 
   await page.locator("[data-session-chip='London']").click();
-  await expect(page.getByText('Showing Home cards and metrics for London.')).toBeVisible();
+  await expect(page.getByText('Showing London cards and metrics.')).toBeVisible();
   await expect(page.locator('.card-hero h2')).toHaveText('ES');
 
   await page.locator("[data-session-chip='New York AM']").click();
   await expect(page.locator('.card-hero h2')).toHaveText('MNQ');
+});
+
+test('focus card derives potential R:R from current price and selected DOL', async ({page}) => {
+  await page.evaluate(() => {
+    const api = window.ICTSweepState;
+    const card = api.createBlankDraft({
+      id: 'rr-card',
+      fields: {
+        instrument: 'MNQ',
+        session: 'New York AM',
+        currentPrice: '20000',
+        bias: 'Bullish',
+        dol1Level: '20250',
+        dol1Draw: 'Previous day high (PDH)',
+        dol1Tf: 'Daily'
+      }
+    });
+    api.saveCards([card]);
+    api.go('focus', {id: 'rr-card'});
+  });
+
+  await expect(page.getByText('Focus card details')).toBeVisible();
+  await page.locator('#riskDirection').selectOption('Long');
+  await page.locator('#riskTargetDol').selectOption('dol1');
+  await page.locator('#riskRatio').selectOption('2R');
+  await page.locator('#saveChangesBtn').click();
+
+  await expect(page.getByText('19875')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().find(card => card.id === 'rr-card').riskPlan.invalidationPrice)).toBe('19875');
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().find(card => card.id === 'rr-card').riskPlan.riskPoints)).toBe('125');
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().find(card => card.id === 'rr-card').riskPlan.rewardPoints)).toBe('250');
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().find(card => card.id === 'rr-card').riskPlan.rr)).toBe('2R');
+});
+
+test('price map and DOL stack share DOL taken state', async ({page}) => {
+  await page.evaluate(() => {
+    const api = window.ICTSweepState;
+    const card = api.createBlankDraft({
+      id: 'mirror-card',
+      fields: {
+        instrument: 'MNQ',
+        session: 'New York AM',
+        currentPrice: '20000',
+        bias: 'Bullish',
+        dol1Level: '20250',
+        dol1Draw: 'Previous day high (PDH)',
+        dol1Tf: 'Daily'
+      }
+    });
+    api.saveCards([card]);
+    api.go('focus', {id: 'mirror-card'});
+  });
+
+  await expect(page.locator('#priceMap_dol1Taken')).toBeVisible();
+  await expect(page.locator('#focus_dol1Taken')).toBeVisible();
+  await page.locator('#priceMap_dol1Taken').check();
+  await expect(page.locator('#focus_dol1Taken')).toBeChecked();
+  await page.locator('#saveChangesBtn').click();
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().find(card => card.id === 'mirror-card').fields.dol1Taken)).toBe(true);
+
+  await page.reload();
+  await expect(page.locator('#priceMap_dol1Taken')).toBeChecked();
+  await expect(page.locator('#focus_dol1Taken')).toBeChecked();
+  await page.locator('#focus_dol1Taken').uncheck();
+  await expect(page.locator('#priceMap_dol1Taken')).not.toBeChecked();
+  await page.locator('#saveChangesBtn').click();
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().find(card => card.id === 'mirror-card').fields.dol1Taken)).toBe(false);
 });

@@ -1,61 +1,52 @@
 # Code Review Report
 
 ## Review Decision
-
 PASS
 
 ## Score
-
 9/10
 
 ## Original Task Completed?
-
-PARTIAL
+YES
 
 ## Approved Plan Followed?
-
 YES
 
 ## Unrelated Changes?
-
 NO
 
 ## What Was Done Well
 
-- The patch addresses confirmed audit findings instead of broad, risky refactoring.
-- Local-first behavior, storage key `ict_cards_v078`, and export schema `ict_dol_sweep_export_v7` were preserved.
-- Manual price fallback remains available.
-- Version/cache updates were made through the repository helper.
-- Smoke, unit, focused Planner Playwright, and full Playwright suites passed after the runtime changes.
-- Current docs now match the web/mobile-site QA scope and optional Supabase sync model.
-- The safe refactor foundation now has a documented legacy boundary, npm test scripts, and unit coverage before any future file extraction.
-- Live production price-provider endpoint behavior is now recorded for supported and unsupported symbols.
-- Safe-refactor prerequisites now include a documented baseline and tracked developer/user docs folders.
-- `/api/price` now has deterministic boundary tests without live market calls.
+- Kept the changes inside the static no-build app and avoided modularizing `assets/app.js`.
+- Removed user-facing Journal UI while preserving JSON/storage compatibility.
+- Added deterministic derived R:R behavior with smoke/unit/E2E coverage.
+- Added mirrored Price Map and DOL Stack DOL-taken behavior with E2E persistence coverage.
+- Preserved mobile bottom navigation and added desktop sidebar coverage.
+- Updated version/cache references through the helper and tightened smoke assertions.
+- Recorded production evidence and closed the superseded GitHub issue.
 
 ## Issues Found
 
-No blocking issues in the implemented scope.
+- No blocking implementation issues found after test fixes.
+- Live Supabase Account & Backup QA is unverified due to missing credentials/session.
+- v0.8.6 is local only until deployed.
 
 ## Required Fixes
 
-None for this pass.
+None.
 
 ## Recommended Improvements
 
-- Add a future opt-in live price-provider QA script or documented manual QA record for production `/api/price`.
-- Add future API-boundary tests around mocked `/api/price` responses if the price helper contract changes again.
-- Re-run production UI price auto-detect after v0.8.5 deployment if app bundle or routing changes.
-- Keep Phase 5 JavaScript extraction deferred until it has a separate no-feature plan and the baseline remains green.
-- Record live Supabase Account & Backup verification against the deployed app/account.
-- Treat `FINAL_SAFE_REFACTOR_IMPLEMENTATION_PROMPT_2026-07-09.md` as a separate no-feature refactor initiative.
+- After deployment, repeat production UI QA against v0.8.6.
+- Perform live admin/Supabase sync QA with the real admin password or authenticated session.
+- Consider a future small refactor for the large one-line render templates, after a separate approved no-feature refactor plan.
 
 ## Regression Risks
 
-- Completion status now uses stricter fields, matching Generate Focus Plan; existing incomplete cards may show as Draft more accurately.
-- `manualPriceNeededAck` is an additive normalized field, so older cards import normally.
-- Settings import now calls `saveSettings`, which can queue optional remote settings sync when backup is configured.
+- Existing cards with stored `journal` data should remain readable/exportable, covered by smoke tests.
+- Existing cards with old risk plans should normalize through the new ratio inference/default path, covered by unit/smoke tests for current helper behavior.
+- Desktop layout is CSS-only at the shell level and covered by Playwright, but should still be checked after deployment.
 
 ## Final Reviewer Notes
 
-The remediation pass is safe to commit. The full broad objective is not complete because live v0.8.5 deployment UI QA, live Supabase verification, and any future runtime refactor remain outside this local patch.
+The work is safe to commit based on automated checks and scoped review. Remaining risks are external QA/deployment items, not local implementation blockers.

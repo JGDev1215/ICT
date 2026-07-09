@@ -60,6 +60,7 @@ test.describe('release QA evidence', () => {
       await expect(nav).toBeVisible();
       const navBox = await nav.boundingBox();
       expect(navBox.y + navBox.height).toBeLessThanOrEqual(844);
+      expect(navBox.y).toBeGreaterThan(700);
 
       await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
       await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
@@ -69,6 +70,27 @@ test.describe('release QA evidence', () => {
     });
   }
 
+  test('desktop viewport uses sidebar navigation and labeled new analysis action', async ({page}) => {
+    await page.setViewportSize({width: 1200, height: 844});
+    await resetApp(page);
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    const nav = page.locator("nav[aria-label='Primary']");
+    const main = page.locator('.app-main');
+    await expect(nav).toBeVisible();
+    await expect(main).toBeVisible();
+    const navBox = await nav.boundingBox();
+    const mainBox = await main.boundingBox();
+    expect(navBox.x).toBeLessThan(mainBox.x);
+    expect(navBox.height).toBeGreaterThan(navBox.width);
+    expect(navBox.y + navBox.height).toBeLessThan(700);
+    await expect(page.locator('.fab')).toBeHidden();
+    await expect(page.locator('#globalNewDesktopBtn')).toBeVisible();
+    await expect(page.locator('#globalNewDesktopBtn')).toContainText('New analysis');
+  });
+
   test('all primary and secondary screens render with a saved focus card', async ({page}) => {
     await resetApp(page);
     await seedCard(page);
@@ -77,7 +99,6 @@ test.describe('release QA evidence', () => {
       ['home', 'ICT Sweep Tracker'],
       ['planner', 'AI Trade Plan Builder'],
       ['saved', 'Saved Cards'],
-      ['journal', 'Journal'],
       ['profile', 'Profile'],
       ['liquidity-map', 'Setup Library'],
       ['risk', 'Risk tracker'],
@@ -88,6 +109,10 @@ test.describe('release QA evidence', () => {
       await page.evaluate(nextRoute => window.ICTSweepState.go(nextRoute), route);
       await expect(page.getByText(text).first()).toBeVisible();
     }
+
+    await page.evaluate(() => window.ICTSweepState.go('journal'));
+    await expect(page.getByText('ICT Sweep Tracker')).toBeVisible();
+    await expect(page.getByRole('button', {name: /Journal/})).toHaveCount(0);
 
     await page.evaluate(() => window.ICTSweepState.go('focus', {id: 'release-card'}));
     await expect(page.getByText('Focus card details')).toBeVisible();

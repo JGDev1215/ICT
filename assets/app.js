@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'v0.8.5';
+  const VERSION = 'v0.8.6';
   const KEY = 'ict_cards_v078';
   const SETTINGS_KEY = 'ict_settings_v1';
   const DRAFT_KEY = 'ict_planner_draft_v1';
@@ -34,7 +34,7 @@
   const DEFAULT_SUPABASE_URL = 'https://cdcqklvvswzipmmvpzaj.supabase.co';
   const ADMIN_USERNAME = 'admin';
   const DEFAULT_ADMIN_SUPABASE_EMAIL = 'admin@ict.local';
-  const ROUTES = ['home','planner','saved','journal','profile','focus','review','timeline','liquidity-map','risk','component-gallery'];
+  const ROUTES = ['home','planner','saved','profile','focus','review','timeline','liquidity-map','risk','component-gallery'];
   const NOTICE_LEVELS = ['good','warn','bad'];
 
   const instruments = ['MNQ','NQ','MES','ES','MYM','YM','RTY','M2K','MGC','GC','CL','BTCUSD','ETHUSD','EURUSD','GBPUSD'];
@@ -81,9 +81,10 @@
   const phaseOptions = ['Consolidation','Expansion','Retracement','Reversal'];
   const dolIds = ['dol1','dol2','dol3'];
   const riskDirections = ['Long','Short'];
+  const riskRatios = ['1R','1.5R','2R','2.5R','3R','4R','5R'];
   const arrayTypes = ['SIBI','BISI','CE','OB','FVG','High','Low','Other'];
   const routeBehaviors = ['Respect','Disrespect','Pending','Untested'];
-  const PRICE_DELAY_DISCLAIMER = 'Price data may be delayed by 5 minutes. You can override it manually before saving.';
+  const PRICE_DELAY_DISCLAIMER = 'Price may be delayed. Manual override is available.';
   const PRICE_SYMBOL_PATTERN = /^[A-Z0-9._=/-]{1,24}$/;
   const marketPhaseKeys = {
     Monthly: 'monthly',
@@ -625,6 +626,35 @@
     };
   }
 
+  function ratioNumber(value){
+    const raw = String(value == null ? '' : value).trim().replace(/r$/i, '');
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  function formatRatio(value){
+    const n = ratioNumber(value);
+    return n == null ? '' : fmtNum(n) + 'R';
+  }
+
+  function inferRiskRatio(plan, fields, targetDolId){
+    const p = isObject(plan) ? plan : {};
+    const explicit = formatRatio(p.ratio || p.targetR);
+    if(explicit) return explicit;
+    const flds = normFields(fields || {});
+    const dol = activeDol(flds, targetDolId);
+    const direction = riskDirections.includes(p.direction) ? p.direction : '';
+    const entry = priceNumber(p.entryPrice || flds.currentPrice);
+    const target = priceNumber((dol && dol.level) || p.targetPrice);
+    const stop = priceNumber(p.invalidationPrice);
+    if(direction && entry != null && target != null && stop != null){
+      const reward = Math.abs(target - entry);
+      const risk = direction === 'Long' ? entry - stop : stop - entry;
+      if(reward > 0 && risk > 0) return formatRatio(reward / risk);
+    }
+    return '2R';
+  }
+
   function normRouteEvidence(rows){
     const source = Array.isArray(rows) ? rows : [];
     return source.map(row => {
@@ -648,6 +678,7 @@
     const dol = activeDol(flds, activeDolId);
     return {
       direction: '',
+      ratio: '2R',
       entryPrice: flds.currentPrice || '',
       targetDolId: dol ? dol.id : '',
       targetPrice: dol ? dol.level : '',
@@ -666,39 +697,43 @@
     const targetDolId = normActiveDolId(p.targetDolId || activeDolId, flds);
     const dol = activeDol(flds, targetDolId);
     const direction = riskDirections.includes(p.direction) ? p.direction : '';
+    const ratio = inferRiskRatio(p, flds, targetDolId);
+    const ratioValue = ratioNumber(ratio);
     const entryPrice = clean(p.entryPrice || flds.currentPrice);
-    const targetPrice = clean(p.targetPrice || (dol && dol.level));
-    const invalidationPrice = clean(p.invalidationPrice);
+    const targetPrice = clean((dol && dol.level) || p.targetPrice);
     const entry = priceNumber(entryPrice);
     const target = priceNumber(targetPrice);
-    const stop = priceNumber(invalidationPrice);
     const base = {
       direction,
+      ratio,
       entryPrice,
       targetDolId,
       targetPrice,
-      invalidationPrice,
+      invalidationPrice: '',
       riskPoints: '',
       rewardPoints: '',
       rr: '',
       status: 'incomplete',
       message: 'R:R unavailable - check entry, DOL target, invalidation, and direction.'
     };
-    if(!direction || entry == null || target == null || stop == null) return base;
-    const risk = direction === 'Long' ? entry - stop : stop - entry;
-    const reward = direction === 'Long' ? target - entry : entry - target;
-    if(risk <= 0 || reward <= 0){
+    if(!direction || ratioValue == null || entry == null || target == null) return base;
+    const reward = Math.abs(target - entry);
+    const validSide = direction === 'Long' ? target > entry : target < entry;
+    if(!validSide || reward <= 0){
       return Object.assign(base, {
         status: 'invalid',
-        message: 'Invalid R:R - target and invalidation must be on the correct side of entry/current price.'
+        message: 'Invalid R:R - target DOL must be on the correct side of entry/current price.'
       });
     }
+    const risk = reward / ratioValue;
+    const invalidation = direction === 'Long' ? entry - risk : entry + risk;
     return Object.assign(base, {
       riskPoints: fmtNum(risk),
       rewardPoints: fmtNum(reward),
-      rr: fmtNum(reward / risk) + 'R',
+      rr: formatRatio(ratioValue),
+      invalidationPrice: fmtNum(invalidation),
       status: 'ready',
-      message: 'Potential R:R to selected DOL. Educational planning only; not a trade recommendation.'
+      message: 'Potential R:R to selected DOL. Educational only.'
     });
   }
 
@@ -1719,7 +1754,8 @@
   }
 
   function normaliseRoute(value){
-    const next = value === 'review' ? 'focus' : asText(value || 'home');
+    const raw = asText(value || 'home');
+    const next = raw === 'review' ? 'focus' : raw === 'journal' ? 'home' : raw;
     return ROUTES.includes(next) ? next : 'home';
   }
 
@@ -1728,7 +1764,7 @@
     if(!hash) return null;
     const parts = hash.split('/');
     const routeName = safeDecode(parts[0] || 'home', 'home');
-    if(routeName !== 'review' && !ROUTES.includes(routeName)) return null;
+    if(routeName !== 'review' && routeName !== 'journal' && !ROUTES.includes(routeName)) return null;
     return {
       route: normaliseRoute(routeName),
       id: parts[1] ? safeDecode(parts[1], '') : ''
@@ -2048,8 +2084,10 @@
       : id => doc ? doc.getElementById(id) : null;
     for(let i = 1; i <= 3; i++){
       for(const p of ['dol', 'sweep']){
-        const node = findNode('focus_' + p + i + 'Taken');
-        out[p + i + 'Taken'] = node ? !!node.checked : !!fields[p + i + 'Taken'];
+        const key = p + i + 'Taken';
+        const node = findNode('focus_' + key);
+        const mapNode = p === 'dol' ? findNode('priceMap_' + key) : null;
+        out[key] = mapNode ? !!mapNode.checked : node ? !!node.checked : !!fields[key];
       }
     }
     const fvgNode = findNode('focusFvg');
@@ -2118,6 +2156,9 @@
         const diff = current == null ? null : level - current;
         const pct = current == null || current === 0 || diff == null ? 'N/A' : (diff / current * 100).toFixed(2) + '%';
         rows.push({
+          prefix: item.prefix,
+          index: i,
+          fieldKey: item.prefix + i + 'Taken',
           kind: item.kind,
           name: draw || 'Unspecified liquidity',
           price: level,
@@ -2166,7 +2207,9 @@
       const sideClass = level.kind === 'Sweep' ? 'sweep' : (level.above ? 'dol above' : 'dol below');
       const classes = ['price-map-row', sideClass, level.taken ? 'taken' : ''].filter(Boolean).join(' ');
       const distance = level.distPts + ' pts · ' + level.distPct;
-      return `<div class='${classes}'><div><div class='price-map-row-title'><span class='pill ${level.kind === 'DOL' ? 'info' : 'warn'}'>${esc(level.kind)}</span><span>${esc(level.name)}</span></div><div class='price-map-row-sub'>${esc(level.timeframe)} · ${level.taken ? 'Taken' : 'Pending'}${level.rationale ? ' · ' + esc(level.rationale) : ''}</div></div><div><div class='price-map-price'>${esc(fmtNum(level.price))}</div><div class='price-map-distance'>${esc(distance)}</div></div></div>`;
+      const editableDol = meta && meta.editable && level.kind === 'DOL';
+      const takenControl = editableDol ? `<label class='check-row compact price-map-taken'><input type='checkbox' id='priceMap_${level.fieldKey}' data-mirror-taken='${level.fieldKey}' ${level.taken ? 'checked' : ''}> <span>DOL taken</span></label>` : '';
+      return `<div class='${classes}'><div><div class='price-map-row-title'><span class='pill ${level.kind === 'DOL' ? 'info' : 'warn'}'>${esc(level.kind)}</span><span>${esc(level.name)}</span></div><div class='price-map-row-sub'>${esc(level.timeframe)} · ${level.taken ? 'Taken' : 'Pending'}${level.rationale ? ' · ' + esc(level.rationale) : ''}</div>${takenControl}</div><div><div class='price-map-price'>${esc(fmtNum(level.price))}</div><div class='price-map-distance'>${esc(distance)}</div></div></div>`;
     };
     return `<div class='price-map'>${header}<div class='price-map-body'>${above.map(row).join('')}<div class='price-map-current'><span>CURRENT PRICE</span><strong>${esc(fmtNum(current))}</strong></div>${below.map(row).join('')}</div>${notice}</div>`;
   }
@@ -2199,7 +2242,7 @@
       const has = c.fields[id + 'Level'] || c.fields[id + 'Draw'];
       return has ? `<option value='${id}'${rp.targetDolId === id ? ' selected' : ''}>${esc(label)}</option>` : '';
     }).join('');
-    return `<div class='status-row'>${pill(rp.status, statusClass)}${rp.rr ? pill(rp.rr, 'info') : ''}</div><div class='grid'><div><label class='label' for='riskDirection'>Planning direction</label><select class='in' id='riskDirection'>${options(riskDirections, rp.direction, '- direction -')}</select></div><div><label class='label' for='riskTargetDol'>Target DOL</label><select class='in' id='riskTargetDol'><option value=''>- target DOL -</option>${dolOptions}</select></div></div><div class='grid'><div><label class='label' for='riskEntryPrice'>Entry/current planning price</label><input class='in numeric' id='riskEntryPrice' inputmode='decimal' value='${esc(rp.entryPrice)}' placeholder='current or entry price'></div><div><label class='label' for='riskTargetPrice'>Target price</label><input class='in numeric' id='riskTargetPrice' inputmode='decimal' value='${esc(rp.targetPrice)}' placeholder='DOL target'></div></div><label class='label' for='riskInvalidation'>Invalidation / stop level</label><input class='in numeric' id='riskInvalidation' inputmode='decimal' value='${esc(rp.invalidationPrice)}' placeholder='price that invalidates idea'><div class='metric-grid'><div class='metric'><div class='m'>${esc(rp.riskPoints || '-')}</div><div class='l'>Risk points</div></div><div class='metric'><div class='m'>${esc(rp.rewardPoints || '-')}</div><div class='l'>Reward points</div></div><div class='metric'><div class='m'>${esc(rp.rr || '-')}</div><div class='l'>Potential R:R</div></div></div><p class='hint'>${esc(rp.message)}</p>`;
+    return `<div class='status-row'>${pill(rp.status, statusClass)}${rp.rr ? pill(rp.rr, 'info') : ''}</div><div class='grid'><div><label class='label' for='riskDirection'>Direction</label><select class='in' id='riskDirection'>${options(riskDirections, rp.direction, '- direction -')}</select></div><div><label class='label' for='riskTargetDol'>Target DOL</label><select class='in' id='riskTargetDol'><option value=''>- target DOL -</option>${dolOptions}</select></div></div><div class='grid'><div><label class='label' for='riskEntryPrice'>Current / entry</label><input class='in numeric' id='riskEntryPrice' inputmode='decimal' value='${esc(rp.entryPrice)}' placeholder='current or entry price'></div><div><label class='label' for='riskRatio'>Target R:R</label><select class='in' id='riskRatio'>${options(riskRatios, rp.ratio, '- ratio -')}</select></div></div><div class='metric-grid'><div class='metric'><div class='m'>${esc(rp.targetPrice || '-')}</div><div class='l'>Target DOL</div></div><div class='metric'><div class='m'>${esc(rp.invalidationPrice || '-')}</div><div class='l'>Invalidation / stop</div></div><div class='metric'><div class='m'>${esc(rp.riskPoints || '-')}</div><div class='l'>Risk points</div></div><div class='metric'><div class='m'>${esc(rp.rewardPoints || '-')}</div><div class='l'>Reward points</div></div><div class='metric'><div class='m'>${esc(rp.rr || '-')}</div><div class='l'>Potential R:R</div></div></div><p class='hint'>${esc(rp.message)}</p>`;
   }
 
   function routeEvidenceHtml(c){
@@ -2344,14 +2387,13 @@
       ['home', 'home', 'Home'],
       ['planner', 'edit_note', 'Planner'],
       ['saved', 'folder_open', 'Saved'],
-      ['journal', 'stylus_note', 'Journal'],
       ['profile', 'person', 'Profile']
     ];
     return `<nav class='tab-bar' aria-label='Primary'><div class='inner'>${tabs.map(t => `<button class='btn ${active === t[0] ? 'active' : ''}' data-route='${t[0]}' ${active === t[0] ? `aria-current='page'` : ''}>${icon(t[1])}<span>${t[2]}</span></button>`).join('')}</div></nav>`;
   }
 
   function activeTab(){
-    if(['home','planner','saved','journal','profile'].includes(route)) return route;
+    if(['home','planner','saved','profile'].includes(route)) return route;
     if(['focus','review','timeline'].includes(route)) return 'saved';
     if(route === 'liquidity-map') return 'planner';
     if(route === 'risk' || route === 'component-gallery') return 'profile';
@@ -2365,8 +2407,8 @@
   }
 
   function fabHtml(){
-    if(!['home','saved','journal','risk','profile'].includes(route)) return '';
-    return `<button class='fab' id='globalNewBtn' aria-label='Start new plan'>${icon('add')}</button>`;
+    if(!['home','saved','risk','profile'].includes(route)) return '';
+    return `<button class='fab' id='globalNewBtn' aria-label='Start new plan'>${icon('add')}</button><button class='desktop-new-plan btn primary' id='globalNewDesktopBtn'>${icon('add')}New analysis</button>`;
   }
 
   function renderShell(content){
@@ -2382,7 +2424,7 @@
     const sessionOptions = ['All'].concat(sessions);
     const chips = sessionOptions.map(s => `<button class='chip ${homeSession === s ? 'chip-active' : ''}' data-session-chip='${esc(s)}' aria-pressed='${homeSession === s ? 'true' : 'false'}'>${esc(s)}</button>`).join('');
     const hero = current ? `<div class='card-hero'><div class='progress'>Today's focus</div><h2>${esc(current.fields.instrument || 'No instrument')}</h2><p class='sub'>${esc(current.fields.session || 'No session')} · ${esc(current.fields.date || 'No date')}</p><div class='status-row'>${biasPill(current.fields.bias)}${statusPill(current)}${outcomePill(current.outcome)}</div><div class='hero-actions'><button class='btn primary' data-open-card='${esc(current.id)}'>Open focus card</button><button class='btn ghost' id='continuePlanBtn'>Continue plan</button></div></div>` : `<div class='card-hero'><div class='progress'>Today's focus</div><h2>Build first plan</h2><p class='sub'>Start with one instrument, one bias thesis, mapped liquidity and review notes.</p><div class='hero-actions'><button class='btn primary' id='startHeroBtn'>Start new analysis</button><button class='btn ghost' data-route='saved'>Saved cards</button></div></div>`;
-    return `<section class='screen'>${pageHead('Market focus', 'ICT Sweep Tracker', 'Educational planning tool only. Not financial advice.', '')}<div class='field'><label class='label' for='homePrompt'>Planning prompt</label><input class='in' id='homePrompt' placeholder='What are you planning today?'></div><div class='card'><div class='progress'>Plan assistant</div><h3>Bias-led liquidity plan</h3><p class='sub'>Use the planner to structure observations. The app does not forecast price or provide trade recommendations.</p><div class='hero-actions'><button class='btn primary' id='startPlanBtn'>Start new analysis</button><button class='btn' data-route='liquidity-map'>Liquidity map</button><button class='btn' data-route='risk'>Risk review</button></div></div><div class='row-actions' aria-label='Session filter'>${chips}</div>${homeSession !== 'All' ? `<p class='hint'>Showing Home cards and metrics for ${esc(homeSession)}.</p>` : ''}${hero}<h3>Review metrics</h3>${metricHtml(homeCards)}<div class='card'><div class='progress'>Watchlist</div><h3>${settings.watchlist.length ? settings.watchlist.map(esc).join(' · ') : 'No watchlist set'}</h3><p class='sub'>Set default instruments and sessions from Profile.</p></div></section>`;
+    return `<section class='screen'>${pageHead('Market focus', 'ICT Sweep Tracker', 'Educational tool. Not financial advice.', '')}<div class='field'><label class='label' for='homePrompt'>Planning prompt</label><input class='in' id='homePrompt' placeholder='What are you planning today?'></div><div class='card'><div class='progress'>Plan assistant</div><h3>Bias-led liquidity plan</h3><p class='sub'>Structure observations. No forecasts or trade signals.</p><div class='hero-actions'><button class='btn primary' id='startPlanBtn'>Start new analysis</button><button class='btn' data-route='liquidity-map'>Liquidity map</button><button class='btn' data-route='risk'>Risk review</button></div></div><div class='row-actions' aria-label='Session filter'>${chips}</div>${homeSession !== 'All' ? `<p class='hint'>Showing ${esc(homeSession)} cards and metrics.</p>` : ''}${hero}<h3>Review metrics</h3>${metricHtml(homeCards)}<div class='card'><div class='progress'>Watchlist</div><h3>${settings.watchlist.length ? settings.watchlist.map(esc).join(' · ') : 'No watchlist set'}</h3><p class='sub'>Edit defaults in Profile.</p></div></section>`;
   }
 
   function planner(){
@@ -2398,7 +2440,7 @@
   function saved(){
     const query = savedSearch.toLowerCase();
     const filtered = sortedCards().filter(c => {
-      const hay = [c.fields.instrument, c.fields.session, c.fields.bias, marketContextText(c.marketContext), stack(c.fields, 'dol', 'Liquidity draw'), stack(c.fields, 'sweep', 'Sweep liquidity'), c.notes, c.journal.lesson, c.journal.tags.join(' ')].join(' ').toLowerCase();
+      const hay = [c.fields.instrument, c.fields.session, c.fields.bias, marketContextText(c.marketContext), stack(c.fields, 'dol', 'Liquidity draw'), stack(c.fields, 'sweep', 'Sweep liquidity'), c.notes].join(' ').toLowerCase();
       const matchesSearch = !query || hay.includes(query);
       const matchesFilter = savedFilter === 'All' ||
         (savedFilter === 'Final Saved' && c.finalSaved) ||
@@ -2428,7 +2470,7 @@
     }).join('');
     const latest = (c.priceHistory || []).slice(-1)[0] || c.priceSnapshot || {};
     const mapSource = (latest && latest.source) || (c.priceSnapshot && c.priceSnapshot.source) || 'manual';
-    return `<section class='screen'>${pageHead('Focus card details', c.fields.instrument || 'No instrument', c.fields.session || 'No session', 'saved')}<div class='card-hero'><div class='progress'>${esc(c.fields.date || 'No date')}</div><h2>${esc(c.fields.instrument || 'No instrument')}</h2><p class='sub'>${esc(c.fields.session || 'No session')} · ${esc(c.fields.bias || 'No bias selected')}</p><div class='status-row'>${biasPill(c.fields.bias)}${c.finalSaved ? pill('Final saved', 'info') : pill(status === 'complete' ? 'Complete draft' : 'Draft', status === 'complete' ? 'ok' : 'warn')}${outcomePill(c.outcome)}</div><p class='hint'>Bias Determination For Session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div>${auditStripHtml(c)}<div class='card'><div class='progress'>Price Map Dashboard</div>${priceValidationHtml(c.fields)}${priceMapHtml(c.fields, {updatedAt: c.updatedAt, source: mapSource})}<p class='hint'>${esc(PRICE_DELAY_DISCLAIMER)}</p></div><div class='card'><div class='progress'>Focus DOL</div><label class='label' for='activeDol'>Active draw on liquidity</label><select class='in' id='activeDol'><option value=''>- active DOL -</option>${activeOptions}</select>${activeDolHtml(c)}</div><div class='card snapshot-section'>${priceSnapshotCardHtml(c)}${priceOverrideHtml(c)}${priceHistoryHtml(c)}</div><div class='card'><div class='progress'>Potential risk-to-reward</div>${riskPlanHtml(c)}</div><div class='card'><div class='progress'>Route to DOL / PD array evidence</div>${routeEvidenceHtml(c)}</div><div class='card'><div class='progress'>Market Context</div>${marketContextRows(c.marketContext)}</div><div class='card'><div class='progress'>DOL stack</div>${stackRows(c.fields, 'dol', 'DOL')}</div><div class='card'><div class='progress'>Potential sweep stack</div>${stackRows(c.fields, 'sweep', 'Sweep')}</div><div class='card'><div class='progress'>FVG</div>${fvgReviewHtml(c)}</div><div class='card'><h3>Trade highlights</h3><div class='review-grid'>${check('mark_dolRespected', 'DOL respected', c.markers.dolRespected)}${check('mark_sweepConfirmed', 'LTF sweep confirmed', c.markers.sweepConfirmed)}${check('mark_fvgFormed', 'FVG formed after sweep', c.markers.fvgFormed)}${check('mark_planFollowed', 'Plan followed', c.markers.planFollowed)}</div><label class='label' for='reviewOutcome'>Outcome</label><select class='in' id='reviewOutcome'>${options(outcomes, c.outcome, '- outcome -')}</select><label class='label' for='reviewNotes'>Verification notes</label><textarea class='in' id='reviewNotes' placeholder='Add review notes'>${esc(c.notes)}</textarea><div class='grid'><div><label class='label' for='riskPct'>Planned risk %</label><input class='in' id='riskPct' value='${esc(c.risk.plannedRiskPct)}' placeholder='0.5'></div><div><label class='label' for='plannedR'>Planned R</label><input class='in' id='plannedR' value='${esc(c.risk.plannedR)}' placeholder='2R'></div></div><label class='label' for='maxLoss'>Max loss</label><input class='in' id='maxLoss' value='${esc(c.risk.maxLoss)}' placeholder='Optional amount'><label class='label' for='journalLesson'>Journal lesson</label><textarea class='in' id='journalLesson' placeholder='Lesson learned'>${esc(c.journal.lesson)}</textarea><label class='label' for='journalTags'>Behaviour tags</label><input class='in' id='journalTags' value='${esc(c.journal.tags.join(', '))}' placeholder='patient, followed plan'></div><div class='row-actions'><button class='btn' id='loadBtn'>Load to planner</button><button class='btn' data-route='timeline'>Timeline</button><button class='btn' id='copyBtn'>Copy</button><button class='btn' id='shareBtn'>Share</button><button class='btn' id='saveChangesBtn'>Save changes</button><button class='btn good' id='finalSaveBtn'>Final save</button><button class='btn danger' id='deleteBtn'>Delete</button></div></section>`;
+    return `<section class='screen focus-detail'>${pageHead('Focus card details', c.fields.instrument || 'No instrument', c.fields.session || 'No session', 'saved')}<div class='card-hero'><div class='progress'>${esc(c.fields.date || 'No date')}</div><h2>${esc(c.fields.instrument || 'No instrument')}</h2><p class='sub'>${esc(c.fields.session || 'No session')} · ${esc(c.fields.bias || 'No bias selected')}</p><div class='status-row'>${biasPill(c.fields.bias)}${c.finalSaved ? pill('Final saved', 'info') : pill(status === 'complete' ? 'Complete draft' : 'Draft', status === 'complete' ? 'ok' : 'warn')}${outcomePill(c.outcome)}</div><p class='hint'>Session bias only. Educational tool. Not financial advice.</p></div>${auditStripHtml(c)}<div class='focus-grid'><div><div class='card'><div class='progress'>Price Map Dashboard</div>${priceValidationHtml(c.fields)}${priceMapHtml(c.fields, {updatedAt: c.updatedAt, source: mapSource, editable: true})}</div><div class='card'><div class='progress'>Focus DOL</div><label class='label' for='activeDol'>Active draw on liquidity</label><select class='in' id='activeDol'><option value=''>- active DOL -</option>${activeOptions}</select>${activeDolHtml(c)}</div><div class='card'><div class='progress'>Potential risk-to-reward</div>${riskPlanHtml(c)}</div><div class='card'><div class='progress'>Route to DOL / PD array evidence</div>${routeEvidenceHtml(c)}</div></div><div><div class='card snapshot-section'>${priceSnapshotCardHtml(c)}${priceOverrideHtml(c)}${priceHistoryHtml(c)}</div><div class='card'><div class='progress'>Market Context</div>${marketContextRows(c.marketContext)}</div><div class='card'><div class='progress'>DOL stack</div>${stackRows(c.fields, 'dol', 'DOL')}</div><div class='card'><div class='progress'>Potential sweep stack</div>${stackRows(c.fields, 'sweep', 'Sweep')}</div><div class='card'><div class='progress'>FVG</div>${fvgReviewHtml(c)}</div><div class='card'><h3>Trade highlights</h3><div class='review-grid'>${check('mark_dolRespected', 'DOL respected', c.markers.dolRespected)}${check('mark_sweepConfirmed', 'LTF sweep confirmed', c.markers.sweepConfirmed)}${check('mark_fvgFormed', 'FVG formed after sweep', c.markers.fvgFormed)}${check('mark_planFollowed', 'Plan followed', c.markers.planFollowed)}</div><label class='label' for='reviewOutcome'>Outcome</label><select class='in' id='reviewOutcome'>${options(outcomes, c.outcome, '- outcome -')}</select><label class='label' for='reviewNotes'>Review notes</label><textarea class='in' id='reviewNotes' placeholder='Add review notes'>${esc(c.notes)}</textarea><div class='grid'><div><label class='label' for='riskPct'>Planned risk %</label><input class='in' id='riskPct' value='${esc(c.risk.plannedRiskPct)}' placeholder='0.5'></div><div><label class='label' for='plannedR'>Planned R</label><input class='in' id='plannedR' value='${esc(c.risk.plannedR)}' placeholder='2R'></div></div><label class='label' for='maxLoss'>Max loss</label><input class='in' id='maxLoss' value='${esc(c.risk.maxLoss)}' placeholder='Optional amount'></div></div></div><div class='row-actions'><button class='btn' id='loadBtn'>Load to planner</button><button class='btn' data-route='timeline'>Timeline</button><button class='btn' id='copyBtn'>Copy</button><button class='btn' id='shareBtn'>Share</button><button class='btn' id='saveChangesBtn'>Save changes</button><button class='btn good' id='finalSaveBtn'>Final save</button><button class='btn danger' id='deleteBtn'>Delete</button></div></section>`;
 
   }
 
@@ -2460,12 +2502,6 @@
     const pct = key => final.length ? Math.round(final.filter(c => c.markers[key]).length / final.length * 100) : 0;
     const bar = (label, value) => `<div class='panel'><div class='btn-row-between'><strong>${esc(label)}</strong><span>${value}%</span></div><div style='height:10px;background:var(--surface-line);border-radius:var(--radius-pill);overflow:hidden'><div style='width:${value}%;height:100%;background:var(--primary)'></div></div></div>`;
     return `<section class='screen'>${pageHead('Risk tracker', 'Review Quality', 'Statistics come only from final-saved local cards.', 'home')}<div class='card-hero'><div class='progress'>Planned risk</div><h2>${esc(getSettings().riskDefaults.plannedRiskPct || 'Not set')}</h2><p class='sub'>Default risk fields can be edited from Profile. This is review tracking, not a forecast.</p></div>${metricHtml()}${bar('Bias quality', pct('biasValidated'))}${bar('DOL quality', pct('dolRespected'))}${bar('Sweep quality', pct('sweepConfirmed'))}${bar('FVG confirmation', pct('fvgFormed'))}${bar('Plan followed', pct('planFollowed'))}${!cards.length ? `<div class='panel'><p class='hint'>No review data yet.</p></div>` : ''}</section>`;
-  }
-
-  function journal(){
-    const entries = sortedCards().filter(c => c.notes || c.journal.lesson || c.journal.tags.length || c.outcome !== 'Open');
-    const list = entries.length ? entries.map(c => `<div class='card'><div class='progress'>${esc(c.outcome)} · ${esc(c.fields.date || new Date(c.savedAt).toLocaleDateString())}</div><h3>${esc(c.fields.instrument || 'No instrument')}</h3><p class='sub'>${esc(c.journal.lesson || c.notes || 'No journal lesson recorded.')}</p><div class='status-row'>${c.journal.tags.map(t => pill(t, 'info')).join('')}${statusPill(c)}</div><button class='btn' data-open-card='${esc(c.id)}'>Open focus card</button></div>`).join('') : `<div class='panel'><h3>No journal entries yet</h3><p class='hint'>Add notes or lessons from a focus card after review.</p></div>`;
-    return `<section class='screen'>${pageHead('Trade journal', 'Journal', entries.length + ' reviewed entries', '')}<div class='card-dashed card'><div class='progress'>Screenshots</div><h3>Screenshot metadata placeholder</h3><p class='sub'>Image uploads are left out of v1 to avoid storing large files in localStorage.</p></div><button class='btn' id='exportJsonBtn'>Export journal data</button>${list}</section>`;
   }
 
   function componentGallery(){
@@ -2617,7 +2653,6 @@
       'Outcome: ' + c.outcome,
       'Final saved: ' + (c.finalSaved ? 'Yes' : 'No'),
       'Favorite: ' + (c.favorite ? 'Yes' : 'No'),
-      'Journal lesson: ' + (c.journal.lesson || '-'),
       'Planned risk %: ' + (c.risk.plannedRiskPct || '-'),
       'Planned R: ' + (c.risk.plannedR || '-'),
       'Max loss: ' + (c.risk.maxLoss || '-'),
@@ -2671,10 +2706,12 @@
       };
     });
 
-    on('globalNewBtn', () => {
+    const newAnalysis = () => {
       if(plannerHasInput(f, marketContextDraft, plannerCardId) && !confirm('Start a new draft and replace the current planner inputs?')) return;
       go('planner', {new: true});
-    });
+    };
+    on('globalNewBtn', newAnalysis);
+    on('globalNewDesktopBtn', newAnalysis);
     on('startPlanBtn', () => go('planner', {new: true}));
     on('startHeroBtn', () => go('planner', {new: true}));
     on('continuePlanBtn', () => {
@@ -2689,6 +2726,21 @@
       }
       persistPlannerDraft();
       go('planner');
+    });
+
+    doc.querySelectorAll('[data-mirror-taken]').forEach(n => {
+      n.onchange = () => {
+        const key = n.getAttribute('data-mirror-taken');
+        const paired = q('focus_' + key);
+        if(paired) paired.checked = n.checked;
+      };
+    });
+    doc.querySelectorAll('[id^="focus_dol"][id$="Taken"]').forEach(n => {
+      n.onchange = () => {
+        const key = n.id.replace(/^focus_/, '');
+        const paired = q('priceMap_' + key);
+        if(paired) paired.checked = n.checked;
+      };
     });
     on('saveDraftBtn', () => savePlanner(false));
     on('nextBtn', () => savePlanner(true));
@@ -2958,9 +3010,10 @@
       const riskPlan = {
         direction: q('riskDirection') ? q('riskDirection').value : c.riskPlan.direction,
         targetDolId: q('riskTargetDol') ? q('riskTargetDol').value : activeDolId,
+        ratio: q('riskRatio') ? q('riskRatio').value : c.riskPlan.ratio,
         entryPrice: q('riskEntryPrice') ? q('riskEntryPrice').value : c.riskPlan.entryPrice,
-        targetPrice: q('riskTargetPrice') ? q('riskTargetPrice').value : c.riskPlan.targetPrice,
-        invalidationPrice: q('riskInvalidation') ? q('riskInvalidation').value : c.riskPlan.invalidationPrice
+        targetPrice: c.riskPlan.targetPrice,
+        invalidationPrice: c.riskPlan.invalidationPrice
       };
       if(focusPrice !== c.fields.currentPrice && (!riskPlan.entryPrice || clean(riskPlan.entryPrice) === clean(c.fields.currentPrice))){
         riskPlan.entryPrice = focusPrice;
@@ -2983,10 +3036,7 @@
         finalSaved: !!(finalSave && finalOutcomes.includes(outcome)),
         priceSource: focusPrice !== c.fields.currentPrice ? 'manual' : (c.priceSnapshot.source || 'manual'),
         priceHistoryEvent: finalSave ? 'final-save' : 'saved-edit',
-        journal: {
-          tags: arrayText(q('journalTags') ? q('journalTags').value : c.journal.tags),
-          lesson: q('journalLesson') ? q('journalLesson').value.trim() : c.journal.lesson
-        },
+        journal: c.journal,
         risk: {
           plannedRiskPct: q('riskPct') ? q('riskPct').value.trim() : c.risk.plannedRiskPct,
           plannedR: q('plannedR') ? q('plannedR').value.trim() : c.risk.plannedR,
@@ -3198,7 +3248,6 @@
     else if(route === 'timeline') content = timeline();
     else if(route === 'liquidity-map' || route === 'notes') content = liquidityMap();
     else if(route === 'risk') content = risk();
-    else if(route === 'journal') content = journal();
     else if(route === 'profile') content = profile();
     else if(route === 'component-gallery') content = componentGallery();
     ensureLiveRegion();

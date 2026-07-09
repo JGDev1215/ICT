@@ -2,35 +2,47 @@
 
 ## Plan Quality
 
-The plan is appropriately scoped for the first safe phase of a broad remediation request. It addresses confirmed current documentation contradictions and avoids premature runtime refactoring.
+The implementation plan is specific enough to execute and correctly limits the work to the requested feature changes, tests, documentation, and QA evidence. It respects the no-build app, local-first storage, manual price fallback, optional Supabase sync, GitHub Pages support, and the prohibition on modularizing `assets/app.js`.
 
 ## Missing Steps
 
-- Record that one audit agent reported test coverage gaps and repeated older physical-device guidance, but the user has clarified real-device QA is not necessary.
-- Keep broader runtime/test findings as next-phase items unless they are confirmed defects.
-- Add API boundary coverage as test-only work; do not change `/api/price` behavior unless tests reveal a defect.
+- Explicitly preserve `journal` data through normalization, JSON export/import, Supabase payloads, and stored card compatibility while removing all user-facing Journal UI.
+- Explicitly handle old `#journal` URLs in both route parsing and route normalization.
+- Define a stable persisted R:R ratio field on `riskPlan`.
+- Sync mirrored DOL taken checkboxes both ways in the DOM before save.
+- Treat production `v0.8.5` verification as release-closure evidence, while the local feature pass becomes `v0.8.6`.
+- Record Supabase live QA as credential-dependent if the admin password/session is unavailable.
 
 ## Risk Areas
 
-- The broad user objective could pull unrelated refactors into this phase.
-- Current docs mix historical release gates with current operation requirements.
-- Removing physical-device wording must not remove production mobile-site browser QA.
-- API tests must mock yfinance and must not depend on live market data or CI network access.
+- Broad string removals for `journal` could break stored/exported compatibility.
+- Existing tests use broad source-string assertions that must be updated carefully instead of removing storage-contract coverage.
+- The desktop sidebar must override bottom-nav body padding, app padding, sticky CTA positioning, and FAB visibility together.
+- DOL taken mirrored state can be wrong if one checkbox remains checked while the other is unchecked; active DOM sync is required.
+- Production GitHub Issue #7 update is an external write action and should be performed only after confirming scope and using available authenticated tooling.
 
 ## Overengineering Concerns
 
-Do not create new systems or refactor `assets/app.js` in this phase. API boundary work should stay as test coverage around the existing handler.
+- Do not introduce a framework, build step, or module extraction.
+- Do not redesign every screen for desktop. Use a sidebar shell and focused multi-column wrappers only where the detail/dashboard layout benefits.
+- Do not create a new storage key or export schema for this feature pass.
 
 ## Simpler Alternatives
 
-A single documentation correction across current QA/release docs and README is sufficient for this phase.
+- Use existing `.tab-bar` markup and CSS media queries to turn it into a sidebar.
+- Keep `journal` data model fields but hide/remove user-facing controls.
+- Add `ratio` to `riskPlan` and calculate invalidation as derived output rather than adding multiple new fields.
+- Add `prefix/index/fieldKey` metadata to price-map levels instead of creating a separate price-map state model.
 
 ## Required Amendments
 
-- Replace physical-device requirements with production web/mobile-site browser QA, not with no QA.
-- Leave archived docs untouched.
-- Keep runtime tests out of this docs-only phase unless runtime files are changed later.
-- Include API boundary tests in `npm test` only if they remain fast, deterministic, and network-free.
+1. Preserve `journal` data in cards and JSON compatibility, but remove Journal from user-facing UI, current README, current tests, text export, and search copy.
+2. Make `go('journal')`, direct `#journal`, and any old Journal route resolve to Home.
+3. Add `riskPlan.ratio`, using legacy `invalidationPrice` only as a best-effort source for old cards when possible, else defaulting to planned/default ratio.
+4. Render R:R target/invalidation/risk/reward as calculated values from entry/current, selected DOL, direction, and ratio.
+5. Render editable Price Map DOL taken controls only in Focus Card context, with stable IDs and two-way checkbox sync.
+6. Add desktop layout tests and mobile preservation tests.
+7. Record production `v0.8.5` evidence separately from local `v0.8.6` changes.
 
 ## Decision
 

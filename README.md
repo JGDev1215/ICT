@@ -20,7 +20,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 - Runtime dependencies: no build-time bundle; optional Supabase JS is loaded from CDN for Account & Backup
 - Dev QA dependencies: Playwright, installed only through `npm install`
 - Data storage: browser localStorage/sessionStorage with optional Supabase server sync for Focus Cards
-- Current app version: v0.8.5
+- Current app version: v0.8.6
 - Main entrypoint: index.html
 - Runtime config: assets/config.js
 - Stylesheet: assets/styles.css
@@ -34,7 +34,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 
 The redesigned main page is a mobile-first dashboard with:
 
-- Bottom tab navigation for Home, Planner, Saved, Journal, and Profile.
+- Mobile bottom navigation for Home, Planner, Saved, and Profile, with a desktop sidebar at wider widths.
 - A planning prompt, session-filter chips, and plan-assistant card.
 - Today's focus card from the latest draft or saved plan.
 - Review metrics based on final-saved cards.
@@ -214,7 +214,7 @@ The Focus Card records:
 - Price history for created, saved-edit, and final-save events.
 - Active DOL target.
 - Route evidence for SIBI, BISI, CE, OB, FVG, highs, lows, and other arrays.
-- Potential R:R to the selected DOL using entry/current price, target price, invalidation/stop, and direction.
+- Potential R:R to the selected DOL using entry/current price, selected ratio, direction, and an auto-derived invalidation/stop.
 
 Typing does not update the saved card. The user must press Save changes or Final save to capture edits, timestamps, price data, route evidence, and risk metrics.
 
@@ -248,7 +248,6 @@ Each saved card opens into a Focus Card Details screen with:
 - Plan followed marker.
 - Outcome selector: Open, Hit, Miss, Breakeven, Read
 - Verification notes
-- Journal lesson and behavior tags
 - Load to planner
 - Copy
 - Share
@@ -256,7 +255,7 @@ Each saved card opens into a Focus Card Details screen with:
 - Final save
 - Delete
 
-Secondary screens are included for Execution Timeline, Liquidity Map / Setup Library, Risk Tracker, Trade Journal, and Trader Profile / Settings.
+Secondary screens are included for Execution Timeline, Liquidity Map / Setup Library, Risk Tracker, and Trader Profile / Settings.
 
 ## Save Changes vs Final Save
 

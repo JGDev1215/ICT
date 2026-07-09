@@ -17,21 +17,22 @@ This file tracks only items still open after the 2026-07-08 implementation and d
 
 Agent-assisted browser QA is recorded in `docs/qa/release-qa-evidence-2026-07-08.md`. Remaining checks should be recorded from the deployed web/mobile-site experience.
 
-- [ ] Record v0.8.5 production web QA after deployment: visible version/assets, admin login, Focus Card create/save/final-save/sync/reload, and clear-device behavior.
-- [ ] Record mobile-site browser QA at supported responsive viewport widths, including bottom navigation, Planner sticky actions, import/export usability, touch targets, and offline shell reload where supported by the browser test context.
+- [x] Record v0.8.5 production web shell QA after deployment: visible version/assets on Vercel and GitHub Pages. See `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- [x] Record automated mobile-site browser QA at supported responsive viewport widths, including bottom navigation, Planner sticky actions, import/export usability, touch targets, and offline shell reload where supported by the browser test context. See `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- [ ] Record live admin login / Supabase Account & Backup sync QA with the real admin password or authenticated browser session.
 - [ ] Record assistive-technology/browser accessibility follow-up if moving from beta to public release.
 
 ## GitHub Housekeeping Still Required
 
-- [ ] If GitHub Issue `#7` is still open, repurpose it from physical-device evidence to production web/mobile-site QA evidence, or close it if superseded.
+- [x] GitHub Issue `#7` was closed as superseded by the web/mobile-site QA scope on 2026-07-09.
 
 ## Completed By Agent-Assisted QA
 
-- Live production price-provider endpoint QA for one supported symbol and one unsupported symbol is recorded in `docs/qa/live-price-provider-qa-2026-07-09.md`. The live app shell still reported v0.8.4 during that endpoint check, so v0.8.5 deployment UI QA remains open.
+- Live production price-provider endpoint QA for one supported symbol and one unsupported symbol is recorded in `docs/qa/live-price-provider-qa-2026-07-09.md`. A later shell check confirmed v0.8.5 is deployed on Vercel and GitHub Pages; see `docs/qa/production-web-mobile-qa-2026-07-09.md`.
 - Mobile Chrome emulation at 390px and 430px.
 - Mobile Safari/WebKit emulation at 390px and 430px.
 - Bottom nav and Planner sticky CTA visibility/tappability.
-- Cross-screen rendering for Home, Planner, Saved, Focus Card, Timeline, Liquidity Map, Risk, Journal, Profile, and Component Gallery.
+- Cross-screen rendering for Home, Planner, Saved, Focus Card, Timeline, Liquidity Map, Risk, Profile, and Component Gallery.
 - Chromium/mobile Chrome offline service-worker shell reload.
 - Accessibility/ARIA spot check for skip link, focus styling, primary nav state, and filter chip selected state.
 

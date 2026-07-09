@@ -1,88 +1,108 @@
 # Approved Plan
 
-## Goal
+## Decision
 
-Complete focused remediation phases for the broad goal: documentation/process drift corrections, concrete runtime defects found by the runtime audit agent, and safe refactor/test foundation items that do not move runtime files.
+APPROVED WITH AMENDMENTS
+
+This is the only plan authorized for execution.
 
 ## Execution Scope
 
-- Documentation, focused runtime fixes, tests, and version/cache updates.
-- No modularization.
-- No storage/schema/key changes.
-- No commit or push.
+Implement CR-1 through CR-5, update tests and documentation, record production/web QA evidence, and run required checks. Do not commit or push.
 
-## Approved Changes
+## Authorized Runtime Changes
 
-1. Replace current physical/real-device release gates with production web and mobile-site browser QA.
-2. Keep responsive viewport, offline/service-worker browser behavior, import/export browser flow, live price provider, and accessibility follow-up as relevant QA items.
-3. Update README Known Limitations so saved cards are described as local-first with optional Account & Backup sync, not browser-local-only.
-4. Reconcile Supabase wording so browser localStorage remains the immediate source of truth and Supabase is optional backup/sync.
-5. Update current docs/index/status language so implemented v0.8.3/v0.8.4 plans are not presented as pending source-of-truth work.
-6. Record audit-agent findings and preserve the existing daily-report mobile-site clarification.
-7. Align Planner completion/card status with Generate Focus Plan validation.
-8. Persist and restore `manualPriceNeededAck` in planner drafts and saved cards.
-9. Make Price Map source/status distinguish manual prices from hosted/local yfinance prices.
-10. Import exported settings best-effort through JSON import while preserving card import behavior.
-11. On local development/file contexts, allow the local price helper to run after a hosted unsupported-symbol response.
-12. Bump runtime version/cache/docs to v0.8.5 because `assets/app.js` behavior changes.
-13. Add/update smoke and Playwright coverage for these fixes.
-14. Add Playwright import UI/file-picker coverage.
-15. Add `tests/unit/` with a simple Node runner around current exported helpers.
-16. Update `package.json` scripts so `npm test` runs smoke and unit tests while E2E remains separate.
-17. Add `Legacy/README.md` documenting historical-only legacy files.
-18. Add deterministic `/api/price` boundary tests for missing symbol, unsupported symbol, yfinance dependency unavailable, provider unavailable, and mocked successful response shape.
-19. Add a `test:api` package script and include it in `npm test` if the test remains fast and network-free.
+### CR-1 - Remove User-Facing Journal
 
-## Files Approved For Editing
+- Remove `journal` from primary navigation.
+- Remove the Journal route/view and render branch.
+- Make old `journal` routes resolve to Home, including `go('journal')` and direct hash parsing.
+- Remove Focus Card Journal lesson and behaviour-tag controls.
+- Remove Journal references from current user-facing README sections, text export, saved-card search text, and tests.
+- Preserve storage compatibility:
+  - keep `normJournal`;
+  - keep `card.journal`;
+  - keep JSON export/import compatibility;
+  - do not change storage keys or export schema;
+  - do not break Supabase card payload compatibility.
 
-- `README.md`
-- `docs/README.md`
-- `docs/plans/supabase-focus-card-storage-plan.md`
-- `docs/plans/planner-validation-price-autodetect-plan-2026-07-09.md`
-- `docs/plans/review-fix-report-2026-07-09.md`
-- `docs/qa/docs-implementation-checklist-2026-07-08.md`
-- `docs/qa/release-qa-evidence-2026-07-08.md`
-- `docs/release/release-decision-log-2026-07-08.md`
-- `docs/daily-reports/2026-07-09-session-report-2.md`
-- `CHANGELOG.md`
-- `index.html`
-- `service-worker.js`
-- `assets/app.js`
-- `assets/styles.css`
-- `tests/smoke.js`
-- `tests/e2e/planner.spec.js`
-- `tests/unit/run-tests.js`
-- `tests/api/test_price.py`
-- `package.json`
-- `Legacy/README.md`
-- `agent-workflow/*`
+### CR-2 - Potential R:R Calculation
 
-## Acceptance Criteria
+- Add/normalize a `riskPlan.ratio` field.
+- Use current/entry price and selected target DOL.
+- Reward distance is `abs(target - entry)`.
+- Stop distance is `reward / selectedRatio`.
+- Long target must be above entry; invalidation is below entry.
+- Short target must be below entry; invalidation is above entry.
+- Display and save auto-derived target, risk points, reward points, potential R:R, and invalidation/stop.
+- Preserve invalid-side guard.
 
-- Current docs no longer require physical-device testing.
-- Current docs still require production web/mobile-site browser QA where relevant.
-- Supabase docs no longer conflict with the local-first product rule.
-- Implemented v0.8.3/v0.8.4 plans are clearly historical/completed or non-source-of-truth.
-- `docs/README.md` indexes current plan/report state accurately.
-- Runtime fixes are limited to the approved audit findings.
-- Storage key `ict_cards_v078` and export schema `ict_dol_sweep_export_v7` are preserved.
-- Manual price fallback and local-first behavior are preserved.
-- `npm test` includes smoke, unit, and API boundary tests.
-- API boundary tests do not call live yfinance or require network access.
-- Legacy folder is documented without deleting or renaming legacy files.
-- No runtime files are moved or modularized.
+### CR-3 - Concise Copy
 
-## Checks
+- Condense primary-flow copy in Home, Planner, Focus Card, Risk, Profile, and docs.
+- Replace the visible disclaimer with `Educational tool. Not financial advice.`
+- Remove duplicate delayed-price notices in Focus Card details while retaining one useful price-delay notice.
 
-- `rg -n "physical|real-device|real devices|iOS Safari|Android Chrome|PWA install|Add to Home Screen" README.md docs/qa docs/release docs/daily-reports docs/plans`
-- `rg -n "server-side source of truth|browser-local only|not synced across devices" README.md docs`
-- `node tools/bump-version.js v0.8.5 audit-fixes 20260709`
-- `node tests/smoke.js`
-- `python3 tests/api/test_price.py`
+### CR-4 - Desktop Layout
+
+- Preserve mobile layout below `1024px`.
+- At `>=1024px`, use a left sidebar style based on existing primary nav markup.
+- Hide the mobile FAB on desktop and show a labeled `New analysis` action.
+- Widen centered content to about `1200px`.
+- Add focused multi-column layout for dense detail/dashboard panels without changing mobile order.
+- Override bottom padding and sticky planner CTA behavior for desktop.
+
+### CR-5 - Price Map DOL Taken Mirror
+
+- Add DOL taken checkboxes to DOL rows in the editable Focus Card Price Map Dashboard.
+- Keep existing DOL Stack controls.
+- Add stable row metadata in `priceMapLevels()`.
+- Use stable IDs such as `priceMap_dol1Taken`.
+- Sync Price Map and DOL Stack checkbox state both ways before save.
+- Save one shared `dolNTaken` state and verify reload behavior.
+
+## Authorized Test Changes
+
+- Update smoke tests for:
+  - no user-facing Journal route/nav/fields/text export;
+  - `go('journal')` resolves Home;
+  - JSON/storage `journal` compatibility remains;
+  - editable Price Map includes DOL taken controls only in Focus Card context;
+  - version/cache alignment for `v0.8.6`.
+- Update unit tests for:
+  - Long derived stop/R:R;
+  - Short derived stop/R:R;
+  - invalid target side guard.
+- Update Playwright tests for:
+  - desktop sidebar layout at `>=1024px`;
+  - mobile bottom nav below `1024px`;
+  - R:R UI calculation;
+  - Price Map/DOL Stack mirrored DOL taken state.
+- Update release QA tests that currently expect Journal route.
+
+## Authorized Docs/QA Changes
+
+- Run `node tools/bump-version.js v0.8.6 release 20260709` after runtime changes.
+- Update README and CHANGELOG for current behavior.
+- Create or update `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- Update `docs/qa/docs-implementation-checklist-2026-07-08.md`.
+- Update or cross-reference stale `v0.8.4` note in `docs/qa/live-price-provider-qa-2026-07-09.md` because production now serves `v0.8.5`.
+- Record Supabase live QA as blocked by missing credentials/session if applicable.
+- Inspect or update GitHub Issue `#7` if authenticated tooling permits.
+
+## Required Checks
+
 - `npm test`
-- `npx playwright test tests/e2e/planner.spec.js`
-- `npx playwright test`
+- `npm run test:e2e`
 - `git diff --check`
-- `git status --short`
+- `node tests/smoke.js` explicitly if needed for AGENTS.md handoff clarity.
+- `python3 -m py_compile api/price.py tests/api/test_price.py` only if API files are touched.
 
-One audit agent independently ran `node tests/smoke.js` successfully during read-only audit before runtime edits.
+## Stop Conditions
+
+- Path or remote changes unexpectedly.
+- Storage key/export schema changes become necessary without a tested migration.
+- Manual price entry stops working.
+- Supabase login becomes required for normal app use.
+- GitHub Pages runtime asset references drift from service worker cache entries.
+- Baseline passing tests regress and cannot be fixed within the approved scope.
