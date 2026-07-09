@@ -6,7 +6,7 @@ APPROVED
 
 ## Reasoning
 
-The implementation satisfies the approved plan, preserves local-first storage contracts, keeps manual price fallback available, and passes required smoke plus Planner E2E tests.
+The live production price-provider QA passed for supported `MNQ`, unsupported `NOTREAL`, and Planner manual fallback behavior.
 
 ## Required Fixes
 
@@ -14,4 +14,4 @@ None.
 
 ## Next Action
 
-Prepare final approval and handoff. Do not commit or push unless explicitly instructed.
+Finalize QA workflow evidence and report results to the user.

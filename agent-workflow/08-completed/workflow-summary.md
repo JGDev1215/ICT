@@ -2,7 +2,7 @@
 
 ## User Task
 
-Implement the scoped Planner validation and price auto-detect fix from `docs/plans/planner-validation-price-autodetect-plan-2026-07-09.md`.
+Commit and push the Planner validation / price auto-detect fix, then run live production price-provider QA.
 
 ## Local Path
 
@@ -27,24 +27,16 @@ Implement the scoped Planner validation and price auto-detect fix from `docs/pla
 
 ## Files Changed
 
-- `CHANGELOG.md`
-- `README.md`
 - `agent-workflow/00-inbox/current-task.md`
 - `agent-workflow/01-intake/task-brief.md`
 - `agent-workflow/02-plans/implementation-plan.md`
-- `agent-workflow/03-senior-review/approved-plan.md`
 - `agent-workflow/03-senior-review/plan-review.md`
+- `agent-workflow/03-senior-review/approved-plan.md`
 - `agent-workflow/04-execution/execution-report.md`
 - `agent-workflow/05-code-review/review-report.md`
 - `agent-workflow/06-fix-rounds/senior-decision.md`
 - `agent-workflow/07-final-review/final-approval.md`
 - `agent-workflow/08-completed/workflow-summary.md`
-- `assets/app.js`
-- `assets/styles.css`
-- `index.html`
-- `service-worker.js`
-- `tests/e2e/planner.spec.js`
-- `tests/smoke.js`
 
 ## Workflow Files Created
 
@@ -65,8 +57,14 @@ Implement the scoped Planner validation and price auto-detect fix from `docs/pla
 - `git remote -v`
 - `git status`
 - `find . -maxdepth 3 -type f | sed 's#^\./##' | sort | head -200`
-- `node tests/smoke.js`
-- `npx playwright test tests/e2e/planner.spec.js`
+- `git diff`
+- `git add .`
+- `git commit -m "fix: validate planner saves and price auto-detect"`
+- `git push`
+- `curl -L https://ictict-lake.vercel.app`
+- `curl -i https://ictict-lake.vercel.app/api/price?symbol=MNQ`
+- `curl -i https://ictict-lake.vercel.app/api/price?symbol=NOTREAL`
+- One-off Playwright live browser QA script
 
 ## Final Decision
 
@@ -74,4 +72,4 @@ SAFE TO COMMIT
 
 ## Recommended Next Step
 
-Review `git diff`, then commit with `fix: validate planner saves and price auto-detect` if the changes look good.
+Commit the workflow-only live QA evidence if a persistent audit trail is desired.

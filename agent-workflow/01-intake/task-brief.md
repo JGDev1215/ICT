@@ -2,46 +2,38 @@
 
 ## Original User Task
 
-Implement the scoped product fix in `docs/plans/planner-validation-price-autodetect-plan-2026-07-09.md` after reading AGENTS.md, docs/README.md, README.md, CHANGELOG.md, that plan, and the 2026-07-09 final daily report. Preserve local-first behavior, manual price fallback, storage keys, migrations, export/import compatibility, and optional Supabase sync. Do not commit or push.
+Run the requested git status/diff/add/commit/push commands, then perform live production price-provider QA because automated price tests use mocked provider responses.
 
 ## Objective
 
-Prevent accidental empty or near-empty Focus Cards, keep meaningful partial drafts savable, add clear Generate Focus Plan validation, and improve price auto-detect reliability/status/fallback behavior.
+Verify the live production app and hosted price endpoint after deployment, focusing on real provider behavior for supported and unsupported symbols and preserving manual price fallback.
 
 ## Repo Findings
 
 - Safety check passed in `/Users/soonjeongguan/Desktop/FRAMEWORK`.
 - Git remote is `https://github.com/JGDev1215/ICT.git`.
-- Worktree was clean before workflow updates.
-- App is static HTML/CSS/plain JavaScript with no build step.
-- Planner save behavior is centralized in `assets/app.js` through `savePlanner(openDetails)`.
-- Draft detection currently uses `plannerHasInput`, which can treat default/prefilled values as meaningful.
-- Focus completion status currently uses `comp(fields)`.
-- Price lookup uses `fetchPrice(symbol)`, hosted API resolution, and local helper fallback.
-- Existing E2E coverage is in `tests/e2e/planner.spec.js`.
+- Commit `18c3149 fix: validate planner saves and price auto-detect` was pushed to `main`.
+- Worktree was clean before starting this live-QA workflow.
+- Live app URL from handoff: `https://ictict-lake.vercel.app`.
+- Price endpoint should be available at `https://ictict-lake.vercel.app/api/price?symbol=MNQ`.
 
 ## Assumptions
 
-- "Near-empty" means only default date/time, default profile instrument/session, or no meaningful user-entered planning data.
-- Save Draft should allow one meaningful user field, market context note, or an existing loaded planner card.
-- Generate Focus Plan should require instrument, session, bias, valid current price or an explicit manual-price-needed acknowledgement, and at least one complete DOL row.
-- A checkbox acknowledgement for missing current price is acceptable because the source plan explicitly allows an explicit manual-price-needed acknowledgement.
+- Live QA should use the production Vercel URL, not localhost.
+- It is acceptable to use direct HTTP checks plus Playwright browser automation against the live URL.
+- If the live site has not deployed `v0.8.3` yet, wait briefly and poll before judging the runtime behavior.
 
 ## Out of Scope
 
-- No saved-card storage key change.
-- No export schema change.
-- No Supabase schema or sync behavior change.
-- No redesign of the planner or saved-card UI.
-- No live provider dependency in automated tests.
-- No commit or push.
+- No code changes unless a blocking defect is found and separately planned.
+- No creation of live QA Focus Cards unless needed for price-provider verification.
+- No commit or push for workflow-only QA evidence unless explicitly requested.
 
 ## Success Criteria
 
-- [ ] Empty/default-only Planner Save Draft is blocked with visible feedback.
-- [ ] Meaningful partial drafts still save.
-- [ ] Generate Focus Plan blocks missing required fields and partial DOL/sweep rows with visible validation.
-- [ ] Manual current price remains usable without network/API access.
-- [ ] Price auto-detect handles normalized symbols, malformed responses, unsupported symbols, and provider failures with clear fallback copy.
-- [ ] Storage key remains `ict_cards_v078` and export schema remains `ict_dol_sweep_export_v7`.
-- [ ] Required smoke and relevant Playwright tests pass.
+- [ ] Live app serves `v0.8.3` assets.
+- [ ] Live `/api/price?symbol=MNQ` returns JSON with a positive numeric price.
+- [ ] Live `/api/price?symbol=NOTREAL` fails gracefully with unsupported-symbol JSON/status.
+- [ ] Live Planner Auto-detect for `MNQ` populates Current price and shows detected status.
+- [ ] Live Planner unsupported symbol leaves manual price usable and shows fallback status.
+- [ ] Results are recorded in workflow evidence.

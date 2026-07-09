@@ -2,33 +2,29 @@
 
 ## Plan Quality
 
-The plan is scoped to the requested product fix and identifies the central save path, existing completion helper, price lookup helper, tests, cache-busting requirements, and documentation updates.
+The plan is appropriately scoped to live QA and avoids app code changes.
 
 ## Missing Steps
 
-The plan should explicitly avoid adding any new saved-card field for the missing-price acknowledgement. The acknowledgement should be transient planner UI state only.
+None.
 
 ## Risk Areas
 
-- Blocking Save Draft too aggressively could remove the intended rough-draft workflow.
-- Treating optional sweep detail fields as required would conflict with existing product rules.
-- Price auto-detect tests could become flaky if they hit live services.
-- Cache-busting must be updated consistently with service-worker assets.
+- Deployment lag could make a valid push appear stale.
+- Provider/network issues could be transient and should be reported as observed rather than treated as code defects without evidence.
 
 ## Overengineering Concerns
 
-Do not add a validation framework, schema library, or large state abstraction. Keep helpers small and local to `assets/app.js`.
+Do not add permanent test files for a one-off live QA pass unless a repeatable regression is discovered.
 
 ## Simpler Alternatives
 
-Use the existing `normFields`, `priceNumber`, `marketContextText`, and row field naming conventions rather than introducing a new data model.
+Use direct `curl` for endpoint checks and a short Playwright one-off script for UI behavior.
 
 ## Required Amendments
 
-- Keep the missing-price acknowledgement transient and out of normalized cards/import/export.
-- Do not require sweep rows for Generate Focus Plan unless the user partially fills a sweep row.
-- Use route mocking for Playwright price tests rather than live yfinance.
+None.
 
 ## Decision
 
-APPROVED WITH AMENDMENTS
+APPROVED
