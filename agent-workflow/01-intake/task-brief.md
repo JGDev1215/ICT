@@ -2,38 +2,32 @@
 
 ## Original User Task
 
-Make the folder structure easier for LLMs to understand and update `AGENTS.md` so agents go to the correct docs folder and save files in the correct docs folder.
+Commit and test out a daily report, make sure the LLM reads the prompt when creating the report and saves it to the folder, thereafter commit and push.
 
 ## Objective
 
-Improve documentation governance without changing app runtime behavior.
+Create a real daily report using `docs/daily-reports/README.md`, verify docs/tests, commit the documentation changes, and push to GitHub.
 
 ## Repo Findings
 
-- `docs/README.md` already identifies current docs and archive sections.
-- `docs/archive/README.md` already warns that archived docs are historical only.
-- `AGENTS.md` has workflow rules but did not yet include explicit documentation routing.
-- `docs/.DS_Store` exists and should be removed.
-- `docs/archive/old-agent-prompts/` exists as an empty folder and should be removed.
-- `.gitignore` already ignores `.DS_Store`.
+- `docs/daily-reports/README.md` contains the daily report template.
+- Current branch is `main`.
+- Remote is `https://github.com/JGDev1215/ICT.git`.
+- Documentation cleanup changes are pending.
 
 ## Assumptions
 
-- Updating `AGENTS.md` is in scope because the user explicitly requested it.
-- Existing untracked prompt/report files outside `docs/` are unrelated and must remain untouched.
-- This is a docs-governance task only.
+- Commit should include the pending docs archive cleanup, daily report folder, report file, and workflow records.
 
 ## Out of Scope
 
-- Runtime app behavior.
-- Supabase schema changes.
-- Moving archived documents again.
-- Committing or pushing.
+- Runtime app code changes.
+- New product fixes.
 
 ## Success Criteria
 
-- [ ] `AGENTS.md` explains where agents should read and save documentation.
-- [ ] `docs/README.md` includes a compact save-location guide.
-- [ ] `docs/.DS_Store` is gone.
-- [ ] Empty `docs/archive/old-agent-prompts/` is gone.
-- [ ] `node tests/smoke.js` passes.
+- [x] Daily report prompt was read.
+- [x] Daily report was created under `docs/daily-reports/`.
+- [ ] Smoke test passes.
+- [ ] Changes are committed.
+- [ ] Commit is pushed to `origin/main`.

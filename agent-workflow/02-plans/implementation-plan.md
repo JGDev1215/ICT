@@ -2,60 +2,49 @@
 
 ## Goal
 
-Make repository documentation routing explicit for future agents and LLMs.
+Validate the daily report process and publish the documentation cleanup.
 
 ## Repo Findings
 
-- Current docs are organized under `docs/database`, `docs/implementation-reports`, `docs/plans`, `docs/qa`, and `docs/release`.
-- Historical docs are archived under `docs/archive`.
-- `AGENTS.md` is the right durable place for agent save-location rules.
-- `docs/README.md` is the right human/LLM entry point for documentation navigation.
+- Daily report template exists in `docs/daily-reports/README.md`.
+- Pending changes are documentation and workflow records.
 
 ## Files Likely Affected
 
-- `AGENTS.md`
-- `docs/README.md`
+- `docs/daily-reports/2026-07-09-session-report.md`
 - `agent-workflow/*`
-- `docs/.DS_Store`
-- empty `docs/archive/old-agent-prompts/`
 
 ## Proposed Changes
 
-- Add `Documentation Routing Rules` to `AGENTS.md`.
-- Add `Before Creating A Doc` and `Where To Save New Docs` sections to `docs/README.md`.
-- Remove `docs/.DS_Store`.
-- Remove empty `docs/archive/old-agent-prompts/`.
-- Update workflow reports for this task.
+- Create a daily report using the documented template.
+- Run smoke and doc scans.
+- Commit and push all relevant documentation/workflow changes.
 
 ## Step-by-Step Plan
 
-1. Confirm repo path, remote, and dirty state.
-2. Remove docs folder noise.
-3. Patch `AGENTS.md` with documentation routing rules.
-4. Patch `docs/README.md` with a save-location table.
-5. Update required `agent-workflow/` files.
-6. Run the requested `find`, `rg`, and smoke checks.
+1. Read `docs/daily-reports/README.md`.
+2. Create `docs/daily-reports/2026-07-09-session-report.md`.
+3. Update workflow records.
+4. Run checks.
+5. Stage `AGENTS.md`, `README.md`, `docs`, and `agent-workflow`.
+6. Commit and push to `origin/main`.
 
 ## Acceptance Criteria
 
-- Agents can determine where to save current plans, reports, QA, release, database, and archived docs.
-- `docs/README.md` clearly distinguishes durable docs from `agent-workflow/`.
-- No docs `.DS_Store` remains.
-- Runtime smoke test passes.
+- Report exists in the correct folder.
+- Smoke test passes.
+- Commit and push succeed.
 
 ## Test Plan
 
-```bash
-find docs -maxdepth 4 -type f | sort
-rg -n "Documentation Routing Rules|Where To Save New Docs|docs/archive|docs/plans|docs/qa|docs/release|docs/database" AGENTS.md docs/README.md README.md
-node tests/smoke.js
-```
+- `node tests/smoke.js`
+- `test -f docs/daily-reports/2026-07-09-session-report.md`
+- `git status --short`
 
 ## Risks
 
-- `AGENTS.md` was already dirty before this task; patch only the requested routing section.
-- Archived docs are numerous; avoid moving them again.
+Low. Documentation-only changes.
 
 ## Rollback Plan
 
-Revert the `AGENTS.md` and `docs/README.md` documentation-routing additions and restore only the removed local noise if explicitly needed.
+Revert the commit if needed.

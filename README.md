@@ -408,6 +408,7 @@ ICT/
 │   │   ├── historical-plans/
 │   │   └── superseded-design/
 │   ├── database/
+│   ├── daily-reports/
 │   ├── implementation-reports/
 │   ├── plans/
 │   ├── qa/

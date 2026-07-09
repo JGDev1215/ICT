@@ -1,3 +1,88 @@
+# Codex Workflow Setup Implementation Prompt
+
+> Status: Historical
+> Last reviewed: 2026-07-09
+> Source of truth: No
+
+## Mission
+
+Set up this repository so Codex automatically follows a structured local agent workflow for every future task.
+
+The user’s goal is:
+
+- Codex runs locally inside the ICT app repository.
+- Codex uses `AGENTS.md` as the permanent operating instruction.
+- The user should not need to paste the full workflow every time.
+- For future work, the user should only need to provide a short task.
+- Codex must plan, review, execute, audit, fix if needed, and provide final approval.
+- Codex must communicate through markdown files inside the repo.
+- Codex must not modify app code as part of this setup task.
+
+---
+
+## Repository Location
+
+The local repo must be:
+
+```text
+/Users/soonjeongguan/Desktop/FRAMEWORK
+```
+
+The GitHub remote must be:
+
+```text
+https://github.com/JGDev1215/ICT.git
+```
+
+---
+
+## Step 1 — Verify Location and Remote
+
+Run:
+
+```bash
+cd /Users/soonjeongguan/Desktop/FRAMEWORK
+pwd
+git remote -v
+git status
+```
+
+Required checks:
+
+1. `pwd` must return:
+
+```text
+/Users/soonjeongguan/Desktop/FRAMEWORK
+```
+
+2. `git remote -v` must include:
+
+```text
+https://github.com/JGDev1215/ICT.git
+```
+
+3. Check whether there are existing uncommitted changes.
+
+Rules:
+
+- If the path is wrong, stop.
+- If the GitHub remote is wrong, stop.
+- If there are uncommitted changes, do not overwrite them.
+- Do not edit app code for this setup task.
+
+---
+
+## Step 2 — Create `AGENTS.md`
+
+Create or replace this file at the repo root:
+
+```text
+AGENTS.md
+```
+
+`AGENTS.md` must contain the following instruction:
+
+```md
 # AGENTS.md
 
 ## Purpose
@@ -14,15 +99,11 @@ The user should only need to provide a short task. Codex must then plan, review,
 
 Codex must work only inside:
 
-```text
 /Users/soonjeongguan/Desktop/FRAMEWORK
-```
 
 GitHub remote must be:
 
-```text
 https://github.com/JGDev1215/ICT.git
-```
 
 Before making any changes, Codex must run:
 
@@ -60,48 +141,6 @@ If the path or remote is incorrect, Codex must stop.
 13. Do not claim tests passed unless they were actually run.
 14. If no test framework exists, perform static/manual checks and state this limitation.
 15. If the task is too large, split it into phases and complete the safest first phase.
-
----
-
-## Documentation Routing Rules
-
-Start documentation lookup from:
-
-```text
-docs/README.md
-```
-
-The root `README.md`, `CHANGELOG.md`, `AGENTS.md`, tests, and current app code are the source of truth for current behavior. Archived documents are context only.
-
-When creating or updating durable project documentation, save files in the correct folder:
-
-| Content type | Folder |
-| --- | --- |
-| Current implementation plans | `docs/plans/` |
-| Completed implementation reports | `docs/implementation-reports/` |
-| End-of-session daily reports and historical session logs | `docs/daily-reports/` |
-| QA evidence, release checks, test notes | `docs/qa/` |
-| Release decisions and release rationale | `docs/release/` |
-| Database schemas, SQL, persistence setup | `docs/database/` |
-| Completed or superseded fix lists | `docs/archive/completed-fix-lists/` |
-| Historical plans, old setup guides, legacy handovers | `docs/archive/historical-plans/` |
-| Superseded design packs and old agent prompt packs | `docs/archive/superseded-design/` |
-
-Rules:
-
-- Do not create new top-level markdown files unless they are root-level project docs such as `README.md`, `CHANGELOG.md`, or `AGENTS.md`.
-- Do not treat `docs/archive/` as current requirements unless the user explicitly asks to revive archived work.
-- When the user asks for an end-of-session report, daily report, or session log, save it under `docs/daily-reports/`.
-- Move completed or superseded plans, fix lists, and prompt packs into `docs/archive/`.
-- Add or preserve a status block at the top of markdown docs when practical:
-
-```md
-> Status: Current / Historical / Superseded
-> Last reviewed: YYYY-MM-DD
-> Source of truth: Yes / No
-```
-
-`agent-workflow/` is task execution evidence for the current work session. `docs/` is durable project documentation for future users, maintainers, and LLM agents.
 
 ---
 
@@ -151,7 +190,7 @@ agent-workflow/06-fix-rounds/fix-report.md
 
 ## Workflow Stages
 
-### Stage 0 - Safety Check
+### Stage 0 — Safety Check
 
 Before planning or editing, Codex must inspect the repo.
 
@@ -161,7 +200,7 @@ Run:
 pwd
 git remote -v
 git status
-find . -maxdepth 3 -type f | sed 's#^\./##' | sort | head -200
+find . -maxdepth 3 -type f | sed 's#^./##' | sort | head -200
 ```
 
 Codex must identify:
@@ -172,7 +211,9 @@ Codex must identify:
 - existing uncommitted changes
 - whether it is safe to proceed
 
-### Stage 1 - Capture User Task
+---
+
+### Stage 1 — Capture User Task
 
 Create:
 
@@ -180,9 +221,11 @@ Create:
 agent-workflow/00-inbox/current-task.md
 ```
 
-This file must contain the user's exact task.
+This file must contain the user’s exact task.
 
-### Stage 2 - Intake Agent
+---
+
+### Stage 2 — Intake Agent
 
 Create:
 
@@ -217,7 +260,9 @@ Rules:
 - If something is unclear, make a reasonable assumption and record it.
 - Ask the user only if the task cannot be completed safely without clarification.
 
-### Stage 3 - Planning Agent
+---
+
+### Stage 3 — Planning Agent
 
 Create:
 
@@ -251,7 +296,9 @@ The file must include:
 
 The plan must be specific enough for a junior execution agent to follow.
 
-### Stage 4 - Senior Plan Review Agent
+---
+
+### Stage 4 — Senior Plan Review Agent
 
 Review the implementation plan before editing code.
 
@@ -292,7 +339,9 @@ The approved plan is the only plan that may be executed.
 
 If the plan is rejected, revise it and review again before editing code.
 
-### Stage 5 - Execution Agent
+---
+
+### Stage 5 — Execution Agent
 
 Only after `approved-plan.md` exists, Codex may edit code.
 
@@ -330,9 +379,11 @@ The file must include:
 ## Known Issues
 ```
 
-### Stage 6 - Code Review Agent
+---
 
-Review the completed work as if reviewing another agent's work.
+### Stage 6 — Code Review Agent
+
+Review the completed work as if reviewing another agent’s work.
 
 Create:
 
@@ -384,7 +435,9 @@ The review must check:
 - mobile usability preserved
 - code remains simple and maintainable
 
-### Stage 7 - Senior Decision Agent
+---
+
+### Stage 7 — Senior Decision Agent
 
 Create:
 
@@ -443,7 +496,9 @@ Continue until either:
 - review decision is PASS, or
 - a blocker is identified and reported.
 
-### Stage 8 - Final Approval Agent
+---
+
+### Stage 8 — Final Approval Agent
 
 Create:
 
@@ -482,7 +537,9 @@ YES / NO
 
 If not safe to commit, explain exactly why.
 
-### Stage 9 - Workflow Summary
+---
+
+### Stage 9 — Workflow Summary
 
 Create:
 
@@ -568,73 +625,147 @@ Instead, explain what must be fixed.
 
 ---
 
-## Project Scope and Constraints
+## Step 3 — Create `START_CODEX.md`
 
-- This is a static, no-build app: HTML, CSS, and plain JavaScript are the product surface.
-- Browser storage is the source of truth. Do not introduce server-side saved-card storage unless explicitly requested.
-- The only backend-like code is `api/price.py`, an optional Vercel Python Function for yfinance price lookup.
-- Manual price entry must always work when live price lookup fails.
-- Keep changes small and compatible with existing saved cards.
+Create this file at the repo root:
 
-## Key Files
-
-- `index.html`: app shell, version text, cache-busted JS/CSS references, service worker registration.
-- `assets/app.js`: app state, normalization, localStorage migrations, routing, planner, saved cards, export/import, price helper calls.
-- `assets/styles.css`: UI styling.
-- `service-worker.js`: offline/static cache list. Bump this when asset URLs change.
-- `api/price.py`: Vercel price endpoint and static-file serving for Vercel.
-- `tests/smoke.js`: required static contract test.
-- `README.md` and `CHANGELOG.md`: user-facing documentation and release notes.
-
-## Storage Contract
-
-- Current saved-card key: `ict_cards_v078`.
-- Bias metadata key: `ict_bias_card_meta_v1`.
-- Export schema: `ict_dol_sweep_export_v7`.
-- Legacy migration keys: `ict_cards_v077`, `ict_cards_v076`, `ict_dol_sweep_cards_v2`, `ict_slips_v1`.
-- Preserve normalized card fields for timestamps, market context, DOL/sweep records, markers, journal, risk, price snapshot, price history, active DOL, route evidence, and final-save analytics.
-- Final hit-rate metrics must count only final-saved Hit/Miss outcomes. Breakeven and Read are tracked separately.
-
-## Required Checks
-
-Run before handoff after app, storage, cache, route, or API changes:
-
-```bash
-node tests/smoke.js
+```text
+START_CODEX.md
 ```
 
-Use a local static server for manual checks:
+Its content must be:
 
-```bash
-python3 -m http.server 8000
+```md
+# Start Codex Task
+
+AGENTS.md contains the permanent workflow for this repo.
+
+Codex must follow AGENTS.md exactly.
+
+Task:
 ```
 
-Then open `http://localhost:8000`.
+---
 
-## Version and Cache Bumps
+## Step 4 — Create Workflow Folder Structure
 
-When shipping JS/CSS behavior changes:
+Create these folders:
 
-1. Update cache-busted references in `index.html`.
-2. Update `CACHE_NAME` and `STATIC_ASSETS` in `service-worker.js`.
-3. Update `tests/smoke.js` assertions that pin those strings.
-4. Update README/CHANGELOG version notes where relevant.
+```text
+agent-workflow/00-inbox
+agent-workflow/01-intake
+agent-workflow/02-plans
+agent-workflow/03-senior-review
+agent-workflow/04-execution
+agent-workflow/05-code-review
+agent-workflow/06-fix-rounds
+agent-workflow/07-final-review
+agent-workflow/08-completed
+```
 
-When changing data shape or keys:
+---
 
-1. Keep migrations from old keys.
-2. Update export/import handling and schema documentation.
-3. Add or adjust smoke fixtures for migration, normalization, import dedupe, and analytics.
+## Step 5 — Create Workflow README
 
-## Price API Notes
+Create:
 
-- `api/price.py` supports `/api/price?symbol=...`, maps common futures/crypto aliases to yfinance symbols, and returns JSON with `symbol`, `yfSymbol`, `price`, `source`, `cached`, and `timestamp`.
-- It uses `requirements.txt` for the pinned yfinance dependency and `vercel.json` to include static assets.
-- GitHub Pages cannot run the Python function; Vercel can.
-- If deployment domains change, review `ALLOWED_ORIGINS`, `HOSTED_PRICE_API_BASE`, and any `window.ICT_PRICE_API_BASE` override.
+```text
+agent-workflow/README.md
+```
 
-## Product Guardrails
+Its content must explain:
 
-- Educational planning tool only. Do not present outputs as financial advice or trade recommendations.
-- Keep the planner deterministic and local-first.
-- Do not remove backup/export paths; browser storage can be cleared by the user or device.
+```md
+# Agent Workflow
+
+This folder stores Codex workflow records for each task.
+
+It is the audit trail for:
+
+- task intake
+- planning
+- senior plan review
+- approved plan
+- execution report
+- code review
+- fix rounds
+- final approval
+- workflow summary
+
+Codex must create/update these files for every future task according to AGENTS.md.
+```
+
+---
+
+## Step 6 — Create Setup Report
+
+Create:
+
+```text
+agent-workflow/08-completed/codex-workflow-setup-report.md
+```
+
+The setup report must include:
+
+```md
+# Codex Workflow Setup Report
+
+## Local Path Checked
+
+## GitHub Remote Checked
+
+## Files Created
+
+## Folders Created
+
+## App Code Modified?
+NO
+
+## Existing Uncommitted Changes
+
+## Final Status
+SAFE TO COMMIT / NOT SAFE TO COMMIT
+```
+
+---
+
+## Step 7 — Final Checks
+
+Run:
+
+```bash
+git status
+find agent-workflow -maxdepth 3 -type f | sort
+```
+
+Confirm:
+
+- `AGENTS.md` exists
+- `START_CODEX.md` exists
+- `agent-workflow/README.md` exists
+- `agent-workflow/08-completed/codex-workflow-setup-report.md` exists
+- no app code was intentionally modified
+
+---
+
+## Step 8 — Final Response
+
+Return a short final response with:
+
+```md
+## Setup Complete
+
+### Files Created
+
+### Folders Created
+
+### App Code Modified?
+NO
+
+### Safe To Commit?
+YES / NO
+
+### Recommended Commit Command
+```
+
+Do not commit or push unless the user explicitly asks.

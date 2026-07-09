@@ -10,7 +10,7 @@ None during fix round.
 
 ## Checks Performed
 
-Final checks are recorded in the final approval and workflow summary.
+Final checks are recorded in final approval.
 
 ## Remaining Issues
 

@@ -33,6 +33,7 @@ Do not create new top-level markdown files unless they are root-level project do
 | --- | --- |
 | Current implementation plan | `docs/plans/` |
 | Completed implementation report | `docs/implementation-reports/` |
+| End-of-session daily report or historical session log | `docs/daily-reports/` |
 | QA evidence, release checks, test notes | `docs/qa/` |
 | Release decision or release rationale | `docs/release/` |
 | Database schema, SQL, persistence setup | `docs/database/` |
@@ -45,6 +46,7 @@ Do not create new top-level markdown files unless they are root-level project do
 | Document | Purpose |
 | --- | --- |
 | [`plans/supabase-focus-card-storage-plan.md`](plans/supabase-focus-card-storage-plan.md) | Current Supabase Focus Card backup plan and validation checklist. |
+| [`daily-reports/README.md`](daily-reports/README.md) | End-of-session report format and save-location guidance. |
 | [`database/supabase-focus-card-storage.sql`](database/supabase-focus-card-storage.sql) | Supabase table, RLS, index, and trigger setup artifact. |
 | [`implementation-reports/focus-card-dol-risk-implementation-report.md`](implementation-reports/focus-card-dol-risk-implementation-report.md) | Completed Focus Card DOL/risk implementation report. |
 | [`qa/docs-implementation-checklist-2026-07-08.md`](qa/docs-implementation-checklist-2026-07-08.md) | Remaining external QA and release housekeeping checklist. |
