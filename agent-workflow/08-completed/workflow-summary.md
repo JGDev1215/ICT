@@ -2,7 +2,7 @@
 
 ## User Task
 
-Run a live end-to-end flow: login as admin, create a Focus Card, save/edit/final-save, sync, reload, and confirm persistence. Plan the next product fix around Planner validation and price auto-detect reliability.
+final report for the day for Codex.
 
 ## Local Path
 
@@ -27,6 +27,7 @@ Run a live end-to-end flow: login as admin, create a Focus Card, save/edit/final
 
 ## Files Changed
 
+- `docs/daily-reports/2026-07-09-final-codex-report.md`
 - `agent-workflow/00-inbox/current-task.md`
 - `agent-workflow/01-intake/task-brief.md`
 - `agent-workflow/02-plans/implementation-plan.md`
@@ -37,7 +38,6 @@ Run a live end-to-end flow: login as admin, create a Focus Card, save/edit/final
 - `agent-workflow/06-fix-rounds/senior-decision.md`
 - `agent-workflow/07-final-review/final-approval.md`
 - `agent-workflow/08-completed/workflow-summary.md`
-- `docs/plans/planner-validation-price-autodetect-plan-2026-07-09.md`
 
 ## Workflow Files Created
 
@@ -58,8 +58,9 @@ Run a live end-to-end flow: login as admin, create a Focus Card, save/edit/final
 - `git remote -v`
 - `git status`
 - `find . -maxdepth 3 -type f | sed 's#^\./##' | sort | head -200`
-- Live deployed E2E flow on `https://ictict-lake.vercel.app`
-- `node tests/smoke.js`
+- Daily report template read.
+- Final report manually inspected.
+- `node tests/smoke.js`: passed.
 
 ## Final Decision
 
@@ -67,4 +68,4 @@ SAFE TO COMMIT
 
 ## Recommended Next Step
 
-Review the documentation diff, then commit the QA evidence and product-fix plan.
+Commit the final daily report when ready.

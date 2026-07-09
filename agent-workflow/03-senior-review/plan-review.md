@@ -2,33 +2,32 @@
 
 ## Plan Quality
 
-The plan is appropriately scoped for a QA and planning task. It separates evidence gathering from product implementation and avoids runtime changes before a follow-up fix is approved.
+The plan is appropriate for a documentation-only final report. It respects the daily report routing rules and avoids overwriting the earlier same-day report.
 
 ## Missing Steps
 
-- Record the exact deployed URL tested.
-- Record whether any live test data is left behind.
-- Avoid exposing credentials or tokens in reports.
+- Include the latest commit hash and clean starting git state.
+- Mention that live QA cards remain in the admin backup account.
+- Keep daily report status as Historical and Source of truth as No.
 
 ## Risk Areas
 
-- Admin login may be blocked if the password is not the documented convenience value.
-- Supabase first-sync behavior may pause backup if existing local cards are present.
-- Price auto-detect may fail for live network/API reasons rather than frontend logic.
+- Accidentally turning a historical daily report into current requirements.
+- Overstating tests beyond what is run in this task.
 
 ## Overengineering Concerns
 
-No new automation harness or runtime test should be added for this task. A documented live browser pass plus smoke test is enough.
+No code or automation changes are needed.
 
 ## Simpler Alternatives
 
-If live admin login is blocked, run the local planner persistence flow without Supabase and record the Supabase credential blocker separately.
+Updating the earlier report was possible, but a suffix report is safer because this is a final end-of-day wrap-up and the earlier report is already part of the historical record.
 
 ## Required Amendments
 
-- Include exact URL and timestamp in the execution report.
-- Include credential blocker language if login fails.
-- Keep the next-fix plan focused on Planner validation and price reliability only.
+- Use `docs/daily-reports/2026-07-09-final-codex-report.md`.
+- Keep the report factual and concise.
+- Do not commit or push unless separately requested.
 
 ## Decision
 

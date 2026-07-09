@@ -22,14 +22,14 @@ YES
 
 ## Tests / Checks Completed
 
-- Live deployed E2E flow on `https://ictict-lake.vercel.app`: passed.
-- Admin login as `admin`: passed.
-- Price auto-detect for `MNQ`: passed.
-- Focus Card create/save changes/final save/sync/reload persistence: passed.
+- Safety check completed.
+- Daily report guidance read.
+- Final report manually inspected.
 - `node tests/smoke.js`: passed.
 
 ## Files Changed
 
+- `docs/daily-reports/2026-07-09-final-codex-report.md`
 - `agent-workflow/00-inbox/current-task.md`
 - `agent-workflow/01-intake/task-brief.md`
 - `agent-workflow/02-plans/implementation-plan.md`
@@ -39,13 +39,13 @@ YES
 - `agent-workflow/05-code-review/review-report.md`
 - `agent-workflow/06-fix-rounds/senior-decision.md`
 - `agent-workflow/07-final-review/final-approval.md`
-- `docs/plans/planner-validation-price-autodetect-plan-2026-07-09.md`
+- `agent-workflow/08-completed/workflow-summary.md`
 
 ## Remaining Risks
 
-- Live QA cards `E2EQA448171` and `PWQA104766` remain in the admin backup account.
-- The next product fix is planned but not implemented.
+- The report has not been committed or pushed.
+- Live QA cards remain in the admin backup account.
 
 ## Recommended Commit Message
 
-docs: record live e2e QA and next planner fix plan
+docs: add final Codex daily report
