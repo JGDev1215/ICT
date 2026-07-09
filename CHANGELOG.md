@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.8.8 — 2026-07-09
+
+### Changed
+
+- Set the backing single-user Account & Backup credential to the requested default PIN and revoked prior sessions.
+- Replaced the PIN input's fake example placeholder with neutral copy so the public UI does not imply a different default code.
+- Removed the obsolete `docs/plans/ASD.md` plan file.
+- Updated cache-busted assets and service-worker cache names for the default-PIN follow-up.
+
+### Tests
+
+- Verified the previous Supabase PIN is rejected and the requested default PIN is accepted by Supabase Auth.
+
 ## v0.8.7 — 2026-07-09
 
 ### Changed

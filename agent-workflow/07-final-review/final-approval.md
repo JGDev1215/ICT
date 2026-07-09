@@ -8,7 +8,7 @@ SAFE TO COMMIT
 
 YES
 
-The app now lets the single user sign into Account & Backup with a 4-digit PIN.
+The requested default PIN is active for the backing Account & Backup credential, and `docs/plans/ASD.md` is removed.
 
 ## Approved Plan Followed?
 
@@ -26,14 +26,14 @@ YES
 
 - `pwd`
 - `git remote -v`
-- `git status`
+- `git status --short`
 - `find . -maxdepth 3 -type f | sed 's#^\./##' | sort | head -200`
 - Supabase changelog and password-security doc lookup
-- Supabase SQL update for the backing `admin@ict.local` Auth password
-- Supabase Auth verification that the previous password is rejected and the generated PIN is accepted
+- Supabase SQL update for `admin@ict.local`
+- Supabase Auth verification that the previous credential is rejected and the requested default PIN is accepted
 - `npm test`
-- `npm run test:e2e`
 - `git diff --check`
+- `.env.local` ignore verification
 
 ## Files Changed
 
@@ -41,11 +41,11 @@ YES
 - `index.html`
 - `service-worker.js`
 - `tests/smoke.js`
-- `tests/e2e/planner.spec.js`
 - `README.md`
 - `CHANGELOG.md`
 - `CLAUDE.md`
 - `docs/qa/production-web-mobile-qa-2026-07-09.md`
+- `docs/plans/ASD.md`
 - `agent-workflow/00-inbox/current-task.md`
 - `agent-workflow/01-intake/task-brief.md`
 - `agent-workflow/02-plans/implementation-plan.md`
@@ -60,9 +60,8 @@ YES
 
 ## Remaining Risks
 
-- A 4-digit PIN is weak by normal password standards. Keep this private/single-user only unless authentication is redesigned.
-- The pre-existing deleted `docs/plans/ASD.md` worktree change was not part of this task and remains unresolved.
+- Four-digit PIN auth is weak by normal password standards. Keep this private/single-user only.
 
 ## Recommended Commit Message
 
-feat: add single-user PIN login
+chore: set default PIN and remove ASD plan

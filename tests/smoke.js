@@ -42,11 +42,11 @@ const hostedPriceApiBase = match(configSource, /hostedPriceApiBase: '([^']+)'/, 
 const hostedPriceUrl = new URL(hostedPriceApiBase);
 const runtimeAssets = Array.from(index.matchAll(/(?:src|href)="([^"]*(?:assets\/[^"]+|manifest\.webmanifest|favicon\.svg|icon-\d+\.svg)[^"]*)"/g)).map(found => found[1]);
 
-ok(appVersion === 'v0.8.7', 'app version should be v0.8.7');
-ok(configAsset.includes('v=0.8.7-pin-login-20260709'), 'config asset cache key should match v0.8.7 pin-login');
-ok(appAsset.includes('v=0.8.7-pin-login-20260709'), 'app asset cache key should match v0.8.7 pin-login');
-ok(styleAsset.includes('v=0.8.7-pin-login-20260709'), 'style asset cache key should match v0.8.7 pin-login');
-ok(cacheName === 'ict-sweep-tracker-v087-pin-login-20260709', 'service worker cache name should match v0.8.7 pin-login');
+ok(appVersion === 'v0.8.8', 'app version should be v0.8.8');
+ok(configAsset.includes('v=0.8.8-default-pin-20260709'), 'config asset cache key should match v0.8.8 default-pin');
+ok(appAsset.includes('v=0.8.8-default-pin-20260709'), 'app asset cache key should match v0.8.8 default-pin');
+ok(styleAsset.includes('v=0.8.8-default-pin-20260709'), 'style asset cache key should match v0.8.8 default-pin');
+ok(cacheName === 'ict-sweep-tracker-v088-default-pin-20260709', 'service worker cache name should match v0.8.8 default-pin');
 ok(index.includes(`<title>ICT DOL Sweep Tracker ${appVersion}</title>`), 'index title version missing');
 ok(index.includes(`ICT DOL Sweep Tracker ${appVersion} · Educational tool. Not financial advice.`), 'index footer version missing');
 ok(!index.includes('assets/bias-extension.js'), 'obsolete bias extension should not be loaded');

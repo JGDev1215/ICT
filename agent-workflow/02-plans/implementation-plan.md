@@ -2,14 +2,14 @@
 
 ## Goal
 
-Ship a focused v0.8.7 single-user PIN login update for Account & Backup.
+Apply the requested default PIN and remove the obsolete ASD plan file.
 
 ## Repo Findings
 
-- `assets/app.js` owns Account & Backup rendering and login handling.
-- `README.md`, `CHANGELOG.md`, `index.html`, `service-worker.js`, `CLAUDE.md`, and `tests/smoke.js` pin current version/cache behavior.
-- Current Supabase admin password was rotated to a strong password in the previous readiness pass; for a 4-digit PIN UI, the backing Supabase password must match the PIN.
-- `.env.local` is ignored and untracked, so it can store the local PIN handoff without committing it.
+- `docs/plans/ASD.md` is already deleted in the working tree.
+- Account & Backup PIN login is already implemented in `assets/app.js`.
+- The PIN placeholder still says `1234`, which could conflict with the requested default.
+- Supabase Auth password rotation can be done by updating the existing `auth.users.encrypted_password` hash and revoking refresh/session rows.
 
 ## Files Likely Affected
 
@@ -17,55 +17,55 @@ Ship a focused v0.8.7 single-user PIN login update for Account & Backup.
 - `index.html`
 - `service-worker.js`
 - `tests/smoke.js`
-- `tests/e2e/planner.spec.js`
 - `README.md`
 - `CHANGELOG.md`
 - `CLAUDE.md`
-- `agent-workflow/*`
 - `docs/qa/production-web-mobile-qa-2026-07-09.md`
-- `docs/qa/docs-implementation-checklist-2026-07-08.md`
+- `docs/plans/ASD.md`
+- `agent-workflow/*`
+- `.env.local` ignored local-only credential file
 
 ## Proposed Changes
 
-- Replace visible username/password inputs with one `adminPin` input.
-- Validate PIN with `/^\d{4}$/`.
-- Call `supabaseLogin(adminSupabaseEmail(), pin)` after validation.
-- Rotate Supabase `admin@ict.local` password to a generated 4-digit PIN and store the PIN only in ignored `.env.local`.
-- Bump shipped app version/cache to v0.8.7 with `tools/bump-version.js`.
-- Update README/CHANGELOG/docs/tests for the PIN login behavior.
+- Rotate the Supabase `admin@ict.local` password to the requested default PIN.
+- Store the requested PIN in ignored `.env.local`.
+- Revoke existing Supabase admin sessions/tokens where exposed.
+- Change the visible PIN input placeholder from a fake example code to neutral copy.
+- Bump app/cache to `v0.8.8` because `assets/app.js` changes.
+- Update docs/tests that pin current version/cache.
+- Leave `docs/plans/ASD.md` deleted.
 
 ## Step-by-Step Plan
 
-1. Create/update workflow plan and senior review files.
-2. Edit `assets/app.js` Account & Backup login UI and handler.
-3. Update smoke/E2E tests for the PIN field and validation.
-4. Run `node tools/bump-version.js v0.8.7 pin-login 20260709`.
-5. Rotate Supabase admin password to a generated 4-digit PIN and update `.env.local`.
-6. Verify old strong password fails and PIN succeeds.
-7. Run local tests and focused browser QA.
-8. Update QA/workflow docs with evidence and remaining security note.
+1. Create/update workflow intake, plan, and senior review files.
+2. Edit `assets/app.js` to remove the misleading PIN example placeholder.
+3. Run version/cache bump to `v0.8.8`.
+4. Update changelog and QA evidence without printing the PIN.
+5. Rotate Supabase Auth password to the requested PIN and revoke sessions.
+6. Verify previous credential rejection and requested PIN acceptance.
+7. Run `npm test` and `git diff --check`.
+8. Update execution/review/final workflow files.
 
 ## Acceptance Criteria
 
-- Account & Backup login is PIN-only in the rendered app.
-- Non-4-digit input is rejected locally.
-- 4-digit PIN signs in to Supabase and backup still works.
-- Existing local-first behavior is unchanged when signed out.
-- v0.8.7 cache-busted assets are aligned.
-- `npm test`, focused Playwright checks, and `git diff --check` pass.
+- Supabase login succeeds with the requested default PIN.
+- Supabase login fails with the previous PIN.
+- The committed frontend does not print the PIN.
+- `docs/plans/ASD.md` is removed.
+- Version/cache strings are consistent.
+- Required checks pass.
 
 ## Test Plan
 
+- Supabase Auth old/new credential verification.
 - `npm test`
-- Focused Playwright production/local Profile PIN smoke as applicable.
-- Supabase Auth old/new credential check.
 - `git diff --check`
 
 ## Risks
 
-- A 4-digit PIN is lower entropy than a full password. This is acceptable only for the stated single-user convenience flow and should not be treated as strong public multi-user security.
-- The deployed static app will only show the PIN field after v0.8.7 is deployed.
+- A 4-digit PIN is weak by normal password standards; keep private/single-user only.
+- The deployed site will use the new neutral placeholder only after v0.8.8 deployment.
 
 ## Rollback Plan
 
-Revert the app/docs/test changes and rotate the Supabase admin password back to a strong private value stored in `.env.local`.
+Rotate Supabase back to a strong private password, restore the previous app version/cache commit, and restore `docs/plans/ASD.md` if needed.

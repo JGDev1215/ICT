@@ -1,7 +1,9 @@
 # Current Task
 
-Feedback - This is a single user app. User can log into the app by typing a 4 digit pin code.
+login credentials default code is "5880".
+
+remove asd.md file
 
 ## Scope
 
-Replace the visible Account & Backup username/password login with a single 4-digit PIN login for the existing single-user Supabase-backed admin account. Preserve local-first behavior, browser storage, JSON export/import, and optional Supabase backup.
+Set the single-user Supabase Account & Backup PIN to the requested default code, keep the code out of committed app/docs, remove the already-deleted `docs/plans/ASD.md` from the repository, and update workflow evidence.

@@ -2,9 +2,7 @@
 
 ## Summary of Changes
 
-Implemented the single-user Account & Backup login feedback by replacing the visible username/password sign-in with one 4-digit PIN field.
-Rotated the backing Supabase Auth credential for `admin@ict.local` to a generated 4-digit PIN and revoked prior session state.
-Released the change as `v0.8.7` with cache-busted static assets, service-worker cache updates, documentation updates, and focused tests.
+Set the backing single-user Account & Backup credential to the requested default PIN, removed the misleading example PIN placeholder from the public UI, bumped the app/cache to `v0.8.8`, and accepted the requested removal of `docs/plans/ASD.md`.
 
 ## Files Changed
 
@@ -12,11 +10,11 @@ Released the change as `v0.8.7` with cache-busted static assets, service-worker 
 - `index.html`
 - `service-worker.js`
 - `tests/smoke.js`
-- `tests/e2e/planner.spec.js`
 - `README.md`
 - `CHANGELOG.md`
 - `CLAUDE.md`
 - `docs/qa/production-web-mobile-qa-2026-07-09.md`
+- `docs/plans/ASD.md`
 - `agent-workflow/00-inbox/current-task.md`
 - `agent-workflow/01-intake/task-brief.md`
 - `agent-workflow/02-plans/implementation-plan.md`
@@ -25,19 +23,20 @@ Released the change as `v0.8.7` with cache-busted static assets, service-worker 
 - `agent-workflow/04-execution/execution-report.md`
 - `agent-workflow/05-code-review/review-report.md`
 - `agent-workflow/06-fix-rounds/senior-decision.md`
+- `agent-workflow/06-fix-rounds/fix-report.md`
 - `agent-workflow/07-final-review/final-approval.md`
 - `agent-workflow/08-completed/workflow-summary.md`
+- `.env.local` ignored local-only credential file
 
 ## Implementation Notes
 
-- The Profile Account & Backup form now renders `#adminPin` with numeric input hints, `maxlength="4"`, and 4-digit validation.
-- The login handler rejects non-4-digit input before calling Supabase Auth.
-- Valid PIN input is sent to the existing `adminSupabaseEmail()` backing account, preserving the existing single-user Supabase sync model.
-- The visible `admin` username field and separate password field were removed.
-- The backing Supabase Auth password was rotated to the generated PIN, existing refresh tokens were revoked, and sessions were deleted where exposed by the Auth schema.
-- The generated PIN is stored only in ignored `.env.local` under `ICT_ADMIN_PIN` and `ICT_ADMIN_SUPABASE_PASSWORD`.
-- Version/cache was bumped to `v0.8.7` / `0.8.7-pin-login-20260709`.
-- The pre-existing deleted `docs/plans/ASD.md` worktree change was not touched.
+- Supabase `admin@ict.local` was rotated to the requested default PIN using a bcrypt hash.
+- Existing admin refresh token/session state was revoked/deleted where exposed by the Auth schema.
+- The previous credential was verified rejected and the requested default PIN was verified accepted.
+- `.env.local` stores the PIN locally and remains ignored by `.gitignore`.
+- The public PIN input placeholder changed from `1234` to neutral `PIN`.
+- The app version/cache was bumped to `v0.8.8` / `0.8.8-default-pin-20260709`.
+- `docs/plans/ASD.md` remains deleted as requested.
 
 ## Deviations From Approved Plan
 
@@ -47,16 +46,16 @@ None.
 
 - `pwd`
 - `git remote -v`
-- `git status`
+- `git status --short`
 - `find . -maxdepth 3 -type f | sed 's#^\./##' | sort | head -200`
 - Supabase changelog and password-security doc lookup
 - Supabase SQL update for `admin@ict.local`
-- Supabase Auth verification: previous password rejected, generated PIN accepted
-- `node tools/bump-version.js v0.8.7 pin-login 20260709`
+- Supabase Auth verification: previous credential rejected, requested default PIN accepted
+- `node tools/bump-version.js v0.8.8 default-pin 20260709`
 - `npm test`
-- `npm run test:e2e`
 - `git diff --check`
+- `git check-ignore -v .env.local`
 
 ## Known Issues
 
-The requested 4-digit PIN is intentionally weaker than Supabase password-strength recommendations. This is acceptable for the stated private single-user app workflow, but it is not suitable for public multi-user authentication.
+The requested 4-digit default PIN is weak by normal password standards and should remain private/single-user only.

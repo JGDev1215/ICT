@@ -2,29 +2,29 @@
 
 ## Plan Quality
 
-The plan is narrowly scoped to the requested single-user PIN login and preserves the existing Supabase Account & Backup architecture.
+The plan is appropriately narrow and treats the PIN as a private credential rather than committed app state.
 
 ## Missing Steps
 
-Add explicit verification that the old strong password no longer works after rotating to the PIN.
+No missing execution steps. Verification must prove the previous credential fails and the requested PIN succeeds.
 
 ## Risk Areas
 
-- A 4-digit PIN is weak for public-internet authentication.
-- Static app clients cannot hide a stronger secret behind a PIN without a backend exchange service.
-- Do not commit `.env.local` or print the PIN in docs.
+- Four-digit PINs are weak if the app becomes public or multi-user.
+- The PIN must not be committed into app source, docs, or workflow files.
+- Session revocation should run when changing the password.
 
 ## Overengineering Concerns
 
-Adding an Edge Function or separate backend PIN exchange would exceed the user’s stated simple single-user requirement and conflict with the static app shape.
+Adding a backend PIN exchange service is unnecessary for this private single-user follow-up.
 
 ## Simpler Alternatives
 
-Use Supabase Auth password as the 4-digit PIN and keep the Profile UI PIN-only.
+Rotate Supabase Auth directly and keep the existing PIN-only UI.
 
 ## Required Amendments
 
-Document the security tradeoff and keep leaked-password protection/public-release hardening notes.
+Keep the public UI placeholder neutral rather than showing the actual default PIN.
 
 ## Decision
 

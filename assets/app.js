@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'v0.8.7';
+  const VERSION = 'v0.8.8';
   const KEY = 'ict_cards_v078';
   const SETTINGS_KEY = 'ict_settings_v1';
   const DRAFT_KEY = 'ict_planner_draft_v1';
@@ -2530,7 +2530,7 @@
     const login = supabaseUser
       ? `<p class='hint good'>Signed in.</p>${firstSyncActions}<div class='row-actions'><button class='btn' id='syncNowBtn'>Back up now</button><button class='btn ghost' id='supabaseLogoutBtn'>Sign out</button></div>`
       : configured
-        ? `<label class='label' for='adminPin'>4-digit PIN</label><input class='in' id='adminPin' type='password' inputmode='numeric' pattern='[0-9]*' maxlength='4' autocomplete='current-password' placeholder='1234' aria-label='4-digit PIN'><p class='hint'>Enter the 4-digit PIN for this backup.</p><div class='row-actions'><button class='btn primary' id='adminLoginBtn'>Sign in</button></div>`
+        ? `<label class='label' for='adminPin'>4-digit PIN</label><input class='in' id='adminPin' type='password' inputmode='numeric' pattern='[0-9]*' maxlength='4' autocomplete='current-password' placeholder='PIN' aria-label='4-digit PIN'><p class='hint'>Enter the 4-digit PIN for this backup.</p><div class='row-actions'><button class='btn primary' id='adminLoginBtn'>Sign in</button></div>`
         : `<p class='hint warn'>Cloud backup is unavailable in this build. Local cards still work on this device.</p>`;
     return `<div class='card'><div class='progress'>Account</div><h3>Account & Backup</h3><p class='hint ${statusClass}'>${esc(statusLabel)}: ${esc(backupStatusMessage())}</p><div class='line'><div class='k'>Local cards</div><div class='v'>${cards.length}</div></div><div class='line'><div class='k'>Cloud backup</div><div class='v'>${pending ? 'Pending' : serverCount}</div></div><div class='line'><div class='k'>Last backup</div><div class='v'>${esc(syncState.lastSyncAt || '-')}</div></div>${login}</div>`;
   }

@@ -2,27 +2,28 @@
 
 ## Goal
 
-Implement a v0.8.7 Account & Backup login change so the single user signs in with a 4-digit PIN.
+Set the single-user Account & Backup credential to the requested default PIN and remove `docs/plans/ASD.md`.
 
 ## Approved Scope
 
-- Replace username/password UI with a single PIN field.
-- Validate exactly four digits before Supabase login.
-- Keep using `adminSupabaseEmail()` as the backing account identity.
-- Rotate the backing Supabase password to a generated 4-digit PIN and store it only in ignored `.env.local`.
-- Update version/cache, tests, README, CHANGELOG, QA docs, and workflow evidence.
+- Rotate Supabase `admin@ict.local` to the requested default PIN.
+- Store the PIN only in ignored `.env.local`.
+- Revoke existing admin session/token state where exposed.
+- Keep public app/docs from printing the PIN.
+- Remove misleading PIN placeholder text in `assets/app.js`.
+- Bump version/cache to `v0.8.8`.
+- Leave `docs/plans/ASD.md` deleted for the next commit.
 
 ## Constraints
 
-- No app-wide lock screen in this pass.
-- No storage key or export schema change.
-- No service role key in frontend.
-- Do not touch unrelated user change deleting `docs/plans/ASD.md`.
-- Do not commit or push unless explicitly requested.
+- No schema changes.
+- No service-role key in frontend.
+- No public committed PIN.
+- Do not commit or push unless explicitly instructed.
 
 ## Verification
 
+- Supabase previous credential rejected.
+- Supabase requested PIN accepted.
 - `npm test`
-- Focused Playwright Profile PIN checks
-- Supabase old/new credential check
 - `git diff --check`

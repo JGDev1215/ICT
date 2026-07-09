@@ -2,41 +2,43 @@
 
 ## Original User Task
 
-Feedback - This is a single user app. User can log into the app by typing a 4 digit pin code.
+login credentials default code is "5880".
+
+remove asd.md file
 
 ## Objective
 
-Make the visible single-user Account & Backup login use one 4-digit PIN field instead of username plus password.
+Set the backing single-user Account & Backup PIN to the requested default code and remove `docs/plans/ASD.md`.
 
 ## Repo Findings
 
 - Safety checks passed in `/Users/soonjeongguan/Desktop/FRAMEWORK`.
 - Remote is `https://github.com/JGDev1215/ICT.git`.
-- Existing uncommitted change: `docs/plans/ASD.md` is deleted; treat as user work and do not restore or depend on it.
-- Current Profile Account & Backup UI renders `adminUsername` and `adminPassword`.
-- Login handler requires username `admin` and sends `adminPassword` to Supabase Auth for `admin@ict.local`.
-- Supabase backup is optional; localStorage remains the immediate source of truth.
-- JS/CSS behavior changes require version/cache bump and smoke assertion updates.
+- Current dirty state before this task: `docs/plans/ASD.md` deleted.
+- The app already renders a PIN-only Account & Backup login in `assets/app.js`.
+- The visible PIN input still has a misleading placeholder value of `1234`.
+- The backing Supabase account is `admin@ict.local`.
+- `.env.local` is ignored by `.gitignore`.
 
 ## Assumptions
 
-- The requested 4-digit PIN is for the existing Profile Account & Backup login, not a new full-app lock screen.
-- The PIN will be the Supabase Auth password for the existing single-user backing account.
-- Because this is a static app, the PIN is a convenience login for one user, not high-security multi-user authentication.
+- The requested default code should become the Supabase Auth password for `admin@ict.local`.
+- The default code should not be committed into public frontend source or docs.
+- Removing `asd.md` means accepting and tracking the existing deletion of `docs/plans/ASD.md`.
 
 ## Out of Scope
 
-- New server-side PIN exchange endpoint.
-- App-wide route lock before using local cards.
-- Supabase schema changes or storage key changes.
-- Removing JSON export/import or local-first behavior.
-- Touching the unrelated deleted `docs/plans/ASD.md`.
+- A full app-wide lock screen.
+- Supabase schema changes.
+- Public documentation that prints the PIN.
+- Commit/push unless explicitly requested.
 
 ## Success Criteria
 
-- [x] Account & Backup shows one 4-digit PIN field and no username field.
-- [x] Login validates exactly four digits before calling Supabase.
-- [x] Login still maps to the backing Supabase admin email.
-- [x] Supabase admin password is rotated to the 4-digit PIN and verified.
-- [x] Version/cache/docs/tests are updated for v0.8.7.
+- [x] Supabase `admin@ict.local` password is rotated to the requested default PIN.
+- [x] Previous PIN/password no longer works.
+- [x] Requested default PIN works.
+- [x] `.env.local` stores the PIN locally and remains ignored.
+- [x] `docs/plans/ASD.md` deletion remains present for the next commit.
+- [x] PIN input no longer shows a conflicting example code.
 - [x] Required checks pass.

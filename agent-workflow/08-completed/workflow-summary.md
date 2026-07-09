@@ -2,7 +2,9 @@
 
 ## User Task
 
-Feedback - This is a single user app. User can log into the app by typing a 4 digit pin code.
+login credentials default code is "5880".
+
+remove asd.md file
 
 ## Local Path
 
@@ -31,11 +33,11 @@ Feedback - This is a single user app. User can log into the app by typing a 4 di
 - `index.html`
 - `service-worker.js`
 - `tests/smoke.js`
-- `tests/e2e/planner.spec.js`
 - `README.md`
 - `CHANGELOG.md`
 - `CLAUDE.md`
 - `docs/qa/production-web-mobile-qa-2026-07-09.md`
+- `docs/plans/ASD.md`
 - `agent-workflow/00-inbox/current-task.md`
 - `agent-workflow/01-intake/task-brief.md`
 - `agent-workflow/02-plans/implementation-plan.md`
@@ -64,21 +66,21 @@ Feedback - This is a single user app. User can log into the app by typing a 4 di
 
 ## Checks Performed
 
-- Safety: `pwd`, `git remote -v`, `git status`, `find . -maxdepth 3 -type f | sed 's#^\./##' | sort | head -200`
+- Safety: `pwd`, `git remote -v`, `git status --short`, `find . -maxdepth 3 -type f | sed 's#^\./##' | sort | head -200`
 - Supabase docs: changelog and password-security guide
 - Supabase Auth credential rotation for `admin@ict.local`
-- Supabase Auth verification: previous password rejected, generated PIN accepted
-- Version/cache bump: `node tools/bump-version.js v0.8.7 pin-login 20260709`
+- Supabase Auth verification: previous credential rejected, requested default PIN accepted
+- Version/cache bump: `node tools/bump-version.js v0.8.8 default-pin 20260709`
 - Local: `npm test` PASS
-- Local: `npm run test:e2e` PASS, 68 passed, 1 skipped
 - Static: `git diff --check` PASS
+- Ignore check: `.env.local` remains ignored
 
 ## Final Decision
 
 SAFE TO COMMIT
 
-The single-user PIN login change is implemented and verified.
+The requested default PIN is active and verified, and the ASD plan file is removed.
 
 ## Recommended Next Step
 
-Review the unrelated pre-existing `docs/plans/ASD.md` deletion, then commit the v0.8.7 PIN-login change if that deletion is intended.
+Commit the v0.8.8 default-PIN follow-up and ASD plan removal.

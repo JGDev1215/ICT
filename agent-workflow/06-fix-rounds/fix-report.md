@@ -15,4 +15,4 @@ None for fix round.
 
 ## Remaining Issues
 
-The 4-digit PIN is intentionally a private single-user convenience credential, not production-grade public authentication.
+The requested default PIN remains a private single-user convenience credential, not public-grade authentication.

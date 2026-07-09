@@ -6,7 +6,7 @@ APPROVED
 
 ## Reasoning
 
-The approved plan was followed. The app now presents the single-user Account & Backup sign-in as a 4-digit PIN, validates the PIN before Supabase Auth login, and still maps to the existing `admin@ict.local` backing account. The Supabase credential was rotated and verified, and all required automated checks passed.
+The requested default PIN was applied to the backing Supabase Auth user and verified. The previous credential is rejected, the requested default PIN is accepted, and the public app does not commit the PIN. The requested ASD plan file removal is present.
 
 ## Required Fixes
 
@@ -14,4 +14,4 @@ None.
 
 ## Next Action
 
-Proceed to final approval. Do not commit or push unless explicitly instructed.
+Finalize and report that the change is safe to commit. Do not commit or push unless explicitly instructed.
