@@ -101,7 +101,6 @@ test.describe('release QA evidence', () => {
       ['saved', 'Saved Cards'],
       ['profile', 'Profile'],
       ['liquidity-map', 'Setup Library'],
-      ['risk', 'Risk tracker'],
       ['component-gallery', 'Component Gallery']
     ];
 
@@ -109,6 +108,10 @@ test.describe('release QA evidence', () => {
       await page.evaluate(nextRoute => window.ICTSweepState.go(nextRoute), route);
       await expect(page.getByText(text).first()).toBeVisible();
     }
+
+    await page.evaluate(() => window.ICTSweepState.go('risk'));
+    await expect(page.getByText('ICT Sweep Tracker')).toBeVisible();
+    await expect(page.getByText('Risk tracker')).toHaveCount(0);
 
     await page.evaluate(() => window.ICTSweepState.go('journal'));
     await expect(page.getByText('ICT Sweep Tracker')).toBeVisible();

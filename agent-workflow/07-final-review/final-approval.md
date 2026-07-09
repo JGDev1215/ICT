@@ -8,8 +8,6 @@ SAFE TO COMMIT
 
 YES
 
-The requested default PIN is active for the backing Account & Backup credential, and `docs/plans/ASD.md` is removed.
-
 ## Approved Plan Followed?
 
 YES
@@ -28,24 +26,12 @@ YES
 - `git remote -v`
 - `git status --short`
 - `find . -maxdepth 3 -type f | sed 's#^\./##' | sort | head -200`
-- Supabase changelog and password-security doc lookup
-- Supabase SQL update for `admin@ict.local`
-- Supabase Auth verification that the previous credential is rejected and the requested default PIN is accepted
 - `npm test`
-- `git diff --check`
-- `.env.local` ignore verification
+- `npm run test:e2e -- --reporter=dot`
 
 ## Files Changed
 
-- `assets/app.js`
-- `index.html`
-- `service-worker.js`
-- `tests/smoke.js`
-- `README.md`
-- `CHANGELOG.md`
-- `CLAUDE.md`
-- `docs/qa/production-web-mobile-qa-2026-07-09.md`
-- `docs/plans/ASD.md`
+- `docs/daily-reports/2026-07-09-session-report-3.md`
 - `agent-workflow/00-inbox/current-task.md`
 - `agent-workflow/01-intake/task-brief.md`
 - `agent-workflow/02-plans/implementation-plan.md`
@@ -57,11 +43,12 @@ YES
 - `agent-workflow/06-fix-rounds/fix-report.md`
 - `agent-workflow/07-final-review/final-approval.md`
 - `agent-workflow/08-completed/workflow-summary.md`
+- All existing pending product/docs/test changes in the worktree
 
 ## Remaining Risks
 
-- Four-digit PIN auth is weak by normal password standards. Keep this private/single-user only.
+Production deployment smoke testing remains a post-push follow-up.
 
 ## Recommended Commit Message
 
-chore: set default PIN and remove ASD plan
+feat: simplify planner and lock final cards

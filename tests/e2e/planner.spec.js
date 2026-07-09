@@ -52,7 +52,6 @@ test('planner creates a focus card and preserves it after reload', async ({page}
   await page.locator('#instrument').fill('MNQ');
   await page.locator('#session').selectOption('New York AM');
   await page.locator('#currentPrice').fill('20000');
-  await page.locator("[data-bias='Bullish']").click();
   await page.locator('#dol1Level').fill('20250');
   await page.locator('#dol1Draw').selectOption('Previous day high (PDH)');
   await page.locator('#dol1Tf').selectOption('Daily');
@@ -80,7 +79,6 @@ test('manual price acknowledgement restores and can generate complete no-sweep p
 
   await page.locator('#instrument').fill('MNQ');
   await page.locator('#session').selectOption('New York AM');
-  await page.locator("[data-bias='Bullish']").click();
   await page.locator('#manualPriceNeededAck').check();
   await page.locator('#dol1Level').fill('20250');
   await page.locator('#dol1Draw').selectOption('Previous day high (PDH)');
@@ -251,7 +249,6 @@ test('json import through file input imports cards, settings, and schema warning
       defaultInstrument: 'ES',
       defaultSession: 'London',
       theme: 'dark',
-      watchlist: ['ES', 'YM'],
       riskDefaults: {plannedRiskPct: '0.5', plannedR: '2R', maxLoss: '100'}
     },
     cards: [{
@@ -363,11 +360,11 @@ test('home session chips filter the visible focus card', async ({page}) => {
   await expect(page.locator('.card-hero h2')).toHaveText('MNQ');
 });
 
-test('focus card derives potential R:R from current price and selected DOL', async ({page}) => {
+test('legacy bias and risk data stay hidden in active focus UI but export', async ({page}) => {
   await page.evaluate(() => {
     const api = window.ICTSweepState;
     const card = api.createBlankDraft({
-      id: 'rr-card',
+      id: 'legacy-hidden-card',
       fields: {
         instrument: 'MNQ',
         session: 'New York AM',
@@ -376,23 +373,32 @@ test('focus card derives potential R:R from current price and selected DOL', asy
         dol1Level: '20250',
         dol1Draw: 'Previous day high (PDH)',
         dol1Tf: 'Daily'
-      }
+      },
+      marketContext: {
+        Daily: {phase: 'Expansion', note: 'Legacy market note.', potentialNextPhase: 'Retracement'}
+      },
+      routeEvidence: [{arrayType: 'BISI', timeframe: '5m', level: '20020', behavior: 'Respect', notes: 'Legacy route note.'}],
+      riskPlan: {direction: 'Long', ratio: '2R', entryPrice: '20000', targetDolId: 'dol1', invalidationPrice: '19875', riskPoints: '125', rewardPoints: '250', rr: '2R', status: 'ready'}
     });
     api.saveCards([card]);
-    api.go('focus', {id: 'rr-card'});
+    api.go('focus', {id: 'legacy-hidden-card'});
   });
 
   await expect(page.getByText('Focus card details')).toBeVisible();
-  await page.locator('#riskDirection').selectOption('Long');
-  await page.locator('#riskTargetDol').selectOption('dol1');
-  await page.locator('#riskRatio').selectOption('2R');
-  await page.locator('#saveChangesBtn').click();
+  await expect(page.getByText('Price Map Dashboard')).toBeVisible();
+  await expect(page.getByText('Bias Determination For Session')).toHaveCount(0);
+  await expect(page.getByText('Market Context')).toHaveCount(0);
+  await expect(page.getByText('Route to DOL / PD array evidence')).toHaveCount(0);
+  await expect(page.getByText('Potential risk-to-reward')).toHaveCount(0);
+  await expect(page.locator('#riskDirection')).toHaveCount(0);
+  await expect(page.locator('#riskRatio')).toHaveCount(0);
+  await expect(page.locator('#routeArrayType')).toHaveCount(0);
 
-  await expect(page.getByText('19875')).toBeVisible();
-  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().find(card => card.id === 'rr-card').riskPlan.invalidationPrice)).toBe('19875');
-  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().find(card => card.id === 'rr-card').riskPlan.riskPoints)).toBe('125');
-  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().find(card => card.id === 'rr-card').riskPlan.rewardPoints)).toBe('250');
-  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().find(card => card.id === 'rr-card').riskPlan.rr)).toBe('2R');
+  const exported = await page.evaluate(() => window.ICTSweepState.exportCards().cards.find(card => card.id === 'legacy-hidden-card'));
+  expect(exported.fields.bias).toBe('Bullish');
+  expect(exported.marketContext.Daily.note).toBe('Legacy market note.');
+  expect(exported.routeEvidence[0].notes).toBe('Legacy route note.');
+  expect(exported.riskPlan.invalidationPrice).toBe('19875');
 });
 
 test('price map and DOL stack share DOL taken state', async ({page}) => {
@@ -428,4 +434,53 @@ test('price map and DOL stack share DOL taken state', async ({page}) => {
   await expect(page.locator('#priceMap_dol1Taken')).not.toBeChecked();
   await page.locator('#saveChangesBtn').click();
   await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().find(card => card.id === 'mirror-card').fields.dol1Taken)).toBe(false);
+});
+
+test('final-saved cards are locked from further edits', async ({page}) => {
+  await page.evaluate(() => {
+    const api = window.ICTSweepState;
+    const card = api.normaliseCard({
+      id: 'locked-e2e-card',
+      savedAt: '2026-07-09T14:00:00.000Z',
+      updatedAt: '2026-07-09T14:00:00.000Z',
+      fields: {
+        instrument: 'MNQ',
+        session: 'New York AM',
+        currentPrice: '20000',
+        dol1Level: '20250',
+        dol1Draw: 'Previous day high (PDH)',
+        dol1Tf: 'Daily',
+        dol1Taken: true
+      },
+      outcome: 'Hit',
+      finalSaved: true,
+      notes: 'Locked note'
+    });
+    api.saveCards([card]);
+    api.go('focus', {id: 'locked-e2e-card'});
+  });
+
+  await expect(page.getByText('Final card locked')).toBeVisible();
+  await expect(page.locator('#saveChangesBtn')).toHaveCount(0);
+  await expect(page.locator('#finalSaveBtn')).toHaveCount(0);
+  await expect(page.locator('#deleteBtn')).toHaveCount(0);
+  await expect(page.locator('#loadBtn')).toHaveCount(0);
+  await expect(page.locator('#reviewOutcome')).toBeDisabled();
+  await expect(page.locator('#reviewNotes')).toBeDisabled();
+  await expect(page.locator('#focus_dol1Taken')).toBeDisabled();
+  await expect(page.locator('#priceMap_dol1Taken')).toHaveCount(0);
+
+  const blocked = await page.evaluate(() => {
+    const api = window.ICTSweepState;
+    const update = api.updateCard('locked-e2e-card', {fields: {instrument: 'LOCKED'}});
+    const favorite = api.toggleFavorite('locked-e2e-card');
+    const deleted = api.deleteCard('locked-e2e-card');
+    const card = api.getCards().find(item => item.id === 'locked-e2e-card');
+    return {update, favorite, deleted, instrument: card.fields.instrument, error: api.lastStorageError()};
+  });
+  expect(blocked.update).toBeNull();
+  expect(blocked.favorite).toBeNull();
+  expect(blocked.deleted).toBe(false);
+  expect(blocked.instrument).toBe('MNQ');
+  expect(blocked.error).toContain('Final-saved cards are locked');
 });

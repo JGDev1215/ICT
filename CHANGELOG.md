@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.8.10 — 2026-07-09
+
+### Changed
+
+- Removed the active Watchlist concept from Home, Profile settings, settings export, and backup sync payloads.
+- Locked final-saved cards so they can only be viewed, copied, shared, or exported after Final save.
+- Blocked final-saved card edits through Focus Card controls, Timeline notes, favorite toggles, delete, load-to-planner, helper mutations, bulk saves, and import overwrite.
+- Updated cache-busted assets and service-worker cache names for the final-lock release.
+
+### Tests
+
+- Added smoke, unit, and Playwright coverage for ignored legacy Watchlist settings and final-saved card locking.
+
+## v0.8.9 — 2026-07-09
+
+### Changed
+
+- Simplified the active Planner to instrument, session, current price, Price Map, DOL records, and Sweep records.
+- Removed active Bias Determination, Market Context, FVG Formation, Focus DOL, Potential R:R, Route to DOL / PD array evidence, and Risk Tracker UI.
+- Preserved legacy bias, market context, FVG, route evidence, active-DOL, and risk-plan data in saved cards, JSON export, and JSON import.
+- Updated cache-busted assets and service-worker cache names for the planner-simplification release.
+
+### Tests
+
+- Updated smoke, unit, and Playwright expectations for the simplified Planner/Focus workflow and legacy-data preservation.
+
 ## v0.8.8 — 2026-07-09
 
 ### Changed

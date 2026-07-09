@@ -2,70 +2,59 @@
 
 ## Goal
 
-Apply the requested default PIN and remove the obsolete ASD plan file.
+Complete project closeout documentation and publish the current worktree to GitHub.
 
 ## Repo Findings
 
-- `docs/plans/ASD.md` is already deleted in the working tree.
-- Account & Backup PIN login is already implemented in `assets/app.js`.
-- The PIN placeholder still says `1234`, which could conflict with the requested default.
-- Supabase Auth password rotation can be done by updating the existing `auth.users.encrypted_password` hash and revoking refresh/session rows.
+- The current dirty worktree contains the intended Planner simplification, final-card lock, Watchlist removal, docs, tests, QA, and workflow evidence.
+- Daily reports belong in `docs/daily-reports/`.
+- Commit and push are explicitly requested.
 
 ## Files Likely Affected
 
-- `assets/app.js`
-- `index.html`
-- `service-worker.js`
-- `tests/smoke.js`
-- `README.md`
-- `CHANGELOG.md`
-- `CLAUDE.md`
-- `docs/qa/production-web-mobile-qa-2026-07-09.md`
-- `docs/plans/ASD.md`
+- `docs/daily-reports/2026-07-09-session-report-3.md`
 - `agent-workflow/*`
-- `.env.local` ignored local-only credential file
+- Existing dirty files already present in the worktree
 
 ## Proposed Changes
 
-- Rotate the Supabase `admin@ict.local` password to the requested default PIN.
-- Store the requested PIN in ignored `.env.local`.
-- Revoke existing Supabase admin sessions/tokens where exposed.
-- Change the visible PIN input placeholder from a fake example code to neutral copy.
-- Bump app/cache to `v0.8.8` because `assets/app.js` changes.
-- Update docs/tests that pin current version/cache.
-- Leave `docs/plans/ASD.md` deleted.
+- Add an end-of-day historical report.
+- Update workflow evidence for this closeout task.
+- Run checks.
+- Stage all changes.
+- Commit with a message covering the shipped planner/final-lock updates.
+- Push `main` to `origin`.
 
 ## Step-by-Step Plan
 
-1. Create/update workflow intake, plan, and senior review files.
-2. Edit `assets/app.js` to remove the misleading PIN example placeholder.
-3. Run version/cache bump to `v0.8.8`.
-4. Update changelog and QA evidence without printing the PIN.
-5. Rotate Supabase Auth password to the requested PIN and revoke sessions.
-6. Verify previous credential rejection and requested PIN acceptance.
-7. Run `npm test` and `git diff --check`.
-8. Update execution/review/final workflow files.
+1. Run required safety checks.
+2. Read docs routing and daily-report guidance.
+3. Create the end-of-day report.
+4. Run `npm test`, `npm run test:e2e -- --reporter=dot`, and `git diff --check`.
+5. Complete workflow review/final approval files.
+6. Run `git status` and `git diff`.
+7. `git add .`
+8. Commit all changes.
+9. Push the current branch.
 
 ## Acceptance Criteria
 
-- Supabase login succeeds with the requested default PIN.
-- Supabase login fails with the previous PIN.
-- The committed frontend does not print the PIN.
-- `docs/plans/ASD.md` is removed.
-- Version/cache strings are consistent.
-- Required checks pass.
+- Report is present and factual.
+- Checks pass.
+- Commit exists locally.
+- Push succeeds.
 
 ## Test Plan
 
-- Supabase Auth old/new credential verification.
 - `npm test`
+- `npm run test:e2e -- --reporter=dot`
 - `git diff --check`
 
 ## Risks
 
-- A 4-digit PIN is weak by normal password standards; keep private/single-user only.
-- The deployed site will use the new neutral placeholder only after v0.8.8 deployment.
+- Playwright may take time but should reuse existing local static server configuration.
+- Push may fail if remote rejects or network/auth is unavailable.
 
 ## Rollback Plan
 
-Rotate Supabase back to a strong private password, restore the previous app version/cache commit, and restore `docs/plans/ASD.md` if needed.
+If checks fail, fix before commit. If push fails after commit, report the local commit hash and push failure.

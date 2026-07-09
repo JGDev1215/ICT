@@ -1,9 +1,7 @@
 # Current Task
 
-login credentials default code is "5880".
-
-remove asd.md file
+Complete an end-of-day report for this project and thereafter commit and push everything.
 
 ## Scope
 
-Set the single-user Supabase Account & Backup PIN to the requested default code, keep the code out of committed app/docs, remove the already-deleted `docs/plans/ASD.md` from the repository, and update workflow evidence.
+Create a historical daily report under `docs/daily-reports/`, run final checks, stage all repository changes, commit them, and push the current branch.

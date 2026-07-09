@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ict-sweep-tracker-v088-default-pin-20260709';
+const CACHE_NAME = 'ict-sweep-tracker-v0810-final-lock-20260709';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -6,9 +6,9 @@ const STATIC_ASSETS = [
   './favicon.svg',
   './icon-192.svg',
   './icon-512.svg',
-  './assets/config.js?v=0.8.8-default-pin-20260709',
-  './assets/styles.css?v=0.8.8-default-pin-20260709',
-  './assets/app.js?v=0.8.8-default-pin-20260709'
+  './assets/config.js?v=0.8.10-final-lock-20260709',
+  './assets/styles.css?v=0.8.10-final-lock-20260709',
+  './assets/app.js?v=0.8.10-final-lock-20260709'
 ];
 
 self.addEventListener('install', event => {

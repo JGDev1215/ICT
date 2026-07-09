@@ -117,6 +117,56 @@ Covered:
 
 Result: PASS.
 
+## v0.8.9 Simplified Planner Follow-Up
+
+Local QA was rerun for the v0.8.9 planner simplification before commit/push/deploy.
+
+Commands:
+
+```bash
+npm test
+npm run test:e2e -- --reporter=dot
+git diff --check
+```
+
+Results:
+
+- `npm test`: PASS. Smoke, unit, and API boundary tests passed.
+- `npm run test:e2e -- --reporter=dot`: PASS. 68 passed, 1 skipped. The skipped case is the existing Playwright WebKit offline reload limitation.
+- `git diff --check`: PASS.
+
+Coverage updates:
+
+- Planner renders instrument, session, current price/manual price acknowledgement, Price Map, DOL records, and Sweep records.
+- Active Bias Determination, Market Context, FVG Formation, Focus DOL, Potential R:R, Route to DOL / PD array evidence, and Risk Tracker UI are absent.
+- Legacy bias, market context, route evidence, and risk-plan data remains preserved in saved-card normalization and JSON export/import.
+- Legacy `risk` and `journal` routes redirect to Home.
+
+## v0.8.10 Watchlist Removal And Final Lock Follow-Up
+
+Local QA was rerun for the v0.8.10 Watchlist removal and final-saved card lock before commit/push/deploy.
+
+Commands:
+
+```bash
+npm test
+npm run test:e2e -- --reporter=dot
+git diff --check
+```
+
+Results:
+
+- `npm test`: PASS. Smoke, unit, and API boundary tests passed.
+- `npm run test:e2e -- --reporter=dot`: PASS. 71 passed, 1 skipped. The skipped case is the existing Playwright WebKit offline reload limitation.
+- `git diff --check`: PASS.
+
+Coverage updates:
+
+- Watchlist no longer renders in Home/Profile and is no longer exported or synced as an active setting.
+- Legacy imported Watchlist settings are ignored.
+- Final-saved cards render locked/read-only in Focus Card Details.
+- Final-saved cards reject Focus edits, Timeline notes, favorite toggles, delete, load-to-planner, helper-level mutations, bulk-save mutation, import overwrite, and remote merge overwrite.
+
 ## Supabase Credential-Independent Checks
 
 These checks do not prove authenticated cloud sync, but they verify the production project is reachable, anonymous writes are blocked by RLS, and the deployed app keeps backup optional when signed out.

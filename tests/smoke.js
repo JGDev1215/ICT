@@ -42,11 +42,11 @@ const hostedPriceApiBase = match(configSource, /hostedPriceApiBase: '([^']+)'/, 
 const hostedPriceUrl = new URL(hostedPriceApiBase);
 const runtimeAssets = Array.from(index.matchAll(/(?:src|href)="([^"]*(?:assets\/[^"]+|manifest\.webmanifest|favicon\.svg|icon-\d+\.svg)[^"]*)"/g)).map(found => found[1]);
 
-ok(appVersion === 'v0.8.8', 'app version should be v0.8.8');
-ok(configAsset.includes('v=0.8.8-default-pin-20260709'), 'config asset cache key should match v0.8.8 default-pin');
-ok(appAsset.includes('v=0.8.8-default-pin-20260709'), 'app asset cache key should match v0.8.8 default-pin');
-ok(styleAsset.includes('v=0.8.8-default-pin-20260709'), 'style asset cache key should match v0.8.8 default-pin');
-ok(cacheName === 'ict-sweep-tracker-v088-default-pin-20260709', 'service worker cache name should match v0.8.8 default-pin');
+ok(appVersion === 'v0.8.10', 'app version should be v0.8.10');
+ok(configAsset.includes('v=0.8.10-final-lock-20260709'), 'config asset cache key should match v0.8.10 final lock');
+ok(appAsset.includes('v=0.8.10-final-lock-20260709'), 'app asset cache key should match v0.8.10 final lock');
+ok(styleAsset.includes('v=0.8.10-final-lock-20260709'), 'style asset cache key should match v0.8.10 final lock');
+ok(cacheName === 'ict-sweep-tracker-v0810-final-lock-20260709', 'service worker cache name should match v0.8.10 final lock');
 ok(index.includes(`<title>ICT DOL Sweep Tracker ${appVersion}</title>`), 'index title version missing');
 ok(index.includes(`ICT DOL Sweep Tracker ${appVersion} · Educational tool. Not financial advice.`), 'index footer version missing');
 ok(!index.includes('assets/bias-extension.js'), 'obsolete bias extension should not be loaded');
@@ -76,8 +76,8 @@ ok(appSource.includes('function nyTimestamp'), 'NY timestamp helper missing');
 ok(appSource.includes('function nyDateInput'), 'NY date helper missing');
 ok(appSource.includes('function nyTimeInput'), 'NY time helper missing');
 ok(appSource.includes('function activeDol'), 'active DOL helper missing');
-ok(appSource.includes('function calculateRiskPlan'), 'risk-to-reward helper missing');
-ok(appSource.includes('function routeEvidenceHtml'), 'route evidence UI missing');
+ok(appSource.includes('function calculateRiskPlan'), 'legacy risk plan normalizer missing');
+ok(!appSource.includes('function routeEvidenceHtml'), 'route evidence UI should not render');
 ok(appSource.includes('PRICE_DELAY_DISCLAIMER'), 'price delay disclaimer missing');
 ok(appSource.includes('Auto-detect price'), 'price auto-detect button missing');
 ok(appSource.includes('function plannerValidationState'), 'planner validation helper missing');
@@ -124,8 +124,8 @@ ok(appSource.includes('favorite'), 'favorite field missing');
 ok(appSource.includes('journal'), 'journal field missing');
 ok(appSource.includes('risk'), 'risk field missing');
 ok(appSource.includes('marketContext'), 'market context field missing');
-ok(appSource.includes('Bias Determination For Session'), 'session-scoped bias label missing');
-ok(appSource.includes('Before 10:30am NY'), 'pre-10:30 NY warning missing');
+ok(!appSource.includes('Bias Determination For Session'), 'active session bias label should be removed');
+ok(!appSource.includes('Before 10:30am NY'), 'active pre-10:30 NY warning should be removed');
 ok(appSource.includes('Start new analysis'), 'home action missing');
 ok(appSource.includes('function setNotice') && appSource.includes('function announce') && appSource.includes('globalStatus'), 'notice severity and persistent live-region helpers missing');
 ok(appSource.includes('function renderShell'), 'app shell renderer missing');
@@ -137,11 +137,14 @@ ok(appSource.includes('Saved focus cards'), 'saved screen missing');
 ok(appSource.includes('Focus card details'), 'focus card details screen missing');
 ok(appSource.includes('Execution timeline'), 'timeline screen missing');
 ok(appSource.includes('Setup Library'), 'liquidity map screen missing');
-ok(appSource.includes('Risk tracker'), 'risk tracker screen missing');
+ok(!appSource.includes('Risk tracker'), 'risk tracker screen should be removed');
 ok(!appSource.includes('Trade journal'), 'journal route should not render');
 ok(!appSource.includes("['journal', 'stylus_note', 'Journal']"), 'journal nav should not render');
 ok(appSource.includes('Trader profile'), 'profile screen missing');
 ok(appSource.includes('Final save'), 'final save missing');
+ok(appSource.includes('function isFinalLocked'), 'final-saved lock helper missing');
+ok(appSource.includes('Final-saved cards are locked'), 'final-saved lock message missing');
+ok(!appSource.includes('Watchlist'), 'active Watchlist UI should be removed');
 ok(appSource.includes('Export JSON'), 'json export missing');
 ok(/const VERSION = 'v0\.[0-9.]+'/.test(biasSource), 'bias extension version missing');
 ok(biasSource.includes('ict_dol_sweep_export_v7'), 'bias export schema missing');
@@ -375,7 +378,6 @@ Object.assign(completePlannerFields, {
   instrument: 'MNQ',
   session: 'New York AM',
   currentPrice: '20000',
-  bias: 'Bullish',
   dol1Level: '20250',
   dol1Draw: 'Previous day high (PDH)',
   dol1Tf: 'Daily'
@@ -455,7 +457,6 @@ ok(priceValidation.some(message => message.includes('DOL 1')), 'price validation
 const optionalSweepCompletion = api.comp({
   instrument: 'MNQ',
   session: 'New York AM',
-  bias: 'Bullish',
   currentPrice: '20000',
   dol1Level: '20250',
   dol1Draw: 'Previous day high (PDH)',
@@ -469,7 +470,6 @@ ok(optionalSweepCompletion.ok === true, 'sweep confidence and hit time should no
 const noSweepCompletion = api.comp({
   instrument: 'MNQ',
   session: 'New York AM',
-  bias: 'Bullish',
   manualPriceNeededAck: true,
   dol1Level: '20250',
   dol1Draw: 'Previous day high (PDH)',
@@ -479,7 +479,6 @@ ok(noSweepCompletion.ok === true, 'complete DOL with manual price acknowledgemen
 const partialSweepCompletion = api.comp({
   instrument: 'MNQ',
   session: 'New York AM',
-  bias: 'Bullish',
   currentPrice: '20000',
   dol1Level: '20250',
   dol1Draw: 'Previous day high (PDH)',
@@ -488,7 +487,7 @@ const partialSweepCompletion = api.comp({
   sweep1Draw: 'Relative equal lows (REL)'
 });
 ok(partialSweepCompletion.ok === false && partialSweepCompletion.sweep.part === 1, 'partial sweep records should keep card in draft status');
-ok(api.comp({instrument: 'MNQ', session: 'New York AM', bias: 'Bullish', dol1Level: '20250', dol1Draw: 'Previous day high (PDH)', dol1Tf: 'Daily'}).ok === false, 'missing current price or manual price acknowledgement should keep card in draft status');
+ok(api.comp({instrument: 'MNQ', session: 'New York AM', dol1Level: '20250', dol1Draw: 'Previous day high (PDH)', dol1Tf: 'Daily'}).ok === false, 'missing current price or manual price acknowledgement should keep card in draft status');
 
 const settingsFixture = runApp();
 const settingsApi = settingsFixture.context.ICTSweepState;
@@ -496,13 +495,12 @@ const savedSettings = settingsApi.saveSettings({
   defaultInstrument: 'NQ',
   defaultSession: 'New York AM',
   theme: 'dark',
-  watchlist: 'MNQ, ES, GC',
   riskDefaults: {plannedRiskPct: '0.5', plannedR: '2R', maxLoss: '150'}
 });
 ok(savedSettings.defaultInstrument === 'NQ', 'default instrument setting did not save');
 ok(savedSettings.defaultSession === 'New York AM', 'default session setting did not save');
 ok(savedSettings.theme === 'dark', 'theme setting did not save');
-ok(savedSettings.watchlist.join(',') === 'MNQ,ES,GC', 'watchlist setting did not normalise');
+ok(!Object.prototype.hasOwnProperty.call(savedSettings, 'watchlist'), 'watchlist should not be an active setting');
 ok(savedSettings.riskDefaults.plannedRiskPct === '0.5', 'risk default percent did not save');
 const reloadedSettingsFixture = runApp(settingsFixture.storage.dump());
 const reloadedSettingsApi = reloadedSettingsFixture.context.ICTSweepState;
@@ -510,14 +508,15 @@ const reloadedSettings = reloadedSettingsApi.getSettings();
 ok(reloadedSettings.defaultInstrument === 'NQ', 'default instrument setting did not persist');
 ok(reloadedSettings.defaultSession === 'New York AM', 'default session setting did not persist');
 ok(reloadedSettings.theme === 'dark', 'theme setting did not persist');
-ok(reloadedSettings.watchlist.length === 3 && reloadedSettings.watchlist[2] === 'GC', 'watchlist setting did not persist');
+ok(!Object.prototype.hasOwnProperty.call(reloadedSettings, 'watchlist'), 'watchlist setting should not persist');
 ok(reloadedSettings.riskDefaults.plannedRiskPct === '0.5' && reloadedSettings.riskDefaults.plannedR === '2R' && reloadedSettings.riskDefaults.maxLoss === '150', 'risk defaults did not persist');
 reloadedSettingsApi.go('profile');
 ok(reloadedSettingsFixture.appNode.innerHTML.includes("id='defaultInstrument' value='NQ'"), 'profile did not render saved default instrument');
-ok(reloadedSettingsFixture.appNode.innerHTML.includes("id='defaultRiskPct' value='0.5'"), 'profile did not render saved risk percent');
-ok(reloadedSettingsFixture.appNode.innerHTML.includes("id='defaultPlannedR' value='2R'"), 'profile did not render saved planned R');
+ok(!reloadedSettingsFixture.appNode.innerHTML.includes("id='defaultRiskPct'"), 'profile should not render saved risk percent');
+ok(!reloadedSettingsFixture.appNode.innerHTML.includes("id='defaultPlannedR'"), 'profile should not render saved planned R');
 reloadedSettingsApi.go('risk');
-ok(reloadedSettingsFixture.appNode.innerHTML.includes('Planned risk') && reloadedSettingsFixture.appNode.innerHTML.includes('<h2>0.5</h2>'), 'risk route did not reflect saved risk default');
+ok(reloadedSettingsFixture.appNode.innerHTML.includes('ICT Sweep Tracker'), 'legacy risk route should redirect home');
+ok(!reloadedSettingsFixture.appNode.innerHTML.includes('Risk tracker'), 'legacy risk route should not render risk UI');
 reloadedSettingsApi.go('planner', {new: true});
 ok(reloadedSettingsFixture.appNode.innerHTML.includes("id='instrument'") && reloadedSettingsFixture.appNode.innerHTML.includes("value='NQ'"), 'new planner draft did not inherit default instrument');
 ok(reloadedSettingsFixture.appNode.innerHTML.includes("<option value='New York AM' selected>New York AM</option>"), 'new planner draft did not inherit default session');
@@ -562,6 +561,11 @@ const mergeOlder = api.mergeCards(
   [api.normaliseCard({id: 'merge-card', updatedAt: '2026-07-08T10:00:00.000Z', fields: {instrument: 'ES'}})]
 );
 ok(mergeOlder[0].fields.instrument === 'NQ', 'mergeCards should keep newer local card over older remote card');
+const mergeLocked = api.mergeCards(
+  [api.normaliseCard({id: 'merge-locked', updatedAt: '2026-07-09T10:00:00.000Z', fields: {instrument: 'NQ'}, outcome: 'Hit', finalSaved: true})],
+  [api.normaliseCard({id: 'merge-locked', updatedAt: '2099-07-09T10:00:00.000Z', fields: {instrument: 'ES'}, outcome: 'Hit', finalSaved: true})]
+);
+ok(mergeLocked[0].fields.instrument === 'NQ', 'mergeCards should not overwrite a local locked final card');
 const metrics = api.getMetrics();
 ok(metrics.rate === '50%', 'hit rate should only use final Hit/Miss outcomes');
 ok(metrics.sample === 2, 'hit/miss sample should exclude Breakeven, Read and drafts');
@@ -572,6 +576,23 @@ ok(metrics.favorites === 1, 'favorite metric invalid');
 
 const openFinalAttempt = api.normaliseCard({id: 'open-final-attempt', outcome: 'Open', finalSaved: true});
 ok(openFinalAttempt.finalSaved === false, 'Open outcome must not normalise as final-saved');
+const editableReview = api.normaliseCard({
+  id: 'editable-review',
+  fields: {
+    instrument: 'MNQ',
+    currentPrice: '20000',
+    dol1Level: '20250',
+    dol1Draw: 'Previous day high (PDH)',
+    dol1Tf: 'Daily',
+    sweep1Level: '19850',
+    sweep1Draw: 'Asia low',
+    sweep1Tf: '15m'
+  },
+  outcome: 'Open',
+  finalSaved: false,
+  favorite: true
+});
+api.saveCards([editableReview].concat(api.getCards()));
 
 const contextCard = api.normaliseCard({
   id: 'context-card',
@@ -617,12 +638,6 @@ ok(priceCard.priceSnapshot.price === '20000', 'price snapshot should use current
 ok(priceCard.priceSnapshot.delayDisclaimer.includes('Manual override'), 'price snapshot disclaimer missing');
 ok(priceCard.priceHistory[0].event === 'created', 'created price history event missing');
 ok(api.activeDol(priceCard.fields, priceCard.activeDolId).direction === 'upward delivery required', 'active DOL direction invalid');
-const longRisk = api.calculateRiskPlan({direction: 'Long', ratio: '2R', entryPrice: '20000'}, priceCard.fields, 'dol1');
-ok(longRisk.status === 'ready' && longRisk.rr === '2R' && longRisk.riskPoints === '125' && longRisk.invalidationPrice === '19875', 'long R:R calculation invalid');
-const shortRisk = api.calculateRiskPlan({direction: 'Short', ratio: '3R', entryPrice: '20000'}, Object.assign({}, priceCard.fields, {dol1Level: '19850'}), 'dol1');
-ok(shortRisk.status === 'ready' && shortRisk.rr === '3R' && shortRisk.riskPoints === '50' && shortRisk.invalidationPrice === '20050', 'short R:R calculation invalid');
-const invalidRisk = api.calculateRiskPlan({direction: 'Long', ratio: '2R', entryPrice: '20000'}, Object.assign({}, priceCard.fields, {dol1Level: '19850'}), 'dol1');
-ok(invalidRisk.status === 'invalid', 'invalid R:R should be blocked');
 const routeEvidence = api.normRouteEvidence([{arrayType: 'BISI', timeframe: '5m', level: '20010-20020', behavior: 'Respect', notes: 'CE held.'}]);
 ok(routeEvidence.length === 1 && routeEvidence[0].createdAtNy.includes('NY'), 'route evidence normalization invalid');
 const distance = api.dolDistance(priceCard.fields.dol1Level, priceCard.fields.currentPrice);
@@ -644,15 +659,32 @@ ok(priceMapMarkup.includes('Source: manual entry') && priceMapMarkup.includes('p
 ok(api.priceMapHtml(priceCard.fields, {source: 'hosted-yfinance'}).includes('Source: hosted yfinance API'), 'hosted price map source label missing');
 const takenPatch = api.focusReviewFields(priceCard, id => ({checked: id === 'priceMap_dol2Taken'}));
 ok(takenPatch.dol1Taken === false && takenPatch.dol2Taken === true && takenPatch.dol3Taken === false, 'focus DOL taken patch did not reflect checkbox states');
-const takenUpdated = api.updateCard('hit', {fields: takenPatch});
+const takenUpdated = api.updateCard('editable-review', {fields: takenPatch});
 ok(takenUpdated.fields.dol2Taken === true, 'focus DOL taken patch did not persist');
 ok(takenUpdated.fields.instrument === 'MNQ', 'focus DOL taken patch should not replace existing fields');
 
-const updated = api.updateCard('hit', {
+const legacyRisk = api.calculateRiskPlan({
+  direction: 'Long',
+  ratio: '2R',
+  entryPrice: '20000',
+  targetDolId: 'dol1',
+  targetPrice: '20250',
+  invalidationPrice: '19875',
+  riskPoints: '125',
+  rewardPoints: '250',
+  rr: '2R',
+  status: 'ready',
+  message: 'Legacy risk reviewed.'
+}, priceCard.fields, 'dol1');
+ok(legacyRisk.status === 'ready' && legacyRisk.rr === '2R' && legacyRisk.riskPoints === '125' && legacyRisk.invalidationPrice === '19875', 'legacy risk plan was not preserved');
+const incompleteLegacyRisk = api.calculateRiskPlan({direction: 'Long', ratio: '2R', entryPrice: '20000'}, priceCard.fields, 'dol1');
+ok(incompleteLegacyRisk.status === 'incomplete' && incompleteLegacyRisk.rr === '2R' && incompleteLegacyRisk.riskPoints === '', 'legacy risk plan should not derive active R:R fields');
+
+const updated = api.updateCard('editable-review', {
   fields: {bias: 'Bearish', biasValidation: 'Buy-side sweep confirmed.', currentPrice: '20000', dol1Level: '20250', dol1Draw: 'Previous day high (PDH)', dol1Tf: 'Daily'},
   activeDolId: 'dol1',
   routeEvidence,
-  riskPlan: {direction: 'Long', ratio: '2R', entryPrice: '20000', targetDolId: 'dol1'},
+  riskPlan: legacyRisk,
   marketContext: {Daily: {phase: 'Retracement', note: 'Corrective delivery.', potentialNextPhase: ''}},
   markers: {biasInvalidated: true},
   journal: {tags: ['review', 'nyam'], lesson: 'Wait for confirmation.'},
@@ -664,11 +696,18 @@ ok(updated.markers.biasInvalidated === true, 'updateCard did not merge markers')
 ok(updated.journal.tags.length === 2, 'updateCard did not preserve journal tags');
 ok(updated.risk.maxLoss === '$50', 'updateCard did not preserve risk');
 ok(updated.routeEvidence.length === 1 && updated.routeEvidence[0].arrayType === 'BISI', 'updateCard did not preserve route evidence');
-ok(updated.riskPlan.status === 'ready' && updated.riskPlan.rr === '2R', 'updateCard did not calculate risk plan');
+ok(updated.riskPlan.status === 'ready' && updated.riskPlan.rr === '2R', 'updateCard did not preserve legacy risk plan');
 ok(updated.priceHistory.length >= 2, 'updateCard should append price history');
 const historyBeforeFavorite = updated.priceHistory.length;
-ok(api.toggleFavorite('hit').favorite === false, 'toggleFavorite did not flip favorite');
-ok(api.getCards().find(card => card.id === 'hit').priceHistory.length === historyBeforeFavorite, 'toggleFavorite should not append price history');
+ok(api.toggleFavorite('editable-review').favorite === false, 'toggleFavorite did not flip favorite');
+ok(api.getCards().find(card => card.id === 'editable-review').priceHistory.length === historyBeforeFavorite, 'toggleFavorite should not append price history');
+ok(api.isFinalLocked(api.getCards().find(card => card.id === 'hit')) === true, 'final-saved card should be locked');
+ok(api.updateCard('hit', {fields: {instrument: 'LOCKED'}}) === null, 'locked final card update should be blocked');
+ok(api.getCards().find(card => card.id === 'hit').fields.instrument === 'MNQ', 'locked final card should not mutate fields');
+ok(api.toggleFavorite('hit') === null, 'locked final card favorite toggle should be blocked');
+ok(api.deleteCard('hit') === false, 'locked final card delete should be blocked');
+api.saveCards(api.getCards().filter(card => card.id !== 'hit'));
+ok(api.getCards().find(card => card.id === 'hit'), 'bulk save should preserve locked final card');
 ok(api.deleteCard('draft-miss') === true, 'deleteCard did not report deletion');
 ok(!api.getCards().find(card => card.id === 'draft-miss'), 'deleteCard did not remove card');
 
@@ -695,16 +734,17 @@ ok(clearDump.ict_cards_v077 == null, 'clearDeviceData should remove legacy card 
 const exported = api.exportCards();
 ok(exported.schema === 'ict_dol_sweep_export_v7', 'export schema invalid');
 ok(exported.analytics.sample === 2, 'export analytics invalid');
-ok(exported.cards.find(card => card.id === 'hit').journal.lesson === 'Wait for confirmation.', 'export lost journal');
-ok(exported.cards.find(card => card.id === 'hit').risk.maxLoss === '$50', 'export lost risk');
-ok(exported.cards.find(card => card.id === 'hit').marketContext.Daily.phase === 'Retracement', 'export lost market context');
-ok(exported.cards.find(card => card.id === 'hit').routeEvidence[0].arrayType === 'BISI', 'export lost route evidence');
-ok(exported.cards.find(card => card.id === 'hit').riskPlan.rr === '2R', 'export lost risk plan');
+ok(!Object.prototype.hasOwnProperty.call(exported.settings, 'watchlist'), 'exported settings should not include watchlist');
+ok(exported.cards.find(card => card.id === 'editable-review').journal.lesson === 'Wait for confirmation.', 'export lost journal');
+ok(exported.cards.find(card => card.id === 'editable-review').risk.maxLoss === '$50', 'export lost risk');
+ok(exported.cards.find(card => card.id === 'editable-review').marketContext.Daily.phase === 'Retracement', 'export lost market context');
+ok(exported.cards.find(card => card.id === 'editable-review').routeEvidence[0].arrayType === 'BISI', 'export lost route evidence');
+ok(exported.cards.find(card => card.id === 'editable-review').riskPlan.rr === '2R', 'export lost risk plan');
 
-api.saveCards([]);
+api.clearDeviceData();
 const imported = api.importCards(JSON.stringify(exported));
 ok(imported.imported === exported.cards.length, 'import count invalid');
-const roundTrip = api.getCards().find(card => card.id === 'hit');
+const roundTrip = api.getCards().find(card => card.id === 'editable-review');
 ok(roundTrip.fields.bias === 'Bearish', 'import lost bias');
 ok(roundTrip.journal.lesson === 'Wait for confirmation.', 'import lost journal lesson');
 ok(roundTrip.risk.plannedR === '2R', 'import lost planned R');
@@ -731,14 +771,13 @@ const settingsOnlyImport = api.importCards({
     defaultInstrument: 'ES',
     defaultSession: 'London',
     theme: 'dark',
-    watchlist: ['ES', 'YM'],
     riskDefaults: {plannedRiskPct: '0.5', plannedR: '2R', maxLoss: '100'}
   }
 });
 ok(settingsOnlyImport.imported === 0 && settingsOnlyImport.settingsImported === true, 'settings-only import should report imported settings without cards');
 const importedSettings = api.getSettings();
 ok(importedSettings.defaultInstrument === 'ES' && importedSettings.defaultSession === 'London', 'importCards should import exported settings');
-ok(importedSettings.watchlist.join(',') === 'ES,YM', 'imported settings should preserve watchlist');
+ok(!Object.prototype.hasOwnProperty.call(importedSettings, 'watchlist'), 'importCards should ignore legacy watchlist settings');
 
 const duplicateImport = api.importCards({
   cards: [
@@ -747,12 +786,16 @@ const duplicateImport = api.importCards({
   ]
 });
 ok(duplicateImport.imported === 2, 'duplicate import should report incoming card count');
-ok(api.getCards().filter(card => card.id === 'hit').length === 1, 'import should deduplicate by id');
-ok(api.getCards().find(card => card.id === 'hit').fields.session === 'London', 'duplicate import should keep newest incoming card data');
+ok(api.getCards().filter(card => card.id === 'editable-review').length === 1, 'import should deduplicate by id');
+ok(api.getCards().find(card => card.id === 'editable-review').fields.session === 'London', 'duplicate import should keep newest incoming card data');
 ok(api.getCards().find(card => card.id === 'unique-import'), 'import should keep unique incoming cards');
-const newestHit = api.getCards().find(card => card.id === 'hit');
-api.importCards({cards: [Object.assign({}, newestHit, {updatedAt: '2000-01-01T00:00:00.000Z', fields: Object.assign({}, newestHit.fields, {session: 'Older import'})})]});
-ok(api.getCards().find(card => card.id === 'hit').fields.session === 'London', 'older duplicate import should not overwrite newer local card');
+const newestEditable = api.getCards().find(card => card.id === 'editable-review');
+api.importCards({cards: [Object.assign({}, newestEditable, {updatedAt: '2000-01-01T00:00:00.000Z', fields: Object.assign({}, newestEditable.fields, {session: 'Older import'})})]});
+ok(api.getCards().find(card => card.id === 'editable-review').fields.session === 'London', 'older duplicate import should not overwrite newer local card');
+const lockedHit = api.getCards().find(card => card.id === 'hit');
+const lockedImport = api.importCards({cards: [Object.assign({}, lockedHit, {updatedAt: '2099-01-01T00:00:00.000Z', fields: Object.assign({}, lockedHit.fields, {instrument: 'LOCKED_IMPORT'})})]});
+ok(lockedImport.imported === 0 && lockedImport.warning.includes('locked final-saved'), 'locked final import overwrite should be skipped with warning');
+ok(api.getCards().find(card => card.id === 'hit').fields.instrument === 'MNQ', 'locked final import should not overwrite fields');
 
 const quotaFixture = runApp();
 const quotaApi = quotaFixture.context.ICTSweepState;
@@ -801,14 +844,14 @@ ok(routes.appNode.innerHTML.includes('Generate Focus Plan'), 'planner CTA did no
 ok(routes.appNode.innerHTML.includes("id='plannerActions'"), 'planner sticky action target missing');
 ok(routes.appNode.innerHTML.includes('Draft state'), 'planner visible draft state missing');
 ok(routes.appNode.innerHTML.includes("id='discardDraftBtn'"), 'planner discard draft action missing');
-ok(routes.appNode.innerHTML.includes('Bias Determination For Session'), 'planner session bias label missing');
-ok(routes.appNode.innerHTML.includes('Before 10:30am NY'), 'planner pre-10:30 warning missing');
-ok(routes.appNode.innerHTML.includes('Market Context'), 'planner market context section missing');
+ok(!routes.appNode.innerHTML.includes('Bias Determination For Session'), 'planner should not render session bias section');
+ok(!routes.appNode.innerHTML.includes('Before 10:30am NY'), 'planner should not render pre-10:30 warning');
+ok(!routes.appNode.innerHTML.includes('Market Context'), 'planner should not render active market context section');
 ok(routes.appNode.innerHTML.includes('priceMapPreview'), 'planner standalone price map preview missing');
 ok(routes.appNode.innerHTML.includes('Liquidity ladder'), 'planner price map heading missing');
 ok(routes.appNode.innerHTML.includes('price-map-empty'), 'planner price map empty state missing');
-ok(routes.appNode.innerHTML.includes('marketContextAddTf'), 'planner market context timeframe dropdown missing');
-ok(routes.appNode.innerHTML.includes('Choose only the timeframe you want to record'), 'planner optional timeframe guidance missing');
+ok(!routes.appNode.innerHTML.includes('marketContextAddTf'), 'planner should not render market context timeframe dropdown');
+ok(!routes.appNode.innerHTML.includes('Choose only the timeframe you want to record'), 'planner should not render market context guidance');
 ok(!routes.appNode.innerHTML.includes('ctx_monthly_phase'), 'planner should not force monthly context field by default');
 ok(!routes.appNode.innerHTML.includes('ctx_m15_next'), 'planner should not force 15m context field by default');
 ok(routes.appNode.innerHTML.includes('currentPrice'), 'planner current price field missing');
@@ -824,6 +867,7 @@ ok(routes.appNode.innerHTML.includes('sweep1Tf'), 'planner sweep timeframe field
 ok(routes.appNode.innerHTML.includes('Sweep taken'), 'planner sweep taken checkbox missing');
 ok(!routes.appNode.innerHTML.includes('Validation of bias'), 'planner should not render validation of bias label');
 ok(!routes.appNode.innerHTML.includes('Invalidation of bias'), 'planner should not render invalidation of bias label');
+ok(!routes.appNode.innerHTML.includes('FVG Formation'), 'planner should not render active FVG section');
 ok(routes.appNode.innerHTML.includes('dol1Level'), 'planner DOL field missing');
 ok(routes.appNode.innerHTML.includes('sweep1Level'), 'planner sweep field missing');
 
@@ -913,7 +957,24 @@ const londonCard = routeApi.createBlankDraft({
   outcome: 'Miss',
   finalSaved: true
 });
-routeApi.saveCards([routeCard, londonCard]);
+const lockedCard = routeApi.normaliseCard({
+  id: 'locked-card',
+  savedAt: '2026-07-07T11:00:00.000Z',
+  updatedAt: '2026-07-07T11:05:00.000Z',
+  fields: {
+    instrument: 'YM',
+    session: 'New York PM',
+    currentPrice: '40000',
+    dol1Level: '40100',
+    dol1Draw: 'Session high',
+    dol1Tf: '15m',
+    dol1Taken: true
+  },
+  outcome: 'Hit',
+  finalSaved: true,
+  notes: 'Locked final note'
+});
+routeApi.saveCards([routeCard, londonCard, lockedCard]);
 
 routeApi.go('home');
 ok(routes.appNode.innerHTML.includes("data-session-chip='All'"), 'home All session filter missing');
@@ -937,14 +998,12 @@ ok(routes.appNode.innerHTML.includes('Export JSON'), 'saved export action missin
 routeApi.go('focus', {id: 'route-card'});
 ok(routes.appNode.innerHTML.includes('Focus card details'), 'focus route did not render');
 ok(routes.appNode.innerHTML.includes('Price Map Dashboard'), 'focus price map dashboard missing');
-ok(routes.appNode.innerHTML.indexOf('Price Map Dashboard') < routes.appNode.innerHTML.indexOf('Market Context'), 'price map dashboard should render before market context');
-ok(routes.appNode.innerHTML.includes('Focus DOL'), 'focus active DOL panel missing');
-ok(routes.appNode.innerHTML.includes('Active draw on liquidity'), 'active DOL selector missing');
-ok(routes.appNode.innerHTML.includes('Potential risk-to-reward'), 'focus risk-to-reward panel missing');
-ok(routes.appNode.innerHTML.includes('Potential R:R'), 'potential R:R label missing');
-ok(routes.appNode.innerHTML.includes('5R'), 'calculated R:R missing from focus panel');
-ok(routes.appNode.innerHTML.includes('Route to DOL / PD array evidence'), 'route evidence panel missing');
-ok(routes.appNode.innerHTML.includes('BISI CE respected toward DOL.'), 'route evidence note missing');
+ok(!routes.appNode.innerHTML.includes('Focus DOL'), 'focus should not render active DOL panel');
+ok(!routes.appNode.innerHTML.includes('Active draw on liquidity'), 'focus should not render active DOL selector');
+ok(!routes.appNode.innerHTML.includes('Potential risk-to-reward'), 'focus should not render risk-to-reward panel');
+ok(!routes.appNode.innerHTML.includes('Potential R:R'), 'focus should not render potential R:R label');
+ok(!routes.appNode.innerHTML.includes('Route to DOL / PD array evidence'), 'focus should not render route evidence panel');
+ok(!routes.appNode.innerHTML.includes('BISI CE respected toward DOL.'), 'focus should not render legacy route evidence note');
 ok(routes.appNode.innerHTML.includes('audit-strip'), 'audit strip missing');
 ok(routes.appNode.innerHTML.includes('Last saved'), 'last saved audit label missing');
 ok(routes.appNode.innerHTML.includes('Latest saved price'), 'latest saved price card missing');
@@ -962,10 +1021,10 @@ ok(routes.appNode.innerHTML.includes('priceMap_dol1Taken'), 'price map DOL taken
 ok(routes.appNode.innerHTML.includes('DOL taken'), 'focus DOL taken label missing');
 ok(routes.appNode.innerHTML.includes('Price source: manual'), 'focus saved price source note missing');
 ok(routes.appNode.innerHTML.includes('Source: manual entry'), 'focus price map should use saved manual source');
-ok(routes.appNode.innerHTML.includes('Market Context'), 'focus market context section missing');
-ok(routes.appNode.innerHTML.includes('Monthly range.'), 'focus market context note missing');
-ok(routes.appNode.innerHTML.includes('Potential next phase: Expansion'), 'focus potential next phase missing');
-ok(routes.appNode.innerHTML.includes('Session bias only'), 'focus session bias warning missing');
+ok(!routes.appNode.innerHTML.includes('Market Context'), 'focus should not render market context section');
+ok(!routes.appNode.innerHTML.includes('Monthly range.'), 'focus should not render legacy market context note');
+ok(!routes.appNode.innerHTML.includes('Potential next phase: Expansion'), 'focus should not render legacy potential next phase');
+ok(!routes.appNode.innerHTML.includes('Session bias only'), 'focus should not render session bias warning');
 ok(!routes.appNode.innerHTML.includes('Displacement after sell-side sweep.'), 'focus should not render legacy validation data');
 ok(!routes.appNode.innerHTML.includes('Acceptance below low.'), 'focus should not render legacy invalidation data');
 ok(!routes.appNode.innerHTML.includes('Bias validated'), 'focus should not render bias validated marker');
@@ -973,15 +1032,30 @@ ok(!routes.appNode.innerHTML.includes('Bias invalidated'), 'focus should not ren
 ok(routes.appNode.innerHTML.includes('Final save'), 'focus final save action missing');
 ok(!routes.appNode.innerHTML.includes('journalLesson'), 'focus journal lesson field should not render');
 ok(!routes.appNode.innerHTML.includes('Behaviour tags'), 'focus journal tag field should not render');
-ok(routes.appNode.innerHTML.includes('riskPct'), 'focus risk field missing');
-ok(routes.appNode.innerHTML.includes('riskRatio'), 'risk ratio field missing');
-ok(routes.appNode.innerHTML.includes('Invalidation / stop'), 'risk invalidation output missing');
-ok(routes.appNode.innerHTML.includes('routeArrayType'), 'route evidence input missing');
+ok(!routes.appNode.innerHTML.includes('riskPct'), 'focus should not render risk percent field');
+ok(!routes.appNode.innerHTML.includes('riskRatio'), 'focus should not render risk ratio field');
+ok(!routes.appNode.innerHTML.includes('Invalidation / stop'), 'focus should not render risk invalidation output');
+ok(!routes.appNode.innerHTML.includes('routeArrayType'), 'focus should not render route evidence input');
+
+routeApi.go('focus', {id: 'locked-card'});
+ok(routes.appNode.innerHTML.includes('Final card locked'), 'locked final card notice missing');
+ok(routes.appNode.innerHTML.includes('Locked'), 'locked final card pill missing');
+ok(!routes.appNode.innerHTML.includes("id='saveChangesBtn'"), 'locked final card should not render save changes');
+ok(!routes.appNode.innerHTML.includes("id='finalSaveBtn'"), 'locked final card should not render final save');
+ok(!routes.appNode.innerHTML.includes("id='loadBtn'"), 'locked final card should not render load to planner');
+ok(!routes.appNode.innerHTML.includes("id='deleteBtn'"), 'locked final card should not render delete');
+ok(!routes.appNode.innerHTML.includes('priceMap_dol1Taken'), 'locked final card should not render editable price-map DOL checkbox');
+ok(routes.appNode.innerHTML.includes("id='focus_dol1Taken' checked disabled"), 'locked final card DOL checkbox should be disabled');
+ok(routes.appNode.innerHTML.includes("id='reviewOutcome' disabled"), 'locked final card outcome should be disabled');
+ok(routes.appNode.innerHTML.includes("id='reviewNotes' placeholder='Add review notes' disabled"), 'locked final card notes should be disabled');
 
 routeApi.go('timeline', {id: 'route-card'});
 ok(routes.appNode.innerHTML.includes('Execution timeline'), 'timeline route did not render');
-ok(routes.appNode.innerHTML.includes('Session bias'), 'timeline session bias step missing');
-ok(routes.appNode.innerHTML.includes('Market context'), 'timeline market context step missing');
+ok(!routes.appNode.innerHTML.includes('Session bias'), 'timeline should not render session bias step');
+ok(!routes.appNode.innerHTML.includes('Market context'), 'timeline should not render market context step');
+routeApi.go('timeline', {id: 'locked-card'});
+ok(routes.appNode.innerHTML.includes('Timeline notes are read-only after Final save.'), 'locked final timeline should be read-only');
+ok(!routes.appNode.innerHTML.includes("id='timelineNote'"), 'locked final timeline should not render note editor');
 
 routeApi.go('liquidity-map');
 ok(routes.appNode.innerHTML.includes('Setup Library'), 'liquidity map route did not render');
@@ -989,8 +1063,8 @@ ok(routes.appNode.innerHTML.includes("data-liquidity-filter='All' aria-pressed='
 ok(routes.appNode.innerHTML.includes('Add to plan'), 'liquidity add-to-plan action missing');
 
 routeApi.go('risk');
-ok(routes.appNode.innerHTML.includes('Risk tracker'), 'risk route did not render');
-ok(routes.appNode.innerHTML.includes('Plan followed'), 'risk review row missing');
+ok(routes.appNode.innerHTML.includes('ICT Sweep Tracker'), 'legacy risk route should redirect home');
+ok(!routes.appNode.innerHTML.includes('Risk tracker'), 'legacy risk route should not render risk UI');
 
 routeApi.go('journal');
 ok(routes.appNode.innerHTML.includes('ICT Sweep Tracker'), 'legacy journal route should redirect home');
@@ -1021,5 +1095,7 @@ ok(routeApi.getCards()[0].favorite === false, 'route favorite flow failed');
 const routeTextExport = routeApi.text(routeCard);
 ok(routeTextExport.includes('Legacy bias validation: Displacement after sell-side sweep.'), 'text export should retain legacy bias validation');
 ok(routeTextExport.includes('Legacy bias invalidation: Acceptance below low.'), 'text export should retain legacy bias invalidation');
+ok(routeTextExport.includes('Legacy market context:'), 'text export should retain legacy market context');
+ok(routeTextExport.includes('Legacy route evidence:'), 'text export should retain legacy route evidence');
 
 console.log('Smoke test passed.');

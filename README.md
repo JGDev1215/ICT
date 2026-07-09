@@ -3,13 +3,11 @@
 A lightweight browser-based ICT planning tool for one focused job:
 
 1. Choose one instrument.
-2. Define the Bias Determination For Session: Bullish or Bearish.
-3. Record market context phases only for the timeframes chosen from the Phase Map dropdown.
-4. Define up to three draws on liquidity.
-5. Confirm up to three potential lower-timeframe sweep areas.
-6. Optionally mark whether an FVG formed after the sweep.
-7. Save the focus card.
-8. Review, verify, final-save, export, and import saved cards.
+2. Choose the session and enter the current/tool-entry price.
+3. Define up to three draws on liquidity.
+4. Confirm up to three potential lower-timeframe sweep areas.
+5. Save the focus card.
+6. Review, verify, final-save, export, and import saved cards.
 
 > Educational tool only. This project does not provide financial advice, investment advice, or trade recommendations.
 
@@ -20,7 +18,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 - Runtime dependencies: no build-time bundle; optional Supabase JS is loaded from CDN for Account & Backup
 - Dev QA dependencies: Playwright, installed only through `npm install`
 - Data storage: browser localStorage/sessionStorage with optional Supabase server sync for Focus Cards
-- Current app version: v0.8.8
+- Current app version: v0.8.10
 - Main entrypoint: index.html
 - Runtime config: assets/config.js
 - Stylesheet: assets/styles.css
@@ -38,7 +36,6 @@ The redesigned main page is a mobile-first dashboard with:
 - A planning prompt, session-filter chips, and plan-assistant card.
 - Today's focus card from the latest draft or saved plan.
 - Review metrics based on final-saved cards.
-- Watchlist preview from local Profile settings.
 
 Saved cards can still be opened directly without going through the planner.
 
@@ -50,17 +47,14 @@ The planner captures:
 
 1. Date, time, instrument, and session.
 2. Current price / price at tool entry.
-3. Bias Determination For Session: Bullish or Bearish.
-4. Market Context phases and notes for only the timeframes the user chooses from the Phase Map dropdown.
-5. Up to three draw-on-liquidity records using Price Level, Draw Rationale, and Timeframe Used.
-6. Up to three potential sweep records using Price Level, Sweep Liquidity, and Timeframe Used, with optional Sweep Taken, confidence, and hit-time context.
-7. FVG formation and timeframe.
-8. Generated preview with DOL distance from the current price where numeric.
-9. Save Draft or Generate Focus Plan.
+3. Up to three draw-on-liquidity records using Price Level, Draw Rationale, and Timeframe Used.
+4. Up to three potential sweep records using Price Level, Sweep Liquidity, and Timeframe Used, with optional Sweep Taken, confidence, and hit-time context.
+5. Generated preview with DOL distance from the current price where numeric.
+6. Save Draft or Generate Focus Plan.
 
 Missing required inputs are shown as Draft, and the user can still save an incomplete draft card after adding at least one meaningful planning input. Completely empty/default-only Planner saves are blocked to prevent accidental blank Focus Cards. Sweep confidence and hit time are optional detail fields and do not decide Complete/Draft status.
 
-Generate Focus Plan validates the minimum Focus Card inputs before opening the details screen: instrument, session, Bias Determination For Session, at least one complete DOL row, and either a valid current price or explicit acknowledgement that manual price is needed. Partial DOL or Sweep rows must be completed or cleared before generation.
+Generate Focus Plan validates the minimum Focus Card inputs before opening the details screen: instrument, session, at least one complete DOL row, and either a valid current price or explicit acknowledgement that manual price is needed. Partial DOL or Sweep rows must be completed or cleared before generation.
 
 Current price can be entered manually. The app can also call an optional hosted yfinance price API on Vercel. Manual entry remains the fallback when the hosted API is unavailable or the symbol is unsupported. Zero, negative, malformed, scientific-notation, ambiguous, stale/unusable API responses are rejected for price-map math.
 
@@ -201,9 +195,9 @@ The ladder shows:
 
 The module uses `.price-map`, `.price-map-current`, `.price-map-row.dol`, `.price-map-row.sweep`, `.price-map-empty`, `.price-map-loading`, and `.price-map-error` hooks.
 
-## Focus Card DOL Navigation
+## Focus Card Details
 
-Focus Card Details now starts with the Price Map Dashboard, then an Active DOL panel, timestamp/price snapshot panel, potential risk-to-reward panel, and Route to DOL / PD array evidence log.
+Focus Card Details starts with the Price Map Dashboard, then timestamp/price snapshot tools, DOL/Sweep review stacks, trade highlights, outcome, and review notes.
 
 The Focus Card records:
 
@@ -212,24 +206,18 @@ The Focus Card records:
 - Price snapshot at creation.
 - Latest saved price snapshot.
 - Price history for created, saved-edit, and final-save events.
-- Active DOL target.
-- Route evidence for SIBI, BISI, CE, OB, FVG, highs, lows, and other arrays.
-- Potential R:R to the selected DOL using entry/current price, selected ratio, direction, and an auto-derived invalidation/stop.
+- DOL and Sweep records, including DOL/Sweep taken status.
+- Outcome, DOL respected, LTF sweep confirmed, plan followed, and review notes.
 
-Typing does not update the saved card. The user must press Save changes or Final save to capture edits, timestamps, price data, route evidence, and risk metrics.
+Typing does not update a draft card. The user must press Save changes or Final save to capture edits, timestamps, price data, review markers, outcome, and notes.
+
+After Final save, the card is locked. Locked final cards are view/copy/share/export only and cannot be edited, deleted, favorited/unfavorited, loaded back into Planner, overwritten by import, or changed by saved-card helper actions.
 
 Price data may be delayed by 5 minutes. Users can override price manually before saving.
 
-## Bias Logic
+## Legacy Bias Data
 
-The bias field is session-scoped. It is a planning label for the selected session, not a whole-day prediction.
-
-- Bullish bias: seek a sell-side liquidity raid below an old low, then rejection or displacement higher toward buy-side liquidity.
-- Bearish bias: seek a buy-side liquidity raid above an old high, then rejection or displacement lower toward sell-side liquidity.
-
-Before 10:30am NY, full-day prediction is not supported by this tool.
-
-Legacy saved `biasValidation`, `biasInvalidation`, `biasValidated`, and `biasInvalidated` data is preserved in JSON exports for migration compatibility, but those fields are no longer shown in the planner or Focus Card Details workflow.
+Bias Determination, Market Context, FVG, route-evidence, active-DOL, and potential-risk data from older saved cards is preserved in local storage, JSON export, and JSON import for migration compatibility. These fields are no longer shown in the active Planner or Focus Card Details workflow.
 
 ## Saved Cards
 
@@ -237,33 +225,27 @@ The Saved tab includes search, filter chips, final-save metrics, export/import c
 
 Each saved card opens into a Focus Card Details screen with:
 
-- Hero summary with instrument, session, date, bias, status, and outcome.
+- Hero summary with instrument, session, date, status, and outcome.
 - Price snapshot with manual/static current price and DOL distance feedback.
-- Market Context with selected timeframe phase, note, and potential next phase.
 - DOL stack focused on Price Level, Draw Rationale, Timeframe Used, DOL Taken review status, and distance from current price, plus potential sweep stacks with timeframe and taken status.
-- FVG and planned-risk fields.
 - DOL respected marker.
 - LTF sweep confirmed marker.
-- FVG formed after sweep marker.
 - Plan followed marker.
 - Outcome selector: Open, Hit, Miss, Breakeven, Read
 - Verification notes
-- Load to planner
 - Copy
 - Share
-- Save changes
-- Final save
-- Delete
+- Load to planner, Save changes, Final save, and Delete for draft/non-final cards only
 
-Secondary screens are included for Execution Timeline, Liquidity Map / Setup Library, Risk Tracker, and Trader Profile / Settings.
+Secondary screens are included for Execution Timeline, Liquidity Map / Setup Library, and Trader Profile / Settings. Legacy Risk and Journal routes redirect to Home.
 
 ## Save Changes vs Final Save
 
-Use Save changes to store edits locally without including the card in the final hit-rate sample.
+Use Save changes to store draft/non-final edits locally without including the card in the final hit-rate sample.
 
-Use Final save after selecting an outcome to mark the analysis as final. Only final-saved Hit/Miss cards enter the hit-rate calculation.
+Use Final save after selecting an outcome to mark the analysis as final and locked. Only final-saved Hit/Miss cards enter the hit-rate calculation.
 
-If a final-saved card is edited again and Save changes is used, the card returns to a non-final state until Final save is pressed again.
+Final-saved cards cannot be altered after locking. To make a new version, create a new Planner card.
 
 ## Final Hit-Rate Data
 
@@ -356,7 +338,7 @@ npm run test:unit
 npm run test:api
 ```
 
-The smoke test checks the main files, app syntax, retained legacy bias extension syntax, storage keys, migration, normalized card shape including Market Context, export/import round trip, import deduplication, final-save analytics, service-worker/cache alignment, and primary mobile routes. The unit helper suite protects core parsing, completion, distance, risk, normalization, export/import, and price-map helper behavior before future refactors. The API boundary suite tests `/api/price` missing-symbol, unsupported-symbol, provider-unavailable, and mocked successful response behavior without live market calls.
+The smoke test checks the main files, app syntax, retained legacy bias extension syntax, storage keys, migration, normalized card shape including legacy Market Context, export/import round trip, import deduplication, final-save analytics, service-worker/cache alignment, simplified Planner/Focus routes, and legacy route redirects. The unit helper suite protects core parsing, completion, distance, legacy risk-plan preservation, normalization, export/import, and price-map helper behavior before future refactors. The API boundary suite tests `/api/price` missing-symbol, unsupported-symbol, provider-unavailable, and mocked successful response behavior without live market calls.
 
 ## Browser E2E Tests
 

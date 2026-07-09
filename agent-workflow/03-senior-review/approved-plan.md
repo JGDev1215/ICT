@@ -2,28 +2,23 @@
 
 ## Goal
 
-Set the single-user Account & Backup credential to the requested default PIN and remove `docs/plans/ASD.md`.
+Create the end-of-day report, verify the worktree, commit all pending changes, and push to GitHub.
 
 ## Approved Scope
 
-- Rotate Supabase `admin@ict.local` to the requested default PIN.
-- Store the PIN only in ignored `.env.local`.
-- Revoke existing admin session/token state where exposed.
-- Keep public app/docs from printing the PIN.
-- Remove misleading PIN placeholder text in `assets/app.js`.
-- Bump version/cache to `v0.8.8`.
-- Leave `docs/plans/ASD.md` deleted for the next commit.
+- Add a historical daily report under `docs/daily-reports/`.
+- Run final checks.
+- Stage all changes.
+- Commit all changes.
+- Push the current `main` branch to `origin`.
 
 ## Constraints
 
-- No schema changes.
-- No service-role key in frontend.
-- No public committed PIN.
-- Do not commit or push unless explicitly instructed.
+- Do not revert any existing worktree changes.
+- Do not create unrelated product changes.
 
 ## Verification
 
-- Supabase previous credential rejected.
-- Supabase requested PIN accepted.
 - `npm test`
+- `npm run test:e2e -- --reporter=dot`
 - `git diff --check`

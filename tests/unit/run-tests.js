@@ -90,23 +90,33 @@ ok(api.priceNumber('1e3') === null, 'price parser should reject scientific notat
 const complete = api.comp({
   instrument: 'MNQ',
   session: 'New York AM',
-  bias: 'Bullish',
   manualPriceNeededAck: true,
   dol1Level: '20250',
   dol1Draw: 'Previous day high (PDH)',
   dol1Tf: 'Daily'
 });
 ok(complete.ok === true, 'completion should allow complete DOL with manual-price acknowledgement');
-ok(api.comp({instrument: 'MNQ', session: 'New York AM', bias: 'Bullish'}).ok === false, 'completion should reject missing DOL and price');
+ok(api.comp({instrument: 'MNQ', session: 'New York AM'}).ok === false, 'completion should reject missing DOL and price');
 
 const distance = api.dolDistance('20250', '20000');
 ok(distance.absolute === '250' && distance.percent === '1.25%', 'DOL distance should calculate points and percent');
 
 const riskFields = {currentPrice: '20000', dol1Level: '20250', dol1Draw: 'Previous day high (PDH)', dol1Tf: 'Daily'};
-const risk = api.calculateRiskPlan({direction: 'Long', ratio: '2R', entryPrice: '20000'}, riskFields, 'dol1');
-ok(risk.status === 'ready' && risk.rr === '2R' && risk.invalidationPrice === '19875', 'risk-to-reward should calculate derived long setup');
-const shortRisk = api.calculateRiskPlan({direction: 'Short', ratio: '3R', entryPrice: '20000'}, Object.assign({}, riskFields, {dol1Level: '19850'}), 'dol1');
-ok(shortRisk.status === 'ready' && shortRisk.rr === '3R' && shortRisk.invalidationPrice === '20050', 'risk-to-reward should calculate derived short setup');
+const risk = api.calculateRiskPlan({
+  direction: 'Long',
+  ratio: '2R',
+  entryPrice: '20000',
+  targetDolId: 'dol1',
+  targetPrice: '20250',
+  invalidationPrice: '19875',
+  riskPoints: '125',
+  rewardPoints: '250',
+  rr: '2R',
+  status: 'ready'
+}, riskFields, 'dol1');
+ok(risk.status === 'ready' && risk.rr === '2R' && risk.invalidationPrice === '19875', 'legacy risk plan should be preserved');
+const incompleteRisk = api.calculateRiskPlan({direction: 'Long', ratio: '2R', entryPrice: '20000'}, riskFields, 'dol1');
+ok(incompleteRisk.status === 'incomplete' && incompleteRisk.riskPoints === '' && incompleteRisk.invalidationPrice === '', 'legacy risk plan should not derive active risk metrics');
 
 const card = api.normaliseCard({
   id: 'unit-card',
@@ -128,6 +138,7 @@ ok(exported.schema === api.SCHEMA && exported.settings, 'export should include s
 const settingsImport = api.importCards({settings: {defaultInstrument: 'ES', watchlist: ['ES', 'YM']}});
 ok(settingsImport.settingsImported === true, 'settings import should be reported');
 ok(api.getSettings().defaultInstrument === 'ES', 'settings import should persist default instrument');
+ok(!Object.prototype.hasOwnProperty.call(api.getSettings(), 'watchlist'), 'legacy watchlist settings should be ignored');
 
 const mapHtml = api.priceMapHtml(card.fields, {source: 'hosted-yfinance'});
 ok(mapHtml.includes('Source: hosted yfinance API'), 'price map should expose hosted yfinance source');
