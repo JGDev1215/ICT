@@ -178,6 +178,22 @@ Rotation evidence:
 
 Result: PASS.
 
+## v0.8.7 PIN Login Rotation
+
+The single-user Account & Backup credential was rotated again after the v0.8.7 PIN-login feedback.
+
+Rotation evidence:
+
+- `.env.local` is ignored and untracked; the generated PIN was stored there under `ICT_ADMIN_PIN` and `ICT_ADMIN_SUPABASE_PASSWORD`.
+- The Supabase Auth `encrypted_password` hash for `admin@ict.local` was updated.
+- Existing admin refresh token/session state was revoked/deleted where exposed by the Auth schema.
+- The previous rotated password was rejected by Supabase Auth after the PIN rotation.
+- The generated 4-digit PIN was accepted by Supabase Auth.
+
+Security note: this intentionally prioritizes the requested private single-user PIN workflow over password strength. It is not suitable as public multi-user authentication.
+
+Result: PASS.
+
 Remaining security advisor:
 
 - Leaked password protection remains disabled in Supabase Auth. The current connector exposes this advisor but does not expose an Auth config update tool. Enable it from the Supabase Dashboard before moving beyond private/single-user beta if the project plan supports it.

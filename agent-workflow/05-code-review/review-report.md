@@ -12,8 +12,7 @@ PASS
 
 YES
 
-The app is proven safe for single-user local-first deployment. Credential-independent Supabase RLS, signed-out backup behavior, and credentialed Account & Backup sync/reload behavior are verified.
-The deployed admin password has also been rotated and verified.
+The Account & Backup login is now a single 4-digit PIN field for the single-user app. The backing Supabase Auth credential was rotated to the generated PIN and verified.
 
 ## Approved Plan Followed?
 
@@ -25,29 +24,31 @@ NO
 
 ## What Was Done Well
 
-- Current production evidence was gathered instead of relying on older QA notes.
-- The documentation now distinguishes proven v0.8.6 deployment readiness from the remaining credential-dependent Supabase gate.
-- Supabase anon write denial and signed-out optional-backup behavior are now recorded as partial safety evidence.
-- Credentialed admin Account & Backup QA is recorded as passing.
-- No runtime behavior, storage, API, or service-worker files were changed.
+- Kept the change scoped to the existing Profile Account & Backup sign-in path.
+- Preserved local-first behavior, storage keys, JSON export/import, and optional Supabase backup.
+- Removed the visible username/password UI and old username validation.
+- Added smoke and Playwright coverage for the PIN-only UI and client-side validation.
+- Bumped runtime version, cache keys, service-worker cache, README, changelog, and CLAUDE version notes.
+- Rotated and verified the Supabase backing credential without printing the PIN.
 
 ## Issues Found
 
-- Supabase leaked-password protection is disabled.
+- No implementation-blocking issues.
+- Security caveat: a 4-digit PIN is weak by normal password standards and should stay private/single-user only.
 
 ## Required Fixes
 
-None for local-first deployment readiness.
+None.
 
 ## Recommended Improvements
 
-- Enable Supabase leaked-password protection before public release if the project plan supports it.
-- Run assistive-technology follow-up before moving from beta/single-user use to public release.
+- If this app ever becomes public or multi-user, replace the 4-digit PIN with stronger Auth settings, MFA, passkeys, or a server-mediated access model.
+- Enable Supabase leaked-password protection from the dashboard before broader release if the project plan supports it.
 
 ## Regression Risks
 
-Documentation-only change. Runtime regression risk is negligible.
+Low. The login form and handler changed, but saved-card storage, planner behavior, sync tables, RLS policies, price API, and import/export contracts were not changed.
 
 ## Final Reviewer Notes
 
-The evidence supports single-user local-first deployment with JSON export/import as the recovery path and verifies authenticated cloud backup mechanics. Password rotation is complete; leaked-password protection remains a dashboard follow-up.
+Automated static/unit/API tests and the full Playwright suite passed. The new PIN contract is correctly reflected in runtime, docs, and QA evidence.

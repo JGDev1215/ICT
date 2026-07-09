@@ -2,7 +2,7 @@
 
 ## User Task
 
-this web app must ready for deployment for single user trader to rely on this app.
+Feedback - This is a single user app. User can log into the app by typing a 4 digit pin code.
 
 ## Local Path
 
@@ -27,6 +27,15 @@ this web app must ready for deployment for single user trader to rely on this ap
 
 ## Files Changed
 
+- `assets/app.js`
+- `index.html`
+- `service-worker.js`
+- `tests/smoke.js`
+- `tests/e2e/planner.spec.js`
+- `README.md`
+- `CHANGELOG.md`
+- `CLAUDE.md`
+- `docs/qa/production-web-mobile-qa-2026-07-09.md`
 - `agent-workflow/00-inbox/current-task.md`
 - `agent-workflow/01-intake/task-brief.md`
 - `agent-workflow/02-plans/implementation-plan.md`
@@ -38,8 +47,6 @@ this web app must ready for deployment for single user trader to rely on this ap
 - `agent-workflow/06-fix-rounds/fix-report.md`
 - `agent-workflow/07-final-review/final-approval.md`
 - `agent-workflow/08-completed/workflow-summary.md`
-- `docs/qa/production-web-mobile-qa-2026-07-09.md`
-- `docs/qa/docs-implementation-checklist-2026-07-08.md`
 
 ## Workflow Files Created
 
@@ -58,25 +65,20 @@ this web app must ready for deployment for single user trader to rely on this ap
 ## Checks Performed
 
 - Safety: `pwd`, `git remote -v`, `git status`, `find . -maxdepth 3 -type f | sed 's#^\./##' | sort | head -200`
-- Source state: `git log -1 --oneline`
-- CI state: `gh run list --repo JGDev1215/ICT --limit 12`
-- Production shell checks for Vercel and GitHub Pages v0.8.6
-- Production MNQ and unsupported-symbol price endpoint checks
-- Supabase REST reachability, anon empty select, and anon insert-denial checks
-- Production Profile signed-out optional-backup smoke
-- Production credentialed admin Account & Backup QA
-- Supabase SQL verification and cleanup for the QA card row
-- Admin password rotation and post-rotation production backup smoke
+- Supabase docs: changelog and password-security guide
+- Supabase Auth credential rotation for `admin@ict.local`
+- Supabase Auth verification: previous password rejected, generated PIN accepted
+- Version/cache bump: `node tools/bump-version.js v0.8.7 pin-login 20260709`
 - Local: `npm test` PASS
-- Local: `npm run test:e2e -- --reporter=dot` PASS, 65 passed, 1 expected skip
-- Production browser smoke PASS
+- Local: `npm run test:e2e` PASS, 68 passed, 1 skipped
+- Static: `git diff --check` PASS
 
 ## Final Decision
 
 SAFE TO COMMIT
 
-v0.8.6 is ready for single-user local-first deployment. Credential-independent Supabase RLS/optional-backup checks passed, credentialed admin Account & Backup sync/reload QA passed, and the admin password has been rotated and verified.
+The single-user PIN login change is implemented and verified.
 
 ## Recommended Next Step
 
-Commit the documentation evidence. Enable Supabase leaked-password protection from the dashboard before public release if the project plan supports it.
+Review the unrelated pre-existing `docs/plans/ASD.md` deletion, then commit the v0.8.7 PIN-login change if that deletion is intended.

@@ -2,30 +2,42 @@
 
 ## Summary of Changes
 
-Updated workflow and QA documentation to record current v0.8.6 deployment-readiness evidence.
-Added credential-independent Supabase safety evidence without changing runtime code or Supabase schema.
-Completed credentialed production Account & Backup QA with the real admin account.
-Rotated the deployed admin password away from the weak/default value and verified the rotated password through Auth plus production UI backup smoke.
+Implemented the single-user Account & Backup login feedback by replacing the visible username/password sign-in with one 4-digit PIN field.
+Rotated the backing Supabase Auth credential for `admin@ict.local` to a generated 4-digit PIN and revoked prior session state.
+Released the change as `v0.8.7` with cache-busted static assets, service-worker cache updates, documentation updates, and focused tests.
 
 ## Files Changed
 
+- `assets/app.js`
+- `index.html`
+- `service-worker.js`
+- `tests/smoke.js`
+- `tests/e2e/planner.spec.js`
+- `README.md`
+- `CHANGELOG.md`
+- `CLAUDE.md`
+- `docs/qa/production-web-mobile-qa-2026-07-09.md`
 - `agent-workflow/00-inbox/current-task.md`
 - `agent-workflow/01-intake/task-brief.md`
 - `agent-workflow/02-plans/implementation-plan.md`
 - `agent-workflow/03-senior-review/plan-review.md`
 - `agent-workflow/03-senior-review/approved-plan.md`
-- `docs/qa/production-web-mobile-qa-2026-07-09.md`
-- `docs/qa/docs-implementation-checklist-2026-07-08.md`
+- `agent-workflow/04-execution/execution-report.md`
+- `agent-workflow/05-code-review/review-report.md`
+- `agent-workflow/06-fix-rounds/senior-decision.md`
+- `agent-workflow/07-final-review/final-approval.md`
+- `agent-workflow/08-completed/workflow-summary.md`
 
 ## Implementation Notes
 
-- No runtime files were changed.
-- Production QA evidence was updated from stale v0.8.5 shell evidence to current v0.8.6 Vercel/GitHub Pages evidence.
-- Supabase anon insert attempts against `focus_cards` and `user_settings` were denied by RLS.
-- Production Profile signed-out Account & Backup behavior was verified with browser-local storage only.
-- Production credentialed Account & Backup behavior was verified for backup upload, reload, second-browser restore, final-save sync, clear-device local-only behavior, database verification, and cleanup.
-- The rotated admin password is stored only in ignored `.env.local`.
-- Supabase leaked-password protection remains a dashboard/plan follow-up.
+- The Profile Account & Backup form now renders `#adminPin` with numeric input hints, `maxlength="4"`, and 4-digit validation.
+- The login handler rejects non-4-digit input before calling Supabase Auth.
+- Valid PIN input is sent to the existing `adminSupabaseEmail()` backing account, preserving the existing single-user Supabase sync model.
+- The visible `admin` username field and separate password field were removed.
+- The backing Supabase Auth password was rotated to the generated PIN, existing refresh tokens were revoked, and sessions were deleted where exposed by the Auth schema.
+- The generated PIN is stored only in ignored `.env.local` under `ICT_ADMIN_PIN` and `ICT_ADMIN_SUPABASE_PASSWORD`.
+- Version/cache was bumped to `v0.8.7` / `0.8.7-pin-login-20260709`.
+- The pre-existing deleted `docs/plans/ASD.md` worktree change was not touched.
 
 ## Deviations From Approved Plan
 
@@ -37,22 +49,14 @@ None.
 - `git remote -v`
 - `git status`
 - `find . -maxdepth 3 -type f | sed 's#^\./##' | sort | head -200`
-- `git log -1 --oneline`
-- `gh run list --repo JGDev1215/ICT --limit 12`
-- Production shell `curl` checks for Vercel and GitHub Pages
-- Production price API `curl` checks for supported and unsupported symbols
-- `.env.local` variable-name check for available credential variables
-- Supabase REST anon select and insert checks
-- Production Profile signed-out optional-backup smoke
-- Production credentialed Account & Backup browser QA
-- Supabase SQL verification and cleanup for the QA card row
-- Admin password rotation
-- Old-password rejection and rotated-password acceptance checks
-- Focused production Account & Backup smoke with rotated password
+- Supabase changelog and password-security doc lookup
+- Supabase SQL update for `admin@ict.local`
+- Supabase Auth verification: previous password rejected, generated PIN accepted
+- `node tools/bump-version.js v0.8.7 pin-login 20260709`
 - `npm test`
-- `npm run test:e2e -- --reporter=dot`
-- One-off Playwright production browser smoke
+- `npm run test:e2e`
+- `git diff --check`
 
 ## Known Issues
 
-Supabase security advisor reports leaked-password protection is disabled. Enable it from the Supabase Dashboard before public release if the project plan supports it.
+The requested 4-digit PIN is intentionally weaker than Supabase password-strength recommendations. This is acceptable for the stated private single-user app workflow, but it is not suitable for public multi-user authentication.

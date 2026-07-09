@@ -207,6 +207,40 @@ test('clear this device data is local-only and clears sync metadata', async ({pa
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ict_supabase_account_sync_v1'))).toBeNull();
 });
 
+test('profile backup sign-in uses a 4 digit PIN field', async ({page}) => {
+  await page.evaluate(() => {
+    window.supabase = {
+      createClient: () => ({
+        auth: {
+          getSession: async () => ({data: {session: null}, error: null}),
+          onAuthStateChange: () => ({data: {subscription: {unsubscribe: () => {}}}}),
+          signInWithPassword: async args => {
+            window.__pinLoginArgs = args;
+            return {data: {session: {user: {id: 'pin-user'}}}, error: null};
+          }
+        },
+        from: () => ({
+          select: () => ({eq: () => Promise.resolve({data: [], error: null})}),
+          upsert: () => Promise.resolve({error: null}),
+          delete: () => ({eq: () => Promise.resolve({error: null})})
+        })
+      })
+    };
+    window.ICTSweepState.go('profile');
+  });
+
+  await expect(page.locator('#adminPin')).toBeVisible();
+  await expect(page.locator('#adminPin')).toHaveAttribute('maxlength', '4');
+  await expect(page.locator('#adminPin')).toHaveAttribute('inputmode', 'numeric');
+  await expect(page.locator('#adminUsername')).toHaveCount(0);
+  await expect(page.locator('#adminPassword')).toHaveCount(0);
+
+  await page.locator('#adminPin').fill('12ab');
+  await page.locator('#adminLoginBtn').click();
+  await expect(page.locator('#globalStatus')).toContainText('Enter the 4-digit PIN.');
+  await expect.poll(() => page.evaluate(() => window.__pinLoginArgs || null)).toBeNull();
+});
+
 test('json import through file input imports cards, settings, and schema warnings', async ({page}) => {
   await page.evaluate(() => window.ICTSweepState.go('profile'));
   await expect(page.getByRole('heading', {name: 'Profile'})).toBeVisible();

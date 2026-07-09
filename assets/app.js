@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'v0.8.6';
+  const VERSION = 'v0.8.7';
   const KEY = 'ict_cards_v078';
   const SETTINGS_KEY = 'ict_settings_v1';
   const DRAFT_KEY = 'ict_planner_draft_v1';
@@ -32,7 +32,6 @@
   const SUPABASE_CARDS_TABLE = 'focus_cards';
   const SUPABASE_SETTINGS_TABLE = 'user_settings';
   const DEFAULT_SUPABASE_URL = 'https://cdcqklvvswzipmmvpzaj.supabase.co';
-  const ADMIN_USERNAME = 'admin';
   const DEFAULT_ADMIN_SUPABASE_EMAIL = 'admin@ict.local';
   const ROUTES = ['home','planner','saved','profile','focus','review','timeline','liquidity-map','risk','component-gallery'];
   const NOTICE_LEVELS = ['good','warn','bad'];
@@ -2529,9 +2528,9 @@
       ? `<div class='panel'><h3>Add existing cards to backup?</h3><p class='hint'>This browser has existing cards. Add them to cloud backup?</p><div class='row-actions'><button class='btn primary' id='approveFirstSyncBtn'>Back up local cards</button><button class='btn ghost' id='skipFirstSyncBtn'>Keep on this device</button></div></div>`
       : '';
     const login = supabaseUser
-      ? `<p class='hint good'>Signed in as ${esc(ADMIN_USERNAME)}.</p>${firstSyncActions}<div class='row-actions'><button class='btn' id='syncNowBtn'>Back up now</button><button class='btn ghost' id='supabaseLogoutBtn'>Sign out</button></div>`
+      ? `<p class='hint good'>Signed in.</p>${firstSyncActions}<div class='row-actions'><button class='btn' id='syncNowBtn'>Back up now</button><button class='btn ghost' id='supabaseLogoutBtn'>Sign out</button></div>`
       : configured
-        ? `<label class='label' for='adminUsername'>Username</label><input class='in' id='adminUsername' autocomplete='username' value='${esc(ADMIN_USERNAME)}' placeholder='admin'><label class='label' for='adminPassword'>Password</label><input class='in' id='adminPassword' type='password' autocomplete='current-password' placeholder='Password'><div class='row-actions'><button class='btn primary' id='adminLoginBtn'>Sign in</button></div>`
+        ? `<label class='label' for='adminPin'>4-digit PIN</label><input class='in' id='adminPin' type='password' inputmode='numeric' pattern='[0-9]*' maxlength='4' autocomplete='current-password' placeholder='1234' aria-label='4-digit PIN'><p class='hint'>Enter the 4-digit PIN for this backup.</p><div class='row-actions'><button class='btn primary' id='adminLoginBtn'>Sign in</button></div>`
         : `<p class='hint warn'>Cloud backup is unavailable in this build. Local cards still work on this device.</p>`;
     return `<div class='card'><div class='progress'>Account</div><h3>Account & Backup</h3><p class='hint ${statusClass}'>${esc(statusLabel)}: ${esc(backupStatusMessage())}</p><div class='line'><div class='k'>Local cards</div><div class='v'>${cards.length}</div></div><div class='line'><div class='k'>Cloud backup</div><div class='v'>${pending ? 'Pending' : serverCount}</div></div><div class='line'><div class='k'>Last backup</div><div class='v'>${esc(syncState.lastSyncAt || '-')}</div></div>${login}</div>`;
   }
@@ -3129,19 +3128,13 @@
       render();
     });
     on('adminLoginBtn', () => {
-      const username = q('adminUsername') ? q('adminUsername').value.trim() : '';
-      const password = q('adminPassword') ? q('adminPassword').value : '';
-      if(username !== ADMIN_USERNAME){
-        setNotice('Use the admin username.', 'warn');
+      const pin = q('adminPin') ? q('adminPin').value.trim() : '';
+      if(!/^\d{4}$/.test(pin)){
+        setNotice('Enter the 4-digit PIN.', 'warn');
         render();
         return;
       }
-      if(!password){
-        setNotice('Enter the admin password.', 'warn');
-        render();
-        return;
-      }
-      supabaseLogin(adminSupabaseEmail(), password).then(ok => {
+      supabaseLogin(adminSupabaseEmail(), pin).then(ok => {
         setNotice(ok ? 'Signed in. Backup is ready.' : syncState.message, ok ? 'good' : 'bad');
         render();
       });

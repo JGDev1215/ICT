@@ -42,11 +42,11 @@ const hostedPriceApiBase = match(configSource, /hostedPriceApiBase: '([^']+)'/, 
 const hostedPriceUrl = new URL(hostedPriceApiBase);
 const runtimeAssets = Array.from(index.matchAll(/(?:src|href)="([^"]*(?:assets\/[^"]+|manifest\.webmanifest|favicon\.svg|icon-\d+\.svg)[^"]*)"/g)).map(found => found[1]);
 
-ok(appVersion === 'v0.8.6', 'app version should be v0.8.6');
-ok(configAsset.includes('v=0.8.6-release-20260709'), 'config asset cache key should match v0.8.6 release');
-ok(appAsset.includes('v=0.8.6-release-20260709'), 'app asset cache key should match v0.8.6 release');
-ok(styleAsset.includes('v=0.8.6-release-20260709'), 'style asset cache key should match v0.8.6 release');
-ok(cacheName === 'ict-sweep-tracker-v086-release-20260709', 'service worker cache name should match v0.8.6 release');
+ok(appVersion === 'v0.8.7', 'app version should be v0.8.7');
+ok(configAsset.includes('v=0.8.7-pin-login-20260709'), 'config asset cache key should match v0.8.7 pin-login');
+ok(appAsset.includes('v=0.8.7-pin-login-20260709'), 'app asset cache key should match v0.8.7 pin-login');
+ok(styleAsset.includes('v=0.8.7-pin-login-20260709'), 'style asset cache key should match v0.8.7 pin-login');
+ok(cacheName === 'ict-sweep-tracker-v087-pin-login-20260709', 'service worker cache name should match v0.8.7 pin-login');
 ok(index.includes(`<title>ICT DOL Sweep Tracker ${appVersion}</title>`), 'index title version missing');
 ok(index.includes(`ICT DOL Sweep Tracker ${appVersion} · Educational tool. Not financial advice.`), 'index footer version missing');
 ok(!index.includes('assets/bias-extension.js'), 'obsolete bias extension should not be loaded');
@@ -106,10 +106,13 @@ ok(appSource.includes('function syncFromSupabase'), 'Supabase sync helper missin
 ok(appSource.includes('function flushSupabaseQueue'), 'Supabase queue flush helper missing');
 ok(appSource.includes('function supabaseSignup'), 'Supabase signup helper missing');
 ok(appSource.includes('auth.signUp'), 'Supabase signup API call missing');
-ok(appSource.includes("const ADMIN_USERNAME = 'admin'"), 'admin username constant missing');
 ok(appSource.includes("const DEFAULT_ADMIN_SUPABASE_EMAIL = 'admin@ict.local'"), 'admin backing email missing');
 ok(appSource.includes('function adminSupabaseEmail'), 'admin backing email helper missing');
 ok(appSource.includes("id='adminLoginBtn'") && appSource.includes('Sign in'), 'admin sign-in UI missing');
+ok(appSource.includes("id='adminPin'") && appSource.includes('4-digit PIN'), 'single-user PIN login UI missing');
+ok(appSource.includes("^\\d{4}$") && appSource.includes('Enter the 4-digit PIN.'), 'PIN login validation missing');
+ok(!appSource.includes("id='adminUsername'"), 'admin username field should not render');
+ok(!appSource.includes("id='adminPassword'"), 'admin password field should not render');
 ok(!appSource.includes("id='supabaseSignupBtn'"), 'signup button should not render in Profile UI');
 ok(appSource.includes('syncFromSupabase({force: true})'), 'Supabase auth actions should force sync after busy login state');
 ok(appSource.includes('auth.getUser'), 'Supabase restored sessions should revalidate the current user');

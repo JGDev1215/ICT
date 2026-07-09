@@ -2,50 +2,41 @@
 
 ## Original User Task
 
-this web app must ready for deployment for single user trader to rely on this app.
+Feedback - This is a single user app. User can log into the app by typing a 4 digit pin code.
 
 ## Objective
 
-Prove or improve deployment readiness for a single-user trader relying on the static web app, while preserving local-first storage, manual price fallback, optional Supabase backup, GitHub Pages support, and Vercel price API support.
+Make the visible single-user Account & Backup login use one 4-digit PIN field instead of username plus password.
 
 ## Repo Findings
 
-- Path confirmed: `/Users/soonjeongguan/Desktop/FRAMEWORK`.
-- GitHub remote confirmed: `https://github.com/JGDev1215/ICT.git`.
-- Starting git status was clean and up to date with `origin/main`.
-- Latest local commit: `1735654 feat: ship v0.8.6 planner and layout updates`.
-- Vercel and GitHub Pages currently serve `ICT DOL Sweep Tracker v0.8.6` with `0.8.6-release-20260709` assets.
-- GitHub Actions for the v0.8.6 push are green for Static smoke test, Browser E2E, and GitHub Pages deploy.
-- Production Vercel price endpoint returns HTTP 200 for `MNQ` and HTTP 400 for unsupported symbols.
-- Live Supabase REST API is reachable; anon insert attempts into `focus_cards` and `user_settings` are denied by RLS.
-- Production Profile signed-out Account & Backup smoke passes: local draft save works without login and Clear this device data clears local cards only after a cloud-backup warning.
-- Credentialed production Account & Backup QA passes with the real `admin` account: backup upload, reload, second-browser restore, final-save sync, clear-device local-only behavior, database verification, and QA row cleanup.
-- Deployed admin password was rotated away from the weak/default value and verified through Supabase Auth plus production Account & Backup smoke.
-- Supabase security advisor reports leaked-password protection is disabled.
+- Safety checks passed in `/Users/soonjeongguan/Desktop/FRAMEWORK`.
+- Remote is `https://github.com/JGDev1215/ICT.git`.
+- Existing uncommitted change: `docs/plans/ASD.md` is deleted; treat as user work and do not restore or depend on it.
+- Current Profile Account & Backup UI renders `adminUsername` and `adminPassword`.
+- Login handler requires username `admin` and sends `adminPassword` to Supabase Auth for `admin@ict.local`.
+- Supabase backup is optional; localStorage remains the immediate source of truth.
+- JS/CSS behavior changes require version/cache bump and smoke assertion updates.
 
 ## Assumptions
 
-- "Ready for deployment" means beta/single-user web deployment readiness, not public commercial release.
-- Physical real-device QA is out of scope per current repo documentation; browser mobile-site QA is acceptable.
-- Supabase remains optional backup/sync only; localStorage and JSON export/import remain the immediate reliability path.
+- The requested 4-digit PIN is for the existing Profile Account & Backup login, not a new full-app lock screen.
+- The PIN will be the Supabase Auth password for the existing single-user backing account.
+- Because this is a static app, the PIN is a convenience login for one user, not high-security multi-user authentication.
 
 ## Out of Scope
 
-- Runtime feature changes without a newly discovered blocker.
-- New storage keys, schema changes, or Supabase migrations.
-- Public-release accessibility certification.
-- Real-device iOS/Android or PWA install testing.
-- Credentialed Supabase login/sync testing without the real admin password or an authenticated production browser session.
+- New server-side PIN exchange endpoint.
+- App-wide route lock before using local cards.
+- Supabase schema changes or storage key changes.
+- Removing JSON export/import or local-first behavior.
+- Touching the unrelated deleted `docs/plans/ASD.md`.
 
 ## Success Criteria
 
-- [x] Required repository safety checks pass.
-- [x] Current CI/deploy status for v0.8.6 is verified.
-- [x] Production Vercel and GitHub Pages serve the current v0.8.6 shell/assets.
-- [x] Production Vercel browser flow can create, reload, final-save, and view a saved Focus Card using browser-local storage.
-- [x] Production price API passes supported and unsupported-symbol checks.
-- [x] Local automated smoke/unit/API/E2E checks pass.
-- [x] Credential-independent Supabase RLS and signed-out optional-backup behavior are verified.
-- [x] Credentialed Supabase Account & Backup QA is completed and recorded.
-- [x] Deployed admin password is rotated to a strong private value and stored only in ignored `.env.local`.
-- [ ] Supabase leaked-password protection is enabled before public release if the project plan supports it.
+- [x] Account & Backup shows one 4-digit PIN field and no username field.
+- [x] Login validates exactly four digits before calling Supabase.
+- [x] Login still maps to the backing Supabase admin email.
+- [x] Supabase admin password is rotated to the 4-digit PIN and verified.
+- [x] Version/cache/docs/tests are updated for v0.8.7.
+- [x] Required checks pass.

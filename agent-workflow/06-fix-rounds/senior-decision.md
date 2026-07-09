@@ -6,9 +6,7 @@ APPROVED
 
 ## Reasoning
 
-The v0.8.6 deployment is live on Vercel and GitHub Pages, current CI checks are green, local automated checks pass, production API checks pass, and production browser smoke validates the core local-first Focus Card flow. Credential-independent Supabase checks show the REST API is reachable, anon writes are denied by RLS, and signed-out Profile behavior keeps backup optional. Credentialed Account & Backup QA passes with the real admin account.
-
-The remaining hardening item is enabling leaked-password protection from the Supabase Dashboard if the project plan supports it. Password rotation and authenticated sync mechanics are verified.
+The approved plan was followed. The app now presents the single-user Account & Backup sign-in as a 4-digit PIN, validates the PIN before Supabase Auth login, and still maps to the existing `admin@ict.local` backing account. The Supabase credential was rotated and verified, and all required automated checks passed.
 
 ## Required Fixes
 
@@ -16,4 +14,4 @@ None.
 
 ## Next Action
 
-Run final static checks and report the deployment-readiness decision with the Supabase limitation.
+Proceed to final approval. Do not commit or push unless explicitly instructed.

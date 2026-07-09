@@ -20,7 +20,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 - Runtime dependencies: no build-time bundle; optional Supabase JS is loaded from CDN for Account & Backup
 - Dev QA dependencies: Playwright, installed only through `npm install`
 - Data storage: browser localStorage/sessionStorage with optional Supabase server sync for Focus Cards
-- Current app version: v0.8.6
+- Current app version: v0.8.7
 - Main entrypoint: index.html
 - Runtime config: assets/config.js
 - Stylesheet: assets/styles.css
@@ -157,7 +157,7 @@ The app uses:
 
 - `public.focus_cards` for saved Focus Cards.
 - `public.user_settings` for profile/settings sync.
-- Single-user `admin` sign-in from the Profile tab, backed internally by Supabase Auth.
+- Single-user 4-digit PIN sign-in from the Profile tab, backed internally by Supabase Auth.
 - Row Level Security so each authenticated user can only access their own rows.
 - Explicit authenticated-role grants for browser Data API access.
 
@@ -180,7 +180,7 @@ window.ICT_ADMIN_SUPABASE_EMAIL = 'admin@ict.local';
 
 Never expose the Supabase service-role key in the browser. See `docs/plans/supabase-focus-card-storage-plan.md` for the schema and validation checklist.
 
-The visible Profile login is intentionally single-user: username `admin`, password entered by the user. The app maps that username to the backing Supabase Auth email `admin@ict.local` by default. Because this is a static frontend, `admin/admin` is a convenience gate, not strong security. Do not treat it as production-grade access control.
+The visible Profile login is intentionally single-user: the user enters a 4-digit PIN, and the app maps that PIN to the backing Supabase Auth email `admin@ict.local` by default. Because this is a static frontend, the PIN is a convenience gate for a private single-user app, not production-grade access control.
 
 Current builds present this as Account & Backup instead of exposing Supabase project details. The app still keeps cards local-first, and if the backing account has no server cards while the browser already has local Focus Cards, Profile asks whether to back up those local cards or keep them on this device.
 

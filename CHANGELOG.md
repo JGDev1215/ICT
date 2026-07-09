@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.8.7 — 2026-07-09
+
+### Changed
+
+- Changed the Account & Backup sign-in from visible username/password fields to one 4-digit PIN field for the single-user app.
+- Rotated the backing `admin@ict.local` Supabase Auth password to a generated 4-digit PIN and revoked existing sessions.
+- Updated cache-busted assets and service-worker cache names for the PIN-login release.
+
+### Tests
+
+- Added smoke and Playwright coverage for the PIN-only Profile login UI and client-side 4-digit validation.
+- Verified the previous Supabase password is rejected and the generated PIN is accepted by Supabase Auth.
+
 ## v0.8.6 — 2026-07-09
 
 ### Changed

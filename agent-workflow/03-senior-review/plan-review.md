@@ -2,32 +2,29 @@
 
 ## Plan Quality
 
-The plan is focused on current deployment evidence and avoids unnecessary runtime changes. It uses current CI, production hosts, production API responses, local tests, and production browser smoke rather than relying on stale documentation.
+The plan is narrowly scoped to the requested single-user PIN login and preserves the existing Supabase Account & Backup architecture.
 
 ## Missing Steps
 
-No missing steps for credential-independent readiness. The plan adds Supabase anon/RLS, signed-out Profile checks, credentialed admin Account & Backup QA, and admin password rotation.
+Add explicit verification that the old strong password no longer works after rotating to the PIN.
 
 ## Risk Areas
 
-- Documentation must state that credentialed Supabase sync passed.
-- Documentation must state the admin password was rotated and the old default rejected.
-- Do not expose the rotated password in tracked docs or final response.
-- Supabase anon/RLS checks must be described as partial safety evidence, not as proof of authenticated sync.
-- Documentation must not imply public-release accessibility certification.
-- The final readiness decision must preserve local-first and manual export/import as the reliable path.
+- A 4-digit PIN is weak for public-internet authentication.
+- Static app clients cannot hide a stronger secret behind a PIN without a backend exchange service.
+- Do not commit `.env.local` or print the PIN in docs.
 
 ## Overengineering Concerns
 
-No new tooling or runtime test framework is needed. A one-off production browser smoke is enough for the deployment evidence gap.
+Adding an Edge Function or separate backend PIN exchange would exceed the user’s stated simple single-user requirement and conflict with the static app shape.
 
 ## Simpler Alternatives
 
-Only updating the existing QA/checklist documents is sufficient. Creating new release documents is not necessary for this pass.
+Use Supabase Auth password as the 4-digit PIN and keep the Profile UI PIN-only.
 
 ## Required Amendments
 
-State the final decision as safe for single-user deployment once password rotation and focused post-rotation QA pass. Keep leaked-password protection as a follow-up if not configurable through the connector.
+Document the security tradeoff and keep leaked-password protection/public-release hardening notes.
 
 ## Decision
 
