@@ -153,7 +153,7 @@ The app uses:
 
 - `public.focus_cards` for saved Focus Cards.
 - `public.user_settings` for profile/settings sync.
-- Supabase Auth email/password login from the Profile tab.
+- Supabase Auth email/password account creation and login from the Profile tab.
 - Row Level Security so each authenticated user can only access their own rows.
 - Explicit authenticated-role grants for browser Data API access.
 
@@ -174,6 +174,8 @@ window.ICT_SUPABASE_URL = 'https://cdcqklvvswzipmmvpzaj.supabase.co';
 ```
 
 Never expose the Supabase service-role key in the browser. See `docs/plans/supabase-focus-card-storage-plan.md` for the schema and validation checklist.
+
+If email confirmations are enabled in Supabase Auth, new users must confirm the email before `Login and sync` will succeed. The app keeps cards local-first while the account is pending confirmation.
 
 ## Price Map Ladder
 

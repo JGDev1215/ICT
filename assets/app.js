@@ -987,6 +987,11 @@
     return getSupabaseClient() ? 'Login required' : 'Local only';
   }
 
+  function authRedirectUrl(){
+    if(!root.location) return undefined;
+    return root.location.origin + root.location.pathname + '#profile';
+  }
+
   function remoteCardPayload(card){
     const c = normaliseCard(card);
     return {
@@ -1115,9 +1120,10 @@
     });
   }
 
-  function flushSupabaseQueue(){
+  function flushSupabaseQueue(options){
+    const opts = isObject(options) ? options : {};
     const client = getSupabaseClient();
-    if(!client || !supabaseUser || syncState.busy) return Promise.resolve(false);
+    if(!client || !supabaseUser || (syncState.busy && !opts.force)) return Promise.resolve(false);
     const queue = getSyncQueue();
     const processedCardIds = Object.keys(queue.cards || {});
     const processedDeleteIds = Object.keys(queue.deletes || {});
@@ -1159,13 +1165,14 @@
       setSyncStatus('Login required', 'Login from Profile to sync Focus Cards.', false);
       return Promise.resolve(false);
     }
+    if(syncState.busy) return Promise.resolve(false);
     setSyncStatus('Syncing', 'Loading Focus Cards from Supabase.', true);
     return Promise.all([loadRemoteCards(), loadRemoteSettings()])
       .then(([remoteCards, remoteSettings]) => {
         const merged = mergeCards(cards, remoteCards);
         saveCards(merged, {remote: false});
         if(remoteSettings) saveSettings(remoteSettings, {remote: false});
-        return flushSupabaseQueue();
+        return flushSupabaseQueue({force: true});
       })
       .then(() => {
         syncState.lastSyncAt = nyTimestamp();
@@ -1194,7 +1201,10 @@
         client.auth.onAuthStateChange((event, session) => {
           supabaseSession = session || null;
           supabaseUser = supabaseSession ? supabaseSession.user : null;
-          if(event === 'SIGNED_IN') syncFromSupabase();
+          if(event === 'SIGNED_IN') {
+            if(typeof setTimeout === 'function') setTimeout(() => syncFromSupabase(), 0);
+            else syncFromSupabase();
+          }
           if(event === 'SIGNED_OUT') setSyncStatus('Login required', 'Logged out. Local cards remain on this device.', false);
           render();
         });
@@ -1222,6 +1232,33 @@
       return syncFromSupabase();
     }).catch(error => {
       setSyncStatus('Login failed', error && error.message ? error.message : 'Supabase login failed.', false);
+      render();
+      return false;
+    });
+  }
+
+  function supabaseSignup(email, password){
+    const client = getSupabaseClient();
+    if(!client) {
+      setSyncStatus('Local only', 'Supabase is not configured.', false);
+      render();
+      return Promise.resolve(false);
+    }
+    setSyncStatus('Syncing', 'Creating Supabase account.', true);
+    return client.auth.signUp({
+      email,
+      password,
+      options: {emailRedirectTo: authRedirectUrl()}
+    }).then(({data, error}) => {
+      if(error) throw error;
+      supabaseSession = data && data.session ? data.session : null;
+      supabaseUser = supabaseSession ? supabaseSession.user : null;
+      if(supabaseUser) return syncFromSupabase();
+      setSyncStatus('Confirm email', 'Account created. Check your email, confirm the account, then login here.', false);
+      render();
+      return true;
+    }).catch(error => {
+      setSyncStatus('Signup failed', error && error.message ? error.message : 'Supabase account creation failed.', false);
       render();
       return false;
     });
@@ -1467,6 +1504,7 @@
     mergeCards,
     remoteCardPayload,
     syncFromSupabase,
+    supabaseSignup,
     priceRefreshRemaining,
     priceCountdownText,
     selectedMarketTimeframes,
@@ -2018,7 +2056,7 @@
     const statusClass = supabaseUser ? 'good' : configured ? 'warn' : 'bad';
     const login = supabaseUser
       ? `<p class='hint good'>Signed in as ${esc(email || 'Supabase user')}.</p><div class='row-actions'><button class='btn' id='syncNowBtn'>Sync now</button><button class='btn ghost' id='supabaseLogoutBtn'>Logout</button></div>`
-      : `<label class='label' for='supabaseEmail'>Email</label><input class='in' id='supabaseEmail' type='email' autocomplete='email' placeholder='you@example.com'><label class='label' for='supabasePassword'>Password</label><input class='in' id='supabasePassword' type='password' autocomplete='current-password' placeholder='Supabase password'><div class='row-actions'><button class='btn primary' id='supabaseLoginBtn'>Login and sync</button><button class='btn' id='syncNowBtn'>Retry sync</button></div>`;
+      : `<label class='label' for='supabaseEmail'>Email</label><input class='in' id='supabaseEmail' type='email' autocomplete='email' placeholder='you@example.com'><label class='label' for='supabasePassword'>Password</label><input class='in' id='supabasePassword' type='password' autocomplete='current-password' placeholder='Supabase password'><p class='hint'>New accounts may need email confirmation before login.</p><div class='row-actions'><button class='btn primary' id='supabaseLoginBtn'>Login and sync</button><button class='btn' id='supabaseSignupBtn'>Create account</button><button class='btn' id='syncNowBtn'>Retry sync</button></div>`;
     return `<div class='card'><div class='progress'>Server sync</div><h3>Supabase Focus Cards</h3><p class='hint ${statusClass}'>${esc(syncStatusLabel())}: ${esc(syncState.message)}</p><div class='line'><div class='k'>Project</div><div class='v'>${esc(cfg.url || 'Not configured')}</div></div><div class='line'><div class='k'>Pending local changes</div><div class='v'>${pending}</div></div><div class='line'><div class='k'>Last sync</div><div class='v'>${esc(syncState.lastSyncAt || '-')}</div></div>${configured ? login : `<p class='hint bad'>Set <code>window.ICT_SUPABASE_ANON_KEY</code> before app.js loads to enable Supabase Auth and server storage.</p>`}</div>`;
   }
 
@@ -2559,6 +2597,19 @@
       }
       supabaseLogin(email, password).then(ok => {
         notice = ok ? 'Supabase sync complete.' : syncState.message;
+        render();
+      });
+    });
+    on('supabaseSignupBtn', () => {
+      const email = q('supabaseEmail') ? q('supabaseEmail').value.trim() : '';
+      const password = q('supabasePassword') ? q('supabasePassword').value : '';
+      if(!email || !password){
+        notice = 'Enter email and password to create an account.';
+        render();
+        return;
+      }
+      supabaseSignup(email, password).then(ok => {
+        notice = syncState.message;
         render();
       });
     });

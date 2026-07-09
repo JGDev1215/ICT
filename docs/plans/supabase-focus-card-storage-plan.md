@@ -51,6 +51,7 @@ Do not expose the Supabase service-role key in the frontend.
 ## Runtime Behavior
 
 - Profile includes Supabase login/logout/sync controls.
+- Profile includes Supabase account creation. If email confirmation is enabled, the user must confirm email before login.
 - Card create/edit/final-save/favorite/delete updates localStorage first.
 - If logged in, the app syncs the change to Supabase.
 - If offline or unauthenticated, the change is queued locally and retried after login.
@@ -61,6 +62,7 @@ Do not expose the Supabase service-role key in the frontend.
 ## Validation Checklist
 
 - Create one Supabase Auth user manually in the Supabase dashboard.
+- Or create an account from Profile and confirm the email before login.
 - Confirm the publishable key is present in `index.html` or an injected config script before `assets/app.js`.
 - Login from Profile.
 - Create a Focus Card and confirm a row appears in `public.focus_cards`.
