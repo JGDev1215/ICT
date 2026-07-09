@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'v0.8.2';
+  const VERSION = 'v0.8.3';
   const KEY = 'ict_cards_v078';
   const SETTINGS_KEY = 'ict_settings_v1';
   const DRAFT_KEY = 'ict_planner_draft_v1';
@@ -83,6 +83,7 @@
   const arrayTypes = ['SIBI','BISI','CE','OB','FVG','High','Low','Other'];
   const routeBehaviors = ['Respect','Disrespect','Pending','Untested'];
   const PRICE_DELAY_DISCLAIMER = 'Price data may be delayed by 5 minutes. You can override it manually before saving.';
+  const PRICE_SYMBOL_PATTERN = /^[A-Z0-9._=/-]{1,24}$/;
   const marketPhaseKeys = {
     Monthly: 'monthly',
     Weekly: 'weekly',
@@ -304,6 +305,31 @@
     return messages.length ? `<div class='price-validation' role='alert'>${messages.map(m => `<p>${esc(m)}</p>`).join('')}</div>` : '';
   }
 
+  function normalizePriceSymbol(symbol){
+    return asText(symbol).toUpperCase().replace(/\s+/g, '');
+  }
+
+  function validPriceSymbol(symbol){
+    const normal = normalizePriceSymbol(symbol);
+    return !!(normal && PRICE_SYMBOL_PATTERN.test(normal) && /[A-Z0-9]/.test(normal));
+  }
+
+  function priceError(kind, message){
+    const err = new Error(message || 'price helper unavailable');
+    err.priceKind = kind || 'unavailable';
+    return err;
+  }
+
+  function priceErrorKind(err){
+    return err && err.priceKind ? err.priceKind : 'unavailable';
+  }
+
+  function validatePricePayload(data){
+    const price = data && data.price != null ? clean(String(data.price)) : '';
+    if(!price || priceNumber(price) == null) throw priceError('malformed', 'malformed price response');
+    return Object.assign({}, data, {price});
+  }
+
   function inferPriceSource(source){
     const s = asText(source);
     if(s) return s;
@@ -409,6 +435,28 @@
     return `<div class='price-countdown'>${esc(priceCountdownText())}</div>`;
   }
 
+  function priceStatusMessage(){
+    if(priceFetchState === 'loading') return 'Fetching live price. Manual entry remains available.';
+    if(priceFetchState === 'ok'){
+      const source = lastPriceSource === 'local-yfinance' ? 'local yfinance helper' : 'hosted yfinance API';
+      return 'Detected from ' + source + (lastPriceFetchAt ? ' at ' + nyTimestamp(lastPriceFetchAt) + '.' : '.');
+    }
+    if(priceFetchState === 'unsupported') return 'Unsupported symbol for auto-detect. Enter the price manually.';
+    if(priceFetchState === 'malformed') return 'Price helper returned an unusable price. Enter the price manually.';
+    if(priceFetchState === 'unavailable' || priceFetchState === 'error') return 'Live price unavailable. Enter the price manually.';
+    return 'Ready. Enter price manually or use Auto-detect when the price helper is available.';
+  }
+
+  function priceStatusClass(){
+    const state = priceFetchState || 'ready';
+    if(['loading','ok'].includes(state)) return state;
+    return ['unsupported','malformed','unavailable','error'].includes(state) ? 'warn' : 'ready';
+  }
+
+  function priceStatusHtml(){
+    return `<div class='price-status ${priceStatusClass()}' id='priceStatusMessage' role='status'>${esc(priceStatusMessage())}</div>`;
+  }
+
   function trimSlash(s){
     return cleanUrl(s).replace(/\/+$/, '');
   }
@@ -423,16 +471,17 @@
   }
 
   function priceHelperUrl(symbol){
-    return priceApiBase() + '?symbol=' + encodeURIComponent(symbol || '');
+    return priceApiBase() + '?symbol=' + encodeURIComponent(normalizePriceSymbol(symbol));
   }
 
   function localPriceHelperUrl(symbol){
-    return LOCAL_PRICE_API_BASE + '?symbol=' + encodeURIComponent(symbol || '');
+    return LOCAL_PRICE_API_BASE + '?symbol=' + encodeURIComponent(normalizePriceSymbol(symbol));
   }
 
   function priceHelperUrls(symbol){
-    const urls = [priceHelperUrl(symbol)];
-    const local = localPriceHelperUrl(symbol);
+    const normal = normalizePriceSymbol(symbol);
+    const urls = [priceHelperUrl(normal)];
+    const local = localPriceHelperUrl(normal);
     if(!urls.includes(local)) urls.push(local);
     return urls;
   }
@@ -443,18 +492,28 @@
     const controller = hasAbort ? new AbortController() : null;
     const timer = hasAbort ? setTimeout(() => controller.abort(), ms) : null;
     return fetch(url, controller ? {signal: controller.signal} : undefined)
-      .then(res => res.ok ? res.json() : Promise.reject(new Error('price helper unavailable')))
+      .then(res => res.json()
+        .catch(() => ({}))
+        .then(body => {
+          if(res.ok) return body;
+          const bodyError = asText(body && body.error).toLowerCase();
+          const kind = bodyError.includes('unsupported') ? 'unsupported' : 'unavailable';
+          throw priceError(kind, 'price helper unavailable');
+        }))
       .finally(() => {
         if(timer) clearTimeout(timer);
       });
   }
 
   function fetchPrice(symbol){
-    const urls = priceHelperUrls(symbol);
+    const normal = normalizePriceSymbol(symbol);
+    if(!validPriceSymbol(normal)) return Promise.reject(priceError('unsupported', 'unsupported symbol'));
+    const urls = priceHelperUrls(normal);
     let index = 0;
     const next = () => fetchJsonWithTimeout(urls[index], PRICE_TIMEOUT_MS)
       .then(data => Object.assign({}, data, {helperUrl: urls[index]}))
       .catch(err => {
+        if(priceErrorKind(err) === 'unsupported') throw err;
         index += 1;
         if(index >= urls.length) throw err;
         return next();
@@ -1460,16 +1519,68 @@
     };
   }
 
-  function plannerHasInput(fields, ctx, cardId){
+  function plannerRowState(fields, prefix, index){
+    const x = normFields(fields || {});
+    const base = prefix + index;
+    const any = !!(x[base + 'Level'] || x[base + 'Draw'] || x[base + 'Tf'] || x[base + 'Taken'] || x[base + 'Confidence'] || x[base + 'HitTime']);
+    const complete = !!(x[base + 'Level'] && x[base + 'Draw'] && x[base + 'Tf']);
+    return {any, complete, label: (prefix === 'dol' ? 'DOL ' : 'Sweep ') + index};
+  }
+
+  function plannerValidationState(fields, ctx, cardId){
     const flds = normFields(fields || {});
+    const settings = getSettings();
     const baseDate = today();
-    const hasField = Object.keys(flds).some(k => {
+    const meaningful = Object.keys(flds).some(k => {
       const value = flds[k];
-      if(k === 'date' && value === baseDate) return false;
-      if(typeof value === 'boolean') return value;
+      if(k === 'date') return !!(value && value !== baseDate);
+      if(k === 'time') return false;
+      if(k === 'instrument') return !!(value && value !== (settings.defaultInstrument || ''));
+      if(k === 'session') return !!(value && value !== (settings.defaultSession || ''));
+      if(typeof value === 'boolean') return value === true;
       return !!value;
+    }) || !!marketContextText(ctx) || !!cardId;
+    const priceMessages = priceValidationMessages(flds);
+    const dolRows = [1, 2, 3].map(i => plannerRowState(flds, 'dol', i));
+    const sweepRows = [1, 2, 3].map(i => plannerRowState(flds, 'sweep', i));
+    const completeDol = dolRows.filter(row => row.complete);
+    const partialDol = dolRows.filter(row => row.any && !row.complete).map(row => row.label);
+    const partialSweep = sweepRows.filter(row => row.any && !row.complete).map(row => row.label);
+    const generateErrors = [];
+    if(!flds.instrument) generateErrors.push('Instrument is required.');
+    if(!flds.session) generateErrors.push('Session is required.');
+    if(!flds.bias) generateErrors.push('Bias Determination For Session is required.');
+    if(flds.currentPrice && priceNumber(flds.currentPrice) == null){
+      generateErrors.push('Current price must be greater than 0, or clear it and acknowledge manual price is needed.');
+    } else if(!flds.currentPrice && !manualPriceNeededAck){
+      generateErrors.push('Enter a current price, or acknowledge that manual price is needed before generation.');
+    }
+    if(!completeDol.length) generateErrors.push('Add at least one complete DOL row with price level, draw rationale and timeframe.');
+    if(partialDol.length) generateErrors.push('Complete or clear partial DOL rows: ' + partialDol.join(', ') + '.');
+    if(partialSweep.length) generateErrors.push('Complete or clear partial Sweep rows: ' + partialSweep.join(', ') + '.');
+    priceMessages.forEach(message => {
+      if(!generateErrors.includes(message)) generateErrors.push(message);
     });
-    return !!(cardId || hasField || marketContextText(ctx));
+    const draftErrors = meaningful ? [] : ['Add at least one planning input before saving a draft.'];
+    return {
+      hasMeaningfulPlannerInput: meaningful,
+      canSaveDraft: draftErrors.length === 0,
+      canGenerateFocusPlan: generateErrors.length === 0,
+      draftErrors,
+      generateErrors,
+      completeDolCount: completeDol.length
+    };
+  }
+
+  function plannerValidationHtml(state, mode){
+    const validation = state || plannerValidationState(f, marketContextDraft, plannerCardId);
+    const messages = mode === 'draft' ? validation.draftErrors : validation.generateErrors;
+    if(!messages.length) return '';
+    return `<div class='planner-validation price-validation' role='alert'>${messages.map(m => `<p>${esc(m)}</p>`).join('')}</div>`;
+  }
+
+  function plannerHasInput(fields, ctx, cardId){
+    return plannerValidationState(fields, ctx, cardId).hasMeaningfulPlannerInput;
   }
 
   function persistPlannerDraft(){
@@ -1533,6 +1644,8 @@
     lastPriceSource = asText(payload.lastPriceSource) || 'manual';
     lastPriceFetchAt = Number(payload.lastPriceFetchAt) || 0;
     priceFetchState = '';
+    manualPriceNeededAck = false;
+    plannerValidationMode = '';
     lastDraftSavedAt = asText(payload.savedAt);
     lastDraftState = lastDraftSavedAt ? 'Restored autosaved draft from ' + nyTimestamp(lastDraftSavedAt) + '.' : 'Restored autosaved draft.';
     plannerDraftDiscarded = false;
@@ -1616,6 +1729,8 @@
   let lastDraftState = '';
   let lastDraftSavedAt = '';
   let plannerDraftDiscarded = false;
+  let manualPriceNeededAck = false;
+  let plannerValidationMode = '';
   let supabaseClient = null;
   let supabaseSession = null;
   let supabaseUser = null;
@@ -1654,6 +1769,9 @@
     normRiskPlan,
     priceNumber,
     priceValidationMessages,
+    normalizePriceSymbol,
+    validPriceSymbol,
+    plannerValidationState,
     dolDistance,
     priceSourceLabel,
     cleanUrl,
@@ -1889,10 +2007,11 @@
     const source = current == null ? 'Manual pending' : 'yfinance/manual';
     const liveClass = current == null ? 'pending' : 'live';
     const header = `<div class='price-map-header'><div><div class='progress'>Price Map</div><h3 class='price-map-title'>${esc(instrument)}</h3><div class='price-map-meta'>${esc(session)} · Updated ${esc(updated)}</div><div class='price-map-source'>Source: ${esc(source)}</div></div><div class='price-map-status'><div class='price-map-live ${liveClass}'>${esc(current == null ? 'Manual needed' : 'Live')}</div>${priceCountdownHtml()}</div></div>`;
+    const priceProblem = ['error','unavailable','unsupported','malformed'].includes(priceFetchState);
     const notice = priceFetchState === 'loading'
       ? `<div class='price-map-loading'>Fetching ${esc(instrument)} price from yfinance...</div>`
-      : priceFetchState === 'error'
-        ? `<div class='price-map-error'>Live price unavailable. Use the last known price or enter price manually.</div>`
+      : priceProblem
+        ? `<div class='price-map-error'>${esc(priceStatusMessage())}</div>`
         : '';
     if(current == null || !levels.length){
       return `<div class='price-map'>${header}<div class='price-map-empty'><h3>No price levels mapped yet</h3><p class='hint'>Add current price plus at least one numeric DOL or Sweep level to build the ladder.</p></div>${notice}</div>`;
@@ -2032,6 +2151,8 @@
     plannerCardId = '';
     priceFetchState = '';
     lastPriceSource = 'manual';
+    manualPriceNeededAck = false;
+    plannerValidationMode = '';
     plannerDraftDiscarded = opts.discarded === true;
     step = 0;
     if(opts.persist !== false) persistPlannerDraft();
@@ -2125,7 +2246,9 @@
     const instrumentInput = `<label class='label' for='instrument'>Instrument</label><input class='in' id='instrument' list='inst' value='${esc(f.instrument)}' placeholder='Select or type instrument'><datalist id='inst'>${instruments.map(x => `<option value='${esc(x)}'>`).join('')}</datalist>`;
     const status = raw('Status', c.ok ? pill('Complete', 'ok') : pill('Draft', 'warn'));
     const draftMessage = lastDraftState || (plannerHasInput(f, marketContextDraft, plannerCardId) ? 'Autosave ready. Planner changes are kept locally before you save a card.' : 'No active planner draft.');
-    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats your inputs only. It does not call external AI, forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button>${priceCountdownHtml()}</div><p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the configured yfinance price API when available, then falls back to the local helper at 127.0.0.1:8765.</p>${priceValidationHtml(f)}<label class='label'>Bias Determination For Session</label><div class='segmented' role='group' aria-label='Bias Determination For Session'>${biasOptions.map(b => `<button class='segmented-option' data-bias='${b}' aria-pressed='${f.bias === b ? 'true' : 'false'}'>${esc(b)}</button>`).join('')}</div><p class='hint'>Session bias is a planning label for the selected session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Market Context</div><h3>Phase map by timeframe</h3><p class='sub'>Record observed context only. Potential next phase is a conservative planning note, not a trade signal or forecast.</p>${marketContextPlanner(marketContextDraft)}</div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}<div class='panel'><h3>FVG Formation</h3><label class='check-row'><input type='checkbox' id='fvg' ${f.fvg ? 'checked' : ''}> <span>FVG formed after sweep</span></label>${selectDisabled('fvgTf', 'FVG timeframe', tfs, '- FVG timeframe -', !f.fvg)}</div></div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div class='panel draft-state'><div><strong>Draft state</strong><p class='hint' id='draftState'>${esc(draftMessage)}</p></div><button class='btn ghost' id='discardDraftBtn'>Discard draft</button></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' id='plannerActions' style='bottom:var(--bottom-nav-height)' tabindex='-1'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
+    const validation = plannerValidationState(f, marketContextDraft, plannerCardId);
+    const validationHtml = plannerValidationMode ? plannerValidationHtml(validation, plannerValidationMode) : '';
+    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats your inputs only. It does not call external AI, forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<label class='check-row'><input type='checkbox' id='manualPriceNeededAck' ${manualPriceNeededAck ? 'checked' : ''}> <span>Manual price needed before generation</span></label><div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button>${priceCountdownHtml()}</div>${priceStatusHtml()}<p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the configured yfinance price API when available, then falls back to the local helper at 127.0.0.1:8765.</p>${priceValidationHtml(f)}<label class='label'>Bias Determination For Session</label><div class='segmented' role='group' aria-label='Bias Determination For Session'>${biasOptions.map(b => `<button class='segmented-option' data-bias='${b}' aria-pressed='${f.bias === b ? 'true' : 'false'}'>${esc(b)}</button>`).join('')}</div><p class='hint'>Session bias is a planning label for the selected session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Market Context</div><h3>Phase map by timeframe</h3><p class='sub'>Record observed context only. Potential next phase is a conservative planning note, not a trade signal or forecast.</p>${marketContextPlanner(marketContextDraft)}</div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}<div class='panel'><h3>FVG Formation</h3><label class='check-row'><input type='checkbox' id='fvg' ${f.fvg ? 'checked' : ''}> <span>FVG formed after sweep</span></label>${selectDisabled('fvgTf', 'FVG timeframe', tfs, '- FVG timeframe -', !f.fvg)}</div></div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div id='plannerValidation'>${validationHtml}</div><div class='panel draft-state'><div><strong>Draft state</strong><p class='hint' id='draftState'>${esc(draftMessage)}</p></div><button class='btn ghost' id='discardDraftBtn'>Discard draft</button></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' id='plannerActions' style='bottom:var(--bottom-nav-height)' tabindex='-1'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
   }
 
   function saved(){
@@ -2244,6 +2367,8 @@
       const n = doc.getElementById(k);
       if(n) f[k] = n.type === 'checkbox' ? n.checked : (isPriceField(k) ? clean(n.value) : asText(n.value));
     }
+    const priceAck = doc.getElementById('manualPriceNeededAck');
+    if(priceAck) manualPriceNeededAck = !!priceAck.checked;
     if(!f.fvg) f.fvgTf = '';
     marketTimeframes.forEach(tf => {
       const key = marketPhaseKeys[tf];
@@ -2278,11 +2403,19 @@
       if(k === 'session') return value === (settings.defaultSession || '');
       if(typeof value === 'boolean') return value === false;
       return !value;
-    });
+    }) && !manualPriceNeededAck;
   }
 
   function savePlanner(openDetails){
     sync();
+    const validation = plannerValidationState(f, marketContextDraft, plannerCardId);
+    if(openDetails ? !validation.canGenerateFocusPlan : !validation.canSaveDraft){
+      plannerValidationMode = openDetails ? 'generate' : 'draft';
+      notice = openDetails ? 'Complete the required planner fields before generating.' : 'Add planning input before saving a draft.';
+      render();
+      return;
+    }
+    plannerValidationMode = '';
     let c;
     if(plannerCardId && cards.find(x => x.id === plannerCardId)){
       c = updateCard(plannerCardId, {fields: f, marketContext: marketContextDraft, finalSaved: false, priceSource: lastPriceSource, priceHistoryEvent: 'saved-edit'});
@@ -2420,14 +2553,21 @@
     });
     on('autoPriceBtn', () => {
       sync();
-      const symbol = f.instrument;
+      const symbol = normalizePriceSymbol(f.instrument);
+      f.instrument = symbol;
       if(!symbol){
         notice = 'Enter an instrument before auto-detecting price.';
         render();
         return;
       }
+      if(!validPriceSymbol(symbol)){
+        priceFetchState = 'unsupported';
+        notice = 'Unsupported symbol for auto-detect. Enter the price manually.';
+        render();
+        return;
+      }
       if(typeof fetch !== 'function'){
-        priceFetchState = 'error';
+        priceFetchState = 'unavailable';
         notice = 'Auto-detect price needs browser fetch support.';
         render();
         return;
@@ -2436,19 +2576,22 @@
       render();
       fetchPrice(symbol)
         .then(data => {
-          if(!data || data.price == null) throw new Error('no price returned');
-          f.currentPrice = clean(String(data.price));
+          const payload = validatePricePayload(data);
+          f.currentPrice = payload.price;
           f.time = f.time || nyTimeInput();
           priceFetchState = 'ok';
           lastPriceFetchAt = Date.now();
           lastPriceSource = data.helperUrl === localPriceHelperUrl(symbol) ? 'local-yfinance' : 'hosted-yfinance';
+          manualPriceNeededAck = false;
           const source = lastPriceSource === 'local-yfinance' ? 'local yfinance helper' : 'hosted yfinance API';
           notice = 'Price auto-detected from ' + source + '.';
+          plannerValidationMode = '';
           render();
         })
-        .catch(() => {
-          priceFetchState = 'error';
-          notice = 'Auto-detect unavailable. Check the hosted price API or enter price manually.';
+        .catch(err => {
+          const kind = priceErrorKind(err);
+          priceFetchState = kind === 'unsupported' ? 'unsupported' : kind === 'malformed' ? 'malformed' : 'unavailable';
+          notice = priceStatusMessage();
           render();
         });
     });
@@ -2494,9 +2637,18 @@
       if(preview) preview.innerHTML = summary(f, marketContextDraft) + raw('Status', comp(f).ok ? pill('Complete', 'ok') : pill('Draft', 'warn'));
       const map = q('priceMapPreview');
       if(map) map.innerHTML = priceMapHtml(f);
+      const validation = q('plannerValidation');
+      if(validation) validation.innerHTML = plannerValidationMode ? plannerValidationHtml(plannerValidationState(f, marketContextDraft, plannerCardId), plannerValidationMode) : '';
+      const priceStatus = q('priceStatusMessage');
+      if(priceStatus){
+        priceStatus.textContent = priceStatusMessage();
+        priceStatus.className = 'price-status ' + priceStatusClass();
+      }
     };
 
     const plannerFields = Object.keys(f).map(id => q(id)).filter(Boolean);
+    const manualPriceAck = q('manualPriceNeededAck');
+    if(manualPriceAck) plannerFields.push(manualPriceAck);
     plannerFields.forEach(n => {
       const ev = n.tagName === 'SELECT' || n.type === 'checkbox' ? 'change' : 'input';
       n.addEventListener(ev, () => {
@@ -2504,6 +2656,15 @@
         if(n.id === 'currentPrice'){
           priceFetchState = '';
           lastPriceSource = 'manual';
+          if(f.currentPrice){
+            manualPriceNeededAck = false;
+            const ack = q('manualPriceNeededAck');
+            if(ack) ack.checked = false;
+          }
+        }
+        if(n.id === 'manualPriceNeededAck' && manualPriceNeededAck && f.currentPrice){
+          manualPriceNeededAck = false;
+          n.checked = false;
         }
         if(n.id === 'fvg'){
           const fvgTf = q('fvgTf');

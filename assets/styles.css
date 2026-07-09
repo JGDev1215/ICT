@@ -546,6 +546,27 @@ textarea.in,.textarea{min-height:104px;resize:vertical;line-height:1.45}
 }
 .price-validation p{margin:0}
 
+.price-status{
+  margin:var(--space-3) 0 0;
+  padding:9px 11px;
+  border:1px solid var(--surface-line);
+  border-radius:var(--radius-md);
+  background:var(--surface-muted);
+  color:var(--text-soft);
+  font-size:13px;
+  font-weight:800;
+}
+.price-status.ok{
+  border-color:rgba(18,165,116,.18);
+  background:var(--confirmed-soft);
+  color:var(--confirmed);
+}
+.price-status.warn{
+  border-color:rgba(240,135,43,.18);
+  background:var(--attention-soft);
+  color:var(--attention);
+}
+
 .price-map{
   display:grid;
   gap:var(--space-3);

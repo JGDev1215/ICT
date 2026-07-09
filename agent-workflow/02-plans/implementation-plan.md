@@ -2,66 +2,89 @@
 
 ## Goal
 
-Create the final Codex daily report for 2026-07-09 and update the required workflow evidence.
+Implement the Planner validation and price auto-detect reliability fix from `docs/plans/planner-validation-price-autodetect-plan-2026-07-09.md` without changing local-first storage, export schema, Supabase optional sync, or unrelated UI.
 
 ## Repo Findings
 
-- Repository path and remote are correct.
-- Worktree was clean before starting.
-- `docs/daily-reports/README.md` defines the required report template and naming convention.
-- `docs/daily-reports/2026-07-09-session-report.md` already exists, so the final report should use a suffix to avoid overwriting it.
-- Today's notable pushed commits include Supabase sync, Account & Backup UI, documentation routing, daily report workflow, and live E2E QA planning.
+- `assets/app.js` owns planner state, normalization, draft persistence, validation, price lookup, and save handlers.
+- `savePlanner(openDetails)` is the correct gate for Save Draft and Generate Focus Plan.
+- `comp(fields)` currently controls complete/draft status and should remain compatible with existing saved cards.
+- `priceValidationMessages(fields)` currently only covers invalid numeric price values.
+- `fetchPrice(symbol)` already tries hosted/same-origin API and local helper; it needs symbol validation and response validation/status refinement.
+- `tests/e2e/planner.spec.js` can cover the browser behavior with mocked route responses.
+- JS/CSS behavior changes require cache-busted asset references, service-worker cache update, smoke assertions compatibility, README, and CHANGELOG updates.
 
 ## Files Likely Affected
 
-- `docs/daily-reports/2026-07-09-final-codex-report.md`
-- `agent-workflow/00-inbox/current-task.md`
-- `agent-workflow/01-intake/task-brief.md`
-- `agent-workflow/02-plans/implementation-plan.md`
-- `agent-workflow/03-senior-review/plan-review.md`
-- `agent-workflow/03-senior-review/approved-plan.md`
-- `agent-workflow/04-execution/execution-report.md`
-- `agent-workflow/05-code-review/review-report.md`
-- `agent-workflow/06-fix-rounds/senior-decision.md`
-- `agent-workflow/07-final-review/final-approval.md`
-- `agent-workflow/08-completed/workflow-summary.md`
+- `assets/app.js`
+- `assets/styles.css`
+- `index.html`
+- `service-worker.js`
+- `tests/smoke.js`
+- `tests/e2e/planner.spec.js`
+- `README.md`
+- `CHANGELOG.md`
+- `agent-workflow/*`
 
 ## Proposed Changes
 
-- Add a new final daily report under `docs/daily-reports/`.
-- Update workflow files for this task.
-- Run a lightweight check suitable for documentation-only work.
+- Add planner validation helpers in `assets/app.js`:
+  - `plannerValidationState(fields, ctx, cardId)` with `hasMeaningfulPlannerInput`, `canSaveDraft`, and `canGenerateFocusPlan`.
+  - `plannerValidationHtml(state, mode)` for visible inline planner feedback.
+  - Row validation for complete/partial DOL and sweep rows.
+- Add a missing-current-price acknowledgement checkbox in the Planner so Generate Focus Plan can proceed without a current price only when the user explicitly acknowledges manual price is needed.
+- Block Save Draft when the planner is effectively empty/default-only.
+- Block Generate Focus Plan when required fields are missing, current price is invalid/unacknowledged, DOL requirements are unmet, or DOL/sweep partial rows exist.
+- Keep partial meaningful draft saves allowed.
+- Improve price auto-detect:
+  - Normalize symbol input by trimming and uppercasing.
+  - Reject blank or invalid symbols before fetch.
+  - Validate API price payload using existing `clean`/`priceNumber`.
+  - Distinguish unsupported/unavailable/malformed outcomes in user-facing copy without exposing raw provider errors.
+  - Preserve manual price edits unless the user explicitly clicks Auto-detect.
+- Add concise CSS for planner validation/status messages if needed.
+- Update E2E coverage for blocked empty save, blocked empty generation, partial draft save, complete flow, mocked price success, and mocked price failure with manual fallback.
+- Update cache strings for the shipped JS/CSS behavior change and keep smoke assertions aligned.
+- Update README/CHANGELOG with the new validation and price fallback behavior.
 
 ## Step-by-Step Plan
 
-1. Complete safety check and read documentation routing guidance.
-2. Read daily report template and existing same-day report.
-3. Create implementation plan and senior review before editing report content.
-4. Add `docs/daily-reports/2026-07-09-final-codex-report.md`.
-5. Include session summary, actions taken, changed files, issues, tests/checks, decisions, git state, risks, and next steps.
-6. Run `node tests/smoke.js` because the repo already has a smoke suite and dependencies are present.
-7. Update execution, review, senior decision, final approval, and workflow summary files.
-8. Confirm final git status.
+1. Add validation helper functions near existing price validation and planner helper functions.
+2. Update Planner HTML to render validation feedback and the missing-price acknowledgement checkbox.
+3. Update `sync()` and default-prefill logic so the acknowledgement participates in planner state but does not alter saved-card schema.
+4. Gate `savePlanner(false)` and `savePlanner(true)` through validation state.
+5. Update price symbol normalization, helper URL calls, response validation, and notice/status messages.
+6. Export any helper functions needed by smoke tests through `window.ICTSweepState`.
+7. Add or update Playwright planner tests with mocked `/api/price` and local helper responses.
+8. Update cache-busted asset query strings in `index.html` and matching `STATIC_ASSETS`/`CACHE_NAME` in `service-worker.js`.
+9. Update README and CHANGELOG.
+10. Run `node tests/smoke.js` and relevant Playwright tests.
+11. Complete workflow execution, code review, senior decision, final approval, and workflow summary files.
 
 ## Acceptance Criteria
 
-- Report exists in the correct folder and uses the daily report template.
-- Report is factual, concise, and marked Historical / not source of truth.
-- Checks are recorded accurately.
-- Runtime app files are unchanged.
+- Empty/default-only Save Draft is blocked and no saved card is created.
+- Partial meaningful Save Draft works and remains a draft.
+- Generate Focus Plan shows missing-field feedback when required inputs are absent.
+- Generate Focus Plan succeeds for existing complete planner input.
+- Partial DOL/sweep rows are visible validation errors for Generate Focus Plan.
+- Manual price entry works without price auto-detect.
+- Price auto-detect succeeds from a mocked supported response and fills current price.
+- Price auto-detect failure leaves existing/manual price usable and shows manual-entry fallback copy.
+- `ict_cards_v078` and `ict_dol_sweep_export_v7` remain unchanged.
 
 ## Test Plan
 
 - `node tests/smoke.js`
-- `git status --short`
-- Manual file inspection of the new report.
+- `npx playwright test tests/e2e/planner.spec.js`
 
 ## Risks
 
-- Report may duplicate the earlier daily report if not scoped as a final end-of-day report.
-- Because this is documentation-only, app behavior is not revalidated beyond smoke.
+- Validation could accidentally block legitimate rough drafts if "meaningful" is too strict.
+- Missing-price acknowledgement must not change saved card shape.
+- Price-status copy must remain educational/fallback-oriented and not imply trading advice.
+- E2E tests must avoid live yfinance dependencies.
 
 ## Rollback Plan
 
-- Delete `docs/daily-reports/2026-07-09-final-codex-report.md`.
-- Revert workflow evidence files for this task if needed.
+Revert the scoped changes in `assets/app.js`, `assets/styles.css`, `index.html`, `service-worker.js`, `tests/smoke.js`, `tests/e2e/planner.spec.js`, `README.md`, and `CHANGELOG.md`. Restore the previous cache-busted references and service-worker cache name if necessary.

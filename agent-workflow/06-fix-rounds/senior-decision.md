@@ -6,7 +6,7 @@ APPROVED
 
 ## Reasoning
 
-The final Codex daily report exists in the correct folder, follows the template, and does not alter runtime app files.
+The implementation satisfies the approved plan, preserves local-first storage contracts, keeps manual price fallback available, and passes required smoke plus Planner E2E tests.
 
 ## Required Fixes
 
@@ -14,4 +14,4 @@ None.
 
 ## Next Action
 
-Run the planned checks and hand off the report for review or commit.
+Prepare final approval and handoff. Do not commit or push unless explicitly instructed.

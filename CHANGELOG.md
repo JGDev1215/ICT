@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.8.3 — 2026-07-09
+
+### Added
+
+- Added Planner validation that blocks empty/default-only draft saves while still allowing meaningful partial drafts.
+- Added Generate Focus Plan validation for required instrument, session, bias, current-price/manual-price acknowledgement, and complete DOL rows.
+- Added visible validation for partial DOL/Sweep rows so incomplete rows must be completed or cleared before generation.
+- Added clearer price auto-detect status copy for ready, fetching, detected, unavailable, malformed, and unsupported-symbol states.
+- Added Playwright coverage for empty Planner blocking, partial draft saving, and mocked price auto-detect success/failure.
+
+### Changed
+
+- Normalized price auto-detect symbols before lookup and validated helper responses before writing current price.
+- Preserved manual current-price entry when auto-detect fails.
+
 ## v0.8.2 — 2026-07-09
 
 ### Changed

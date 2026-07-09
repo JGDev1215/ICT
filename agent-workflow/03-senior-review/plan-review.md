@@ -2,32 +2,32 @@
 
 ## Plan Quality
 
-The plan is appropriate for a documentation-only final report. It respects the daily report routing rules and avoids overwriting the earlier same-day report.
+The plan is scoped to the requested product fix and identifies the central save path, existing completion helper, price lookup helper, tests, cache-busting requirements, and documentation updates.
 
 ## Missing Steps
 
-- Include the latest commit hash and clean starting git state.
-- Mention that live QA cards remain in the admin backup account.
-- Keep daily report status as Historical and Source of truth as No.
+The plan should explicitly avoid adding any new saved-card field for the missing-price acknowledgement. The acknowledgement should be transient planner UI state only.
 
 ## Risk Areas
 
-- Accidentally turning a historical daily report into current requirements.
-- Overstating tests beyond what is run in this task.
+- Blocking Save Draft too aggressively could remove the intended rough-draft workflow.
+- Treating optional sweep detail fields as required would conflict with existing product rules.
+- Price auto-detect tests could become flaky if they hit live services.
+- Cache-busting must be updated consistently with service-worker assets.
 
 ## Overengineering Concerns
 
-No code or automation changes are needed.
+Do not add a validation framework, schema library, or large state abstraction. Keep helpers small and local to `assets/app.js`.
 
 ## Simpler Alternatives
 
-Updating the earlier report was possible, but a suffix report is safer because this is a final end-of-day wrap-up and the earlier report is already part of the historical record.
+Use the existing `normFields`, `priceNumber`, `marketContextText`, and row field naming conventions rather than introducing a new data model.
 
 ## Required Amendments
 
-- Use `docs/daily-reports/2026-07-09-final-codex-report.md`.
-- Keep the report factual and concise.
-- Do not commit or push unless separately requested.
+- Keep the missing-price acknowledgement transient and out of normalized cards/import/export.
+- Do not require sweep rows for Generate Focus Plan unless the user partially fills a sweep row.
+- Use route mocking for Playwright price tests rather than live yfinance.
 
 ## Decision
 

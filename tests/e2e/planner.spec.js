@@ -9,6 +9,42 @@ test.beforeEach(async ({page}) => {
   await page.reload();
 });
 
+test('empty planner save draft is blocked', async ({page}) => {
+  await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
+  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+
+  await page.locator('#saveDraftBtn').click();
+
+  await expect(page.locator('#plannerValidation')).toContainText('Add at least one planning input before saving a draft.');
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().length)).toBe(0);
+});
+
+test('empty planner generate focus plan is blocked', async ({page}) => {
+  await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
+  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+
+  await page.locator('#nextBtn').click();
+
+  await expect(page.locator('#plannerValidation')).toContainText('Instrument is required.');
+  await expect(page.locator('#plannerValidation')).toContainText('Session is required.');
+  await expect(page.locator('#plannerValidation')).toContainText('Add at least one complete DOL row');
+  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().length)).toBe(0);
+});
+
+test('partial meaningful planner draft can save', async ({page}) => {
+  await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
+  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+
+  await page.locator('#instrument').fill('MNQ');
+  await page.locator('#saveDraftBtn').click();
+
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().length)).toBe(1);
+  await page.locator("nav[aria-label='Primary'] [data-route='saved']").click();
+  await expect(page.getByText('Saved Cards')).toBeVisible();
+  await expect(page.getByText('MNQ').first()).toBeVisible();
+});
+
 test('planner creates a focus card and preserves it after reload', async ({page}) => {
   await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
   await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
@@ -36,6 +72,51 @@ test('planner creates a focus card and preserves it after reload', async ({page}
   await page.locator("nav[aria-label='Primary'] [data-route='saved']").click();
   await expect(page.getByText('Saved Cards')).toBeVisible();
   await expect(page.getByText('MNQ').first()).toBeVisible();
+});
+
+test('price auto-detect populates current price from a mocked helper response', async ({page}) => {
+  await page.evaluate(() => {
+    window.ICT_PRICE_API_BASE = `${window.location.origin}/api/price`;
+    window.fetch = async () => new Response(JSON.stringify({
+        symbol: 'MNQ',
+        yfSymbol: 'MNQ=F',
+        price: 29750.5,
+        source: 'yfinance',
+        cached: false,
+        timestamp: '2026-07-09T13:35:00Z'
+      }), {
+        status: 200,
+        headers: {'Content-Type': 'application/json'}
+      });
+  });
+
+  await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
+  await page.locator('#instrument').fill(' mnq ');
+  await page.locator('#autoPriceBtn').click();
+
+  await expect(page.locator('#instrument')).toHaveValue('MNQ');
+  await expect(page.locator('#currentPrice')).toHaveValue('29750.5');
+  await expect(page.locator('#priceStatusMessage')).toContainText('Detected from hosted yfinance API');
+});
+
+test('price auto-detect failure keeps manual price available', async ({page}) => {
+  await page.evaluate(() => {
+    window.ICT_PRICE_API_BASE = `${window.location.origin}/api/price`;
+    window.fetch = async () => new Response(JSON.stringify({error: 'unsupported symbol', symbol: 'NOTREAL'}), {
+      status: 400,
+      headers: {'Content-Type': 'application/json'}
+    });
+  });
+
+  await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
+  await page.locator('#instrument').fill('NOTREAL');
+  await page.locator('#currentPrice').fill('12345');
+  await page.locator('#autoPriceBtn').click();
+
+  await expect(page.locator('#currentPrice')).toHaveValue('12345');
+  await expect(page.locator('#priceStatusMessage')).toContainText('Unsupported symbol');
+  await page.locator('#currentPrice').fill('12346');
+  await expect(page.locator('#currentPrice')).toHaveValue('12346');
 });
 
 test('planner skip link reaches sticky actions without changing route', async ({page}) => {

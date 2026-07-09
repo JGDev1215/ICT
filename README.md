@@ -20,7 +20,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 - Runtime dependencies: none
 - Dev QA dependencies: Playwright, installed only through `npm install`
 - Data storage: browser localStorage/sessionStorage with optional Supabase server sync for Focus Cards
-- Current app version: v0.8.2
+- Current app version: v0.8.3
 - Main entrypoint: index.html
 - Runtime config: assets/config.js
 - Stylesheet: assets/styles.css
@@ -58,9 +58,11 @@ The planner captures:
 8. Generated preview with DOL distance from the current price where numeric.
 9. Save Draft or Generate Focus Plan.
 
-Missing required inputs are shown as Draft, and the user can still save an incomplete draft card. Sweep confidence and hit time are optional detail fields and do not decide Complete/Draft status.
+Missing required inputs are shown as Draft, and the user can still save an incomplete draft card after adding at least one meaningful planning input. Completely empty/default-only Planner saves are blocked to prevent accidental blank Focus Cards. Sweep confidence and hit time are optional detail fields and do not decide Complete/Draft status.
 
-Current price can be entered manually. The app can also call an optional hosted yfinance price API on Vercel. Manual entry remains the fallback when the hosted API is unavailable. Zero, negative, malformed, scientific-notation, and ambiguous prices are rejected for price-map math.
+Generate Focus Plan validates the minimum Focus Card inputs before opening the details screen: instrument, session, Bias Determination For Session, at least one complete DOL row, and either a valid current price or explicit acknowledgement that manual price is needed. Partial DOL or Sweep rows must be completed or cleared before generation.
+
+Current price can be entered manually. The app can also call an optional hosted yfinance price API on Vercel. Manual entry remains the fallback when the hosted API is unavailable or the symbol is unsupported. Zero, negative, malformed, scientific-notation, ambiguous, stale/unusable API responses are rejected for price-map math.
 
 Use `Auto-detect price` in the Planner after the Vercel API is deployed.
 
@@ -178,7 +180,7 @@ Never expose the Supabase service-role key in the browser. See `docs/plans/supab
 
 The visible Profile login is intentionally single-user: username `admin`, password entered by the user. The app maps that username to the backing Supabase Auth email `admin@ict.local` by default. Because this is a static frontend, `admin/admin` is a convenience gate, not strong security. Do not treat it as production-grade access control.
 
-v0.8.2 presents this as Account & Backup instead of exposing Supabase project details. The app still keeps cards local-first, and if the backing account has no server cards while the browser already has local Focus Cards, Profile asks whether to back up those local cards or keep them on this device.
+Current builds present this as Account & Backup instead of exposing Supabase project details. The app still keeps cards local-first, and if the backing account has no server cards while the browser already has local Focus Cards, Profile asks whether to back up those local cards or keep them on this device.
 
 ## Price Map Ladder
 

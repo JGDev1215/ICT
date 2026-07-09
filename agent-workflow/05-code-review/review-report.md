@@ -22,27 +22,29 @@ NO
 
 ## What Was Done Well
 
-- Report was saved in the correct `docs/daily-reports/` folder.
-- Earlier same-day report was preserved.
-- The report captures commits, QA evidence, risks, and next steps.
-- Runtime app files were not changed.
+- Empty/default-only Planner saves are now blocked without preventing meaningful partial drafts.
+- Generate Focus Plan now has explicit, visible validation for required fields and partial DOL/Sweep rows.
+- Manual price fallback remains intact and auto-detect failures do not erase manual price input.
+- Storage key `ict_cards_v078` and export schema `ict_dol_sweep_export_v7` were preserved.
+- Cache-busted assets, service-worker cache entries, README, CHANGELOG, smoke tests, and Playwright tests were updated.
 
 ## Issues Found
 
-- Report remains uncommitted until the user asks for commit/push.
+- No blocking issues found in the final review.
 
 ## Required Fixes
 
-None.
+- None.
 
 ## Recommended Improvements
 
-- Commit the final report when ready.
+- Retest live production auto-detect against `MNQ` and at least one unsupported symbol after deployment.
 
 ## Regression Risks
 
-None for runtime behavior.
+- Users with default Profile instrument/session will now need another meaningful input before a draft is stored. This is intentional for the blank-card prevention requirement.
+- Missing-price acknowledgement is transient; users must re-acknowledge after reload if generating without a current price.
 
 ## Final Reviewer Notes
 
-Documentation-only task is complete and scoped correctly.
+Automated smoke and planner E2E coverage passed. The implementation is local-first and keeps Supabase as optional sync only.

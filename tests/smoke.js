@@ -72,6 +72,10 @@ ok(appSource.includes('function calculateRiskPlan'), 'risk-to-reward helper miss
 ok(appSource.includes('function routeEvidenceHtml'), 'route evidence UI missing');
 ok(appSource.includes('PRICE_DELAY_DISCLAIMER'), 'price delay disclaimer missing');
 ok(appSource.includes('Auto-detect price'), 'price auto-detect button missing');
+ok(appSource.includes('function plannerValidationState'), 'planner validation helper missing');
+ok(appSource.includes("id='manualPriceNeededAck'"), 'manual price-needed acknowledgement missing');
+ok(appSource.includes('function normalizePriceSymbol'), 'price symbol normalization helper missing');
+ok(appSource.includes('validatePricePayload'), 'price payload validation missing');
 ok(appSource.includes('root.ICT_CONFIG'), 'app should read runtime config');
 ok(configSource.includes('localPriceApiBase'), 'local price API config missing');
 ok(configSource.includes('priceTimeoutMs') && configSource.includes('priceRefreshSeconds'), 'price runtime tuning config missing');
@@ -143,6 +147,7 @@ ok(css.includes('.price-history-compact'), 'compact price history css missing');
 ok(css.includes('.draft-state'), 'visible draft-state styling missing');
 ok(css.includes('.skip-link'), 'skip link styling missing');
 ok(css.includes('.price-validation'), 'price validation styling missing');
+ok(css.includes('.price-status'), 'price status styling missing');
 ok(readme.includes('## Price Map Ladder'), 'README price map section missing');
 ok(readme.includes('CURRENT PRICE divider'), 'README current price divider contract missing');
 ok(readme.includes('DOL and Sweep rows'), 'README DOL/Sweep row contract missing');
@@ -333,6 +338,35 @@ const migrated = runApp({
 });
 const migratedApi = migrated.context.ICTSweepState;
 const migratedCards = migratedApi.getCards();
+const emptyPlannerValidation = migratedApi.plannerValidationState(migratedApi.blank(), migratedApi.blankMarketContext(), '');
+ok(emptyPlannerValidation.hasMeaningfulPlannerInput === false, 'empty planner should not count as meaningful input');
+ok(emptyPlannerValidation.canSaveDraft === false, 'empty planner draft save should be blocked');
+ok(emptyPlannerValidation.canGenerateFocusPlan === false, 'empty planner generation should be blocked');
+const partialPlannerFields = migratedApi.blank();
+partialPlannerFields.instrument = 'MNQ';
+const partialPlannerValidation = migratedApi.plannerValidationState(partialPlannerFields, migratedApi.blankMarketContext(), '');
+ok(partialPlannerValidation.hasMeaningfulPlannerInput === true, 'partial planner should count as meaningful input');
+ok(partialPlannerValidation.canSaveDraft === true, 'partial meaningful planner draft should save');
+ok(partialPlannerValidation.canGenerateFocusPlan === false, 'partial planner should not generate a focus plan');
+const completePlannerFields = migratedApi.blank();
+Object.assign(completePlannerFields, {
+  instrument: 'MNQ',
+  session: 'New York AM',
+  currentPrice: '20000',
+  bias: 'Bullish',
+  dol1Level: '20250',
+  dol1Draw: 'Previous day high (PDH)',
+  dol1Tf: 'Daily'
+});
+const completePlannerValidation = migratedApi.plannerValidationState(completePlannerFields, migratedApi.blankMarketContext(), '');
+ok(completePlannerValidation.canGenerateFocusPlan === true, 'minimum complete planner should generate a focus plan');
+completePlannerFields.sweep1Level = '20100';
+const partialSweepValidation = migratedApi.plannerValidationState(completePlannerFields, migratedApi.blankMarketContext(), '');
+ok(partialSweepValidation.canGenerateFocusPlan === false, 'partial sweep row should block generation');
+ok(partialSweepValidation.generateErrors.some(message => message.includes('partial Sweep rows')), 'partial sweep validation message missing');
+ok(migratedApi.normalizePriceSymbol(' mnq ') === 'MNQ', 'price symbols should be trimmed and uppercased');
+ok(migratedApi.validPriceSymbol('MNQ') === true, 'common futures symbol should be accepted');
+ok(migratedApi.validPriceSymbol('BAD SYMBOL !') === false, 'obvious non-symbol strings should be rejected');
 ok(migratedCards.length === 1, 'legacy card did not migrate');
 ok(migrated.storage.getItem('ict_cards_v078'), 'migration did not write current key');
 ok(migratedCards[0].fields.bias === 'Bullish', 'bias was not preserved');
@@ -371,7 +405,7 @@ delete metricsFixture.context.ICT_PRICE_API_BASE;
 ok(api.supabaseConfig().url === 'https://cdcqklvvswzipmmvpzaj.supabase.co', 'default Supabase project URL invalid');
 ok(api.adminSupabaseEmail() === 'admin@ict.local', 'default admin backing email invalid');
 ok(api.priceHelperUrls('MNQ').includes(api.localPriceHelperUrl('MNQ')), 'price helper URLs should include local fallback without network access');
-ok(api.priceHelperUrl('MNQ U4').endsWith('?symbol=MNQ%20U4'), 'price helper URL should encode symbols');
+ok(api.priceHelperUrl(' mnq ').endsWith('?symbol=MNQ'), 'price helper URL should normalize symbols before lookup');
 ok(api.priceNumber('20123.50') === 20123.5, 'plain decimal price should parse');
 ok(api.priceNumber('20,123.50') === 20123.5, 'comma thousands price should parse without changing meaning');
 ok(api.priceNumber('N/A') === null, 'N/A price should not parse as numeric');
@@ -443,13 +477,13 @@ ok(reloadedSettingsFixture.appNode.innerHTML.includes('Planned risk') && reloade
 reloadedSettingsApi.go('planner', {new: true});
 ok(reloadedSettingsFixture.appNode.innerHTML.includes("id='instrument'") && reloadedSettingsFixture.appNode.innerHTML.includes("value='NQ'"), 'new planner draft did not inherit default instrument');
 ok(reloadedSettingsFixture.appNode.innerHTML.includes("<option value='New York AM' selected>New York AM</option>"), 'new planner draft did not inherit default session');
-ok(reloadedSettingsApi.draftState().message.includes('Autosaved locally'), 'planner should expose autosaved draft state');
-ok(!!reloadedSettingsFixture.storage.getItem(reloadedSettingsApi.DRAFT_KEY), 'planner draft autosave was not stored');
+ok(reloadedSettingsApi.draftState().message === 'No active planner draft.', 'default-only planner should not expose an autosaved draft');
+ok(!reloadedSettingsFixture.storage.getItem(reloadedSettingsApi.DRAFT_KEY), 'default-only planner draft should not be stored');
 reloadedSettingsApi.clearPlannerDraft();
 ok(!reloadedSettingsFixture.storage.getItem(reloadedSettingsApi.DRAFT_KEY), 'clearPlannerDraft should remove stored planner draft');
 ok(reloadedSettingsApi.draftState().message === 'Draft discarded.', 'clearPlannerDraft should expose discarded state');
 reloadedSettingsApi.go('planner', {new: true});
-ok(!!reloadedSettingsFixture.storage.getItem(reloadedSettingsApi.DRAFT_KEY), 'new planner draft should autosave defaults before discard');
+ok(!reloadedSettingsFixture.storage.getItem(reloadedSettingsApi.DRAFT_KEY), 'new planner draft should not autosave defaults before discard');
 reloadedSettingsApi.discardPlannerDraft();
 reloadedSettingsApi.go('home');
 ok(!reloadedSettingsFixture.storage.getItem(reloadedSettingsApi.DRAFT_KEY), 'discarded planner draft should not be recreated by default profile values');
@@ -650,7 +684,7 @@ failingDraftSeed[quotaApi.SETTINGS_KEY] = JSON.stringify({defaultInstrument: 'MN
 const failingDraftFixture = runApp(failingDraftSeed, {failWrites: true});
 const failingDraftApi = failingDraftFixture.context.ICTSweepState;
 failingDraftApi.go('planner', {new: true});
-ok(failingDraftApi.draftState().message.includes('Unsaved changes'), 'planner autosave failure should be user-visible');
+ok(failingDraftApi.draftState().message === 'No active planner draft.', 'default-only planner should not attempt autosave failure writes');
 
 const blankDraft = api.createBlankDraft();
 ok(blankDraft.outcome === 'Open', 'blank draft outcome invalid');
