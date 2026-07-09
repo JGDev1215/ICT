@@ -53,6 +53,9 @@ ok(serviceWorker.includes(`'./${configAsset}'`), 'service worker config cache do
 ok(serviceWorker.includes(`'./${appAsset}'`), 'service worker app cache does not match index');
 ok(serviceWorker.includes(`'./${styleAsset}'`), 'service worker style cache does not match index');
 ok(cacheName.includes(appVersionNumber.replaceAll('.', '')), 'service worker cache name should include app version');
+ok(index.includes('cdn.jsdelivr.net/npm/@supabase/supabase-js@2'), 'Supabase JS CDN missing');
+ok(index.includes("window.ICT_SUPABASE_URL = 'https://cdcqklvvswzipmmvpzaj.supabase.co'"), 'Supabase project URL config missing');
+ok(index.includes('window.ICT_SUPABASE_ANON_KEY') && index.includes('sb_publishable_'), 'Supabase publishable key config missing');
 ok(index.includes('rel="manifest" href="manifest.webmanifest"'), 'manifest link missing from index');
 ok(index.includes('href="favicon.svg"'), 'favicon link missing');
 ok(index.includes("navigator.serviceWorker.register('./service-worker.js')"), 'service worker registration missing');
@@ -82,6 +85,11 @@ ok(appSource.includes('fetchJsonWithTimeout'), 'price API timeout helper missing
 ok(appSource.includes('function getMetrics'), 'getMetrics helper missing');
 ok(appSource.includes('function exportCards'), 'exportCards helper missing');
 ok(appSource.includes('function importCards'), 'importCards helper missing');
+ok(appSource.includes('DEFAULT_SUPABASE_URL'), 'default Supabase URL missing');
+ok(appSource.includes('function getSupabaseClient'), 'Supabase client helper missing');
+ok(appSource.includes('function syncFromSupabase'), 'Supabase sync helper missing');
+ok(appSource.includes('function flushSupabaseQueue'), 'Supabase queue flush helper missing');
+ok(appSource.includes('SUPABASE_CARDS_TABLE') && appSource.includes('focus_cards'), 'Supabase focus_cards table binding missing');
 ok(appSource.includes('favorite'), 'favorite field missing');
 ok(appSource.includes('journal'), 'journal field missing');
 ok(appSource.includes('risk'), 'risk field missing');
@@ -129,6 +137,7 @@ ok(readme.includes('DOL and Sweep rows'), 'README DOL/Sweep row contract missing
 ok(readme.includes('distance in points and percent'), 'README distance display contract missing');
 ok(readme.includes('empty state'), 'README empty state contract missing');
 ok(readme.includes('## Hosted Price API'), 'README hosted price API section missing');
+ok(readme.includes('## Supabase Focus Card Sync'), 'README Supabase sync section missing');
 ok(readme.includes('Vercel Python Function'), 'README Vercel API contract missing');
 ok(readme.includes('window.ICT_PRICE_API_BASE'), 'README price API override missing');
 ok(readme.includes('Planner generated preview') && readme.includes('Focus Card Details'), 'README price map integration contract missing');
@@ -347,6 +356,7 @@ ok(api.priceHelperUrl('MNQ') === hostedPriceUrl.origin + '/api/price?symbol=MNQ'
 metricsFixture.context.ICT_PRICE_API_BASE = 'https://example.vercel.app/api/price/';
 ok(api.priceApiBase() === 'https://example.vercel.app/api/price', 'configured price API URL should be preserved');
 delete metricsFixture.context.ICT_PRICE_API_BASE;
+ok(api.supabaseConfig().url === 'https://cdcqklvvswzipmmvpzaj.supabase.co', 'default Supabase project URL invalid');
 ok(api.priceHelperUrls('MNQ').includes(api.localPriceHelperUrl('MNQ')), 'price helper URLs should include local fallback without network access');
 ok(api.priceHelperUrl('MNQ U4').endsWith('?symbol=MNQ%20U4'), 'price helper URL should encode symbols');
 ok(api.priceNumber('20123.50') === 20123.5, 'plain decimal price should parse');
@@ -455,6 +465,12 @@ const draftMiss = api.normaliseCard({id: 'draft-miss', fields: {instrument: 'NQ'
 const breakeven = api.normaliseCard({id: 'be', fields: {instrument: 'CL'}, outcome: 'Breakeven', finalSaved: true});
 const readOutcome = api.normaliseCard({id: 'read', fields: {instrument: 'GC'}, outcome: 'Read', finalSaved: true});
 api.saveCards([hit, miss, draftMiss, breakeven, readOutcome]);
+ok(Object.keys(api.getSyncQueue().cards).length === 5, 'saveCards should queue local cards for Supabase sync');
+const mergeOlder = api.mergeCards(
+  [api.normaliseCard({id: 'merge-card', updatedAt: '2026-07-09T10:00:00.000Z', fields: {instrument: 'NQ'}})],
+  [api.normaliseCard({id: 'merge-card', updatedAt: '2026-07-08T10:00:00.000Z', fields: {instrument: 'ES'}})]
+);
+ok(mergeOlder[0].fields.instrument === 'NQ', 'mergeCards should keep newer local card over older remote card');
 const metrics = api.getMetrics();
 ok(metrics.rate === '50%', 'hit rate should only use final Hit/Miss outcomes');
 ok(metrics.sample === 2, 'hit/miss sample should exclude Breakeven, Read and drafts');

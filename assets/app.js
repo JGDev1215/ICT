@@ -5,6 +5,8 @@
   const KEY = 'ict_cards_v078';
   const SETTINGS_KEY = 'ict_settings_v1';
   const DRAFT_KEY = 'ict_planner_draft_v1';
+  const SYNC_QUEUE_KEY = 'ict_supabase_sync_queue_v1';
+  const SYNC_TOMBSTONES_KEY = 'ict_supabase_tombstones_v1';
   const SCHEMA = 'ict_dol_sweep_export_v7';
   const NL = String.fromCharCode(10);
   const DQ = String.fromCharCode(34);
@@ -26,6 +28,9 @@
   const PRICE_REFRESH_SECONDS = configNumber(runtimeConfig.priceRefreshSeconds, 30);
   const MAX_PRICE_INTEGER_DIGITS = 12;
   const MAX_PRICE_DECIMALS = 8;
+  const SUPABASE_CARDS_TABLE = 'focus_cards';
+  const SUPABASE_SETTINGS_TABLE = 'user_settings';
+  const DEFAULT_SUPABASE_URL = 'https://cdcqklvvswzipmmvpzaj.supabase.co';
   const ROUTES = ['home','planner','saved','journal','profile','focus','review','timeline','liquidity-map','risk','component-gallery'];
 
   const instruments = ['MNQ','NQ','MES','ES','MYM','YM','RTY','M2K','MGC','GC','CL','BTCUSD','ETHUSD','EURUSD','GBPUSD'];
@@ -748,10 +753,11 @@
     return cards.map(normaliseCard);
   }
 
-  function saveCards(nextCards){
+  function saveCards(nextCards, options){
     const normalised = Array.isArray(nextCards) ? nextCards.map(normaliseCard) : [];
     if(!persistCards(normalised)) return getCards();
     cards = normalised;
+    if(!options || options.remote !== false) cards.forEach(queueCardSync);
     return getCards();
   }
 
@@ -815,14 +821,21 @@
       return updated;
     });
     if(!updated) return null;
-    saveCards(nextCards);
-    return lastStorageError ? null : (cards.find(card => card.id === id) || updated);
+    const normalised = nextCards.map(normaliseCard);
+    if(!persistCards(normalised)) return null;
+    cards = normalised;
+    const saved = cards.find(card => card.id === id) || updated;
+    queueCardSync(saved);
+    return saved;
   }
 
   function deleteCard(id){
     const before = cards.length;
-    saveCards(cards.filter(card => card.id !== id));
-    return !lastStorageError && cards.length !== before;
+    const nextCards = cards.filter(card => card.id !== id).map(normaliseCard);
+    if(!persistCards(nextCards)) return false;
+    cards = nextCards;
+    if(cards.length !== before) queueCardDelete(id);
+    return cards.length !== before;
   }
 
   function toggleFavorite(id){
@@ -863,7 +876,7 @@
     };
   }
 
-  function saveSettings(settings){
+  function saveSettings(settings, options){
     const next = Object.assign({}, getSettings(), isObject(settings) ? settings : {});
     next.theme = normTheme(next.theme);
     next.watchlist = arrayText(next.watchlist);
@@ -878,6 +891,7 @@
       }
     }
     applyTheme(next.theme);
+    if(!lastSettingsError && (!options || options.remote !== false)) queueSettingsSync(next);
     return next;
   }
 
@@ -908,6 +922,326 @@
     saveCards(merged);
     if(lastStorageError) return {imported: 0, cards: getCards(), error: lastStorageError};
     return {imported: incoming.length, cards: getCards()};
+  }
+
+  function getSyncQueue(){
+    const store = storage();
+    const base = {cards: {}, deletes: {}, settings: null};
+    if(!store) return base;
+    const saved = parse(store.getItem(SYNC_QUEUE_KEY) || '{}', {});
+    return {
+      cards: isObject(saved.cards) ? saved.cards : {},
+      deletes: isObject(saved.deletes) ? saved.deletes : {},
+      settings: isObject(saved.settings) ? saved.settings : null
+    };
+  }
+
+  function setSyncQueue(queue){
+    const store = storage();
+    if(!store) return;
+    store.setItem(SYNC_QUEUE_KEY, JSON.stringify({
+      cards: isObject(queue.cards) ? queue.cards : {},
+      deletes: isObject(queue.deletes) ? queue.deletes : {},
+      settings: isObject(queue.settings) ? queue.settings : null
+    }));
+  }
+
+  function getTombstones(){
+    const store = storage();
+    return store ? parse(store.getItem(SYNC_TOMBSTONES_KEY) || '{}', {}) : {};
+  }
+
+  function setTombstones(tombstones){
+    const store = storage();
+    if(store) store.setItem(SYNC_TOMBSTONES_KEY, JSON.stringify(isObject(tombstones) ? tombstones : {}));
+  }
+
+  function supabaseConfig(){
+    return {
+      url: cleanUrl(root.ICT_SUPABASE_URL || DEFAULT_SUPABASE_URL),
+      anonKey: cleanUrl(root.ICT_SUPABASE_ANON_KEY || '')
+    };
+  }
+
+  function getSupabaseClient(){
+    if(supabaseClient) return supabaseClient;
+    const cfg = supabaseConfig();
+    const factory = root.supabase && root.supabase.createClient;
+    if(!cfg.url || !cfg.anonKey || typeof factory !== 'function') return null;
+    supabaseClient = factory(cfg.url, cfg.anonKey);
+    return supabaseClient;
+  }
+
+  function setSyncStatus(status, message, busy){
+    syncState = Object.assign({}, syncState, {
+      configured: !!getSupabaseClient(),
+      status,
+      message,
+      busy: !!busy
+    });
+  }
+
+  function syncStatusLabel(){
+    if(syncState.busy) return 'Syncing';
+    if(supabaseUser) return 'Connected';
+    return getSupabaseClient() ? 'Login required' : 'Local only';
+  }
+
+  function remoteCardPayload(card){
+    const c = normaliseCard(card);
+    return {
+      id: c.id,
+      owner_id: supabaseUser && supabaseUser.id,
+      card: c,
+      instrument: c.fields.instrument || null,
+      session: c.fields.session || null,
+      card_date: c.fields.date || null,
+      outcome: c.outcome || 'Open',
+      final_saved: !!c.finalSaved,
+      favorite: !!c.favorite,
+      created_at: c.createdAt || c.savedAt || isoNow(),
+      updated_at: c.updatedAt || c.savedAt || isoNow()
+    };
+  }
+
+  function queueCardSync(card){
+    if(!card || !card.id) return;
+    const queue = getSyncQueue();
+    queue.cards[card.id] = normaliseCard(card);
+    delete queue.deletes[card.id];
+    setSyncQueue(queue);
+    flushSupabaseQueue();
+  }
+
+  function queueCardDelete(id){
+    if(!id) return;
+    const queue = getSyncQueue();
+    delete queue.cards[id];
+    queue.deletes[id] = true;
+    setSyncQueue(queue);
+    const tombstones = getTombstones();
+    tombstones[id] = isoNow();
+    setTombstones(tombstones);
+    flushSupabaseQueue();
+  }
+
+  function queueSettingsSync(settings){
+    const queue = getSyncQueue();
+    queue.settings = getSettingsPayload(settings);
+    setSyncQueue(queue);
+    flushSupabaseQueue();
+  }
+
+  function getSettingsPayload(settings){
+    const s = isObject(settings) ? settings : getSettings();
+    return {
+      defaultInstrument: asText(s.defaultInstrument),
+      defaultSession: asText(s.defaultSession),
+      theme: normTheme(s.theme),
+      watchlist: arrayText(s.watchlist),
+      riskDefaults: normRisk(s.riskDefaults)
+    };
+  }
+
+  function mergeCards(localCards, remoteCards){
+    const tombstones = getTombstones();
+    const byId = {};
+    (Array.isArray(localCards) ? localCards : []).concat(Array.isArray(remoteCards) ? remoteCards : []).forEach(card => {
+      const next = normaliseCard(card);
+      if(tombstones[next.id] && new Date(tombstones[next.id]) >= new Date(next.updatedAt || next.savedAt || 0)) return;
+      const current = byId[next.id];
+      if(!current || new Date(next.updatedAt || next.savedAt || 0) >= new Date(current.updatedAt || current.savedAt || 0)){
+        byId[next.id] = next;
+      }
+    });
+    return Object.values(byId).sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+  }
+
+  function loadRemoteCards(){
+    const client = getSupabaseClient();
+    if(!client || !supabaseUser) return Promise.resolve([]);
+    return client
+      .from(SUPABASE_CARDS_TABLE)
+      .select('card,updated_at')
+      .order('updated_at', {ascending: false})
+      .then(({data, error}) => {
+        if(error) throw error;
+        return (Array.isArray(data) ? data : []).map(row => normaliseCard(row.card || {}));
+      });
+  }
+
+  function loadRemoteSettings(){
+    const client = getSupabaseClient();
+    if(!client || !supabaseUser) return Promise.resolve(null);
+    return client
+      .from(SUPABASE_SETTINGS_TABLE)
+      .select('settings')
+      .eq('owner_id', supabaseUser.id)
+      .maybeSingle()
+      .then(({data, error}) => {
+        if(error) throw error;
+        return data && isObject(data.settings) ? data.settings : null;
+      });
+  }
+
+  function upsertRemoteCard(card){
+    const client = getSupabaseClient();
+    if(!client || !supabaseUser) return Promise.resolve(false);
+    return client.from(SUPABASE_CARDS_TABLE).upsert(remoteCardPayload(card)).then(({error}) => {
+      if(error) throw error;
+      return true;
+    });
+  }
+
+  function deleteRemoteCard(id){
+    const client = getSupabaseClient();
+    if(!client || !supabaseUser) return Promise.resolve(false);
+    return client.from(SUPABASE_CARDS_TABLE).delete().eq('id', id).then(({error}) => {
+      if(error) throw error;
+      return true;
+    });
+  }
+
+  function upsertRemoteSettings(settings){
+    const client = getSupabaseClient();
+    if(!client || !supabaseUser) return Promise.resolve(false);
+    return client.from(SUPABASE_SETTINGS_TABLE).upsert({
+      owner_id: supabaseUser.id,
+      settings: getSettingsPayload(settings),
+      updated_at: isoNow()
+    }).then(({error}) => {
+      if(error) throw error;
+      return true;
+    });
+  }
+
+  function flushSupabaseQueue(){
+    const client = getSupabaseClient();
+    if(!client || !supabaseUser || syncState.busy) return Promise.resolve(false);
+    const queue = getSyncQueue();
+    const processedCardIds = Object.keys(queue.cards || {});
+    const processedDeleteIds = Object.keys(queue.deletes || {});
+    const processedSettings = queue.settings;
+    if(!processedCardIds.length && !processedDeleteIds.length && !processedSettings) return Promise.resolve(true);
+    setSyncStatus('Syncing', 'Uploading local changes to Supabase.', true);
+    const jobs = processedCardIds.map(id => upsertRemoteCard(queue.cards[id]))
+      .concat(processedDeleteIds.map(deleteRemoteCard));
+    if(processedSettings) jobs.push(upsertRemoteSettings(processedSettings));
+    return Promise.all(jobs).then(() => {
+      const latest = getSyncQueue();
+      processedCardIds.forEach(id => delete latest.cards[id]);
+      processedDeleteIds.forEach(id => delete latest.deletes[id]);
+      if(processedSettings && latest.settings && JSON.stringify(latest.settings) === JSON.stringify(processedSettings)){
+        latest.settings = null;
+      }
+      setSyncQueue(latest);
+      syncState.lastSyncAt = nyTimestamp();
+      setSyncStatus('Connected', 'Supabase sync is up to date.', false);
+      const remaining = Object.keys(latest.cards || {}).length + Object.keys(latest.deletes || {}).length + (latest.settings ? 1 : 0);
+      if(remaining) return flushSupabaseQueue();
+      return true;
+    }).catch(error => {
+      setSyncStatus('Sync error', error && error.message ? error.message : 'Supabase sync failed. Local cards are still saved.', false);
+      return false;
+    }).then(result => {
+      if(route === 'profile') render();
+      return result;
+    });
+  }
+
+  function syncFromSupabase(){
+    const client = getSupabaseClient();
+    if(!client) {
+      setSyncStatus('Local only', 'Supabase is not configured.', false);
+      return Promise.resolve(false);
+    }
+    if(!supabaseUser) {
+      setSyncStatus('Login required', 'Login from Profile to sync Focus Cards.', false);
+      return Promise.resolve(false);
+    }
+    setSyncStatus('Syncing', 'Loading Focus Cards from Supabase.', true);
+    return Promise.all([loadRemoteCards(), loadRemoteSettings()])
+      .then(([remoteCards, remoteSettings]) => {
+        const merged = mergeCards(cards, remoteCards);
+        saveCards(merged, {remote: false});
+        if(remoteSettings) saveSettings(remoteSettings, {remote: false});
+        return flushSupabaseQueue();
+      })
+      .then(() => {
+        syncState.lastSyncAt = nyTimestamp();
+        setSyncStatus('Connected', 'Supabase sync is up to date.', false);
+        render();
+        return true;
+      })
+      .catch(error => {
+        setSyncStatus('Sync error', error && error.message ? error.message : 'Supabase sync failed. Local cards are still saved.', false);
+        render();
+        return false;
+      });
+  }
+
+  function initSupabase(){
+    const client = getSupabaseClient();
+    if(!client) {
+      setSyncStatus('Local only', 'Supabase is not configured.', false);
+      return Promise.resolve(false);
+    }
+    return client.auth.getSession().then(({data}) => {
+      supabaseSession = data && data.session ? data.session : null;
+      supabaseUser = supabaseSession ? supabaseSession.user : null;
+      setSyncStatus(supabaseUser ? 'Connected' : 'Login required', supabaseUser ? 'Ready to sync Focus Cards.' : 'Logged out. Local cards remain on this device.', false);
+      if(client.auth.onAuthStateChange){
+        client.auth.onAuthStateChange((event, session) => {
+          supabaseSession = session || null;
+          supabaseUser = supabaseSession ? supabaseSession.user : null;
+          if(event === 'SIGNED_IN') syncFromSupabase();
+          if(event === 'SIGNED_OUT') setSyncStatus('Login required', 'Logged out. Local cards remain on this device.', false);
+          render();
+        });
+      }
+      if(supabaseUser) return syncFromSupabase();
+      return false;
+    }).catch(error => {
+      setSyncStatus('Sync error', error && error.message ? error.message : 'Supabase initialisation failed.', false);
+      return false;
+    });
+  }
+
+  function supabaseLogin(email, password){
+    const client = getSupabaseClient();
+    if(!client) {
+      setSyncStatus('Local only', 'Supabase is not configured.', false);
+      render();
+      return Promise.resolve(false);
+    }
+    setSyncStatus('Syncing', 'Signing in to Supabase.', true);
+    return client.auth.signInWithPassword({email, password}).then(({data, error}) => {
+      if(error) throw error;
+      supabaseSession = data && data.session ? data.session : null;
+      supabaseUser = supabaseSession ? supabaseSession.user : null;
+      return syncFromSupabase();
+    }).catch(error => {
+      setSyncStatus('Login failed', error && error.message ? error.message : 'Supabase login failed.', false);
+      render();
+      return false;
+    });
+  }
+
+  function supabaseLogout(){
+    const client = getSupabaseClient();
+    if(!client) return Promise.resolve(false);
+    return client.auth.signOut().then(() => {
+      supabaseSession = null;
+      supabaseUser = null;
+      syncState = Object.assign({}, syncState, {
+        configured: true,
+        status: 'Login required',
+        message: 'Logged out. Local cards remain on this device.',
+        busy: false
+      });
+      render();
+      return true;
+    });
   }
 
   function profileFormSettings(lookup, themeOverride){
@@ -1086,6 +1420,16 @@
   let lastDraftState = '';
   let lastDraftSavedAt = '';
   let plannerDraftDiscarded = false;
+  let supabaseClient = null;
+  let supabaseSession = null;
+  let supabaseUser = null;
+  let syncState = {
+    configured: false,
+    status: 'Local only',
+    message: 'Supabase is not configured.',
+    busy: false,
+    lastSyncAt: ''
+  };
 
   const api = {
     KEY,
@@ -1118,6 +1462,11 @@
     priceHelperUrl,
     localPriceHelperUrl,
     priceHelperUrls,
+    supabaseConfig,
+    getSyncQueue,
+    mergeCards,
+    remoteCardPayload,
+    syncFromSupabase,
     priceRefreshRemaining,
     priceCountdownText,
     selectedMarketTimeframes,
@@ -1660,11 +2009,24 @@
     return `<section class='screen'>${pageHead('Design system', 'Component Gallery', 'Internal preview for reusable UI states.', 'profile')}<div class='card'><h3>Buttons</h3><div class='row-actions'><button class='btn primary'>Primary</button><button class='btn'>Default</button><button class='btn ghost'>Ghost</button><button class='btn good'>Success</button><button class='btn danger'>Danger</button><button class='btn btn-icon ghost' aria-label='Icon button'>${icon('star')}</button></div></div><div class='card'><h3>Chips and pills</h3><div class='status-row'><button class='chip chip-active'>Active chip</button><button class='chip'>Neutral chip</button>${pill('Complete', 'ok')}${pill('Draft', 'warn')}${pill('Final saved', 'info')}${pill('Miss', 'bad')}</div></div><div class='card'><h3>Form controls</h3><div class='grid'><div><label class='label' for='galleryInput'>Input</label><input class='in' id='galleryInput' value='MNQ'></div><div><label class='label' for='gallerySelect'>Select</label><select class='in' id='gallerySelect'><option>New York AM</option></select></div></div><label class='check-row'><input type='checkbox' checked> <span>Checked state</span></label></div><div class='card'><h3>Cards and empty states</h3><div class='panel'><p class='hint'>Panel / empty state copy remains compact and instructional.</p></div></div><div class='card-dashed card'><div class='progress'>Dashed card</div><h3>Screenshot placeholder</h3><p class='sub'>Local-only metadata state.</p></div><div class='card'><h3>Timeline nodes</h3><div class='timeline'><div class='timeline-node complete'><div class='progress'>Complete</div><h3>Bias mapped</h3><p class='sub'>Completed state.</p></div><div class='timeline-node live'><div class='progress'>Live</div><h3>Sweep watch</h3><p class='sub'>Current state.</p></div><div class='timeline-node pending'><div class='progress'>Pending</div><h3>Outcome review</h3><p class='sub'>Pending state.</p></div></div></div><div class='card'><h3>Price map states</h3>${priceMapHtml(sampleFields)}<div class='price-map price-map-empty'><p>No numeric current price yet.</p></div><div class='price-map price-map-loading'><p>Loading price update...</p></div><div class='price-map price-map-error'><p>Price helper unavailable.</p></div></div></section>`;
   }
 
+  function supabasePanelHtml(){
+    const cfg = supabaseConfig();
+    const configured = !!getSupabaseClient();
+    const email = supabaseUser && supabaseUser.email ? supabaseUser.email : '';
+    const queue = getSyncQueue();
+    const pending = Object.keys(queue.cards || {}).length + Object.keys(queue.deletes || {}).length + (queue.settings ? 1 : 0);
+    const statusClass = supabaseUser ? 'good' : configured ? 'warn' : 'bad';
+    const login = supabaseUser
+      ? `<p class='hint good'>Signed in as ${esc(email || 'Supabase user')}.</p><div class='row-actions'><button class='btn' id='syncNowBtn'>Sync now</button><button class='btn ghost' id='supabaseLogoutBtn'>Logout</button></div>`
+      : `<label class='label' for='supabaseEmail'>Email</label><input class='in' id='supabaseEmail' type='email' autocomplete='email' placeholder='you@example.com'><label class='label' for='supabasePassword'>Password</label><input class='in' id='supabasePassword' type='password' autocomplete='current-password' placeholder='Supabase password'><div class='row-actions'><button class='btn primary' id='supabaseLoginBtn'>Login and sync</button><button class='btn' id='syncNowBtn'>Retry sync</button></div>`;
+    return `<div class='card'><div class='progress'>Server sync</div><h3>Supabase Focus Cards</h3><p class='hint ${statusClass}'>${esc(syncStatusLabel())}: ${esc(syncState.message)}</p><div class='line'><div class='k'>Project</div><div class='v'>${esc(cfg.url || 'Not configured')}</div></div><div class='line'><div class='k'>Pending local changes</div><div class='v'>${pending}</div></div><div class='line'><div class='k'>Last sync</div><div class='v'>${esc(syncState.lastSyncAt || '-')}</div></div>${configured ? login : `<p class='hint bad'>Set <code>window.ICT_SUPABASE_ANON_KEY</code> before app.js loads to enable Supabase Auth and server storage.</p>`}</div>`;
+  }
+
   function profile(){
     const settings = getSettings();
     const m = getMetrics(cards);
     const recent = latestCard();
-    return `<section class='screen'>${pageHead('Trader profile', 'Profile', 'Local settings and portable data tools.', '')}<div class='card'><h3>Local summary</h3>${line('Saved cards', m.total)}${line('Final saved', m.finalSaved)}${line('Favorites', m.favorites)}${line('Recent plan', recent ? (recent.fields.instrument || 'No instrument') : '')}</div><div class='card'><h3>Settings</h3><label class='label' for='defaultInstrument'>Default instrument</label><input class='in' id='defaultInstrument' value='${esc(settings.defaultInstrument)}' placeholder='MNQ'><label class='label' for='defaultSession'>Default session</label><select class='in' id='defaultSession'>${options(sessions, settings.defaultSession, 'No default')}</select><label class='label' for='themeMode'>Theme</label><select class='in' id='themeMode'><option value='light'${settings.theme === 'light' ? ' selected' : ''}>Light mode</option><option value='dark'${settings.theme === 'dark' ? ' selected' : ''}>Dark mode</option></select><label class='label' for='watchlist'>Watchlist</label><input class='in' id='watchlist' value='${esc(settings.watchlist.join(', '))}' placeholder='MNQ, ES, GC'><div class='grid'><div><label class='label' for='defaultRiskPct'>Default risk %</label><input class='in' id='defaultRiskPct' value='${esc(settings.riskDefaults.plannedRiskPct)}'></div><div><label class='label' for='defaultPlannedR'>Default planned R</label><input class='in' id='defaultPlannedR' value='${esc(settings.riskDefaults.plannedR)}'></div></div><label class='label' for='defaultMaxLoss'>Default max loss</label><input class='in' id='defaultMaxLoss' value='${esc(settings.riskDefaults.maxLoss)}'><button class='btn primary' id='saveSettingsBtn'>Save settings</button></div><div class='card'><h3>Data tools</h3><p class='hint'>Saved cards live only in this browser. Export JSON regularly before clearing browser data, changing devices or testing beta builds.</p><div class='row-actions'><button class='btn primary' id='exportJsonBtn'>Export data</button><button class='btn' id='importJsonBtn'>Import data</button><a class='btn' id='feedbackLink' href='https://github.com/JGDev1215/ICT/issues/new' target='_blank' rel='noopener'>Beta feedback</a><button class='btn' data-route='component-gallery'>Component gallery</button><button class='btn danger' id='clearDataBtn'>Clear all local data</button><input class='file-input' id='importFile' type='file' accept='application/json,.json'></div></div></section>`;
+    return `<section class='screen'>${pageHead('Trader profile', 'Profile', 'Local settings, server sync and portable data tools.', '')}${supabasePanelHtml()}<div class='card'><h3>Local summary</h3>${line('Saved cards', m.total)}${line('Final saved', m.finalSaved)}${line('Favorites', m.favorites)}${line('Recent plan', recent ? (recent.fields.instrument || 'No instrument') : '')}</div><div class='card'><h3>Settings</h3><label class='label' for='defaultInstrument'>Default instrument</label><input class='in' id='defaultInstrument' value='${esc(settings.defaultInstrument)}' placeholder='MNQ'><label class='label' for='defaultSession'>Default session</label><select class='in' id='defaultSession'>${options(sessions, settings.defaultSession, 'No default')}</select><label class='label' for='themeMode'>Theme</label><select class='in' id='themeMode'><option value='light'${settings.theme === 'light' ? ' selected' : ''}>Light mode</option><option value='dark'${settings.theme === 'dark' ? ' selected' : ''}>Dark mode</option></select><label class='label' for='watchlist'>Watchlist</label><input class='in' id='watchlist' value='${esc(settings.watchlist.join(', '))}' placeholder='MNQ, ES, GC'><div class='grid'><div><label class='label' for='defaultRiskPct'>Default risk %</label><input class='in' id='defaultRiskPct' value='${esc(settings.riskDefaults.plannedRiskPct)}'></div><div><label class='label' for='defaultPlannedR'>Default planned R</label><input class='in' id='defaultPlannedR' value='${esc(settings.riskDefaults.plannedR)}'></div></div><label class='label' for='defaultMaxLoss'>Default max loss</label><input class='in' id='defaultMaxLoss' value='${esc(settings.riskDefaults.maxLoss)}'><button class='btn primary' id='saveSettingsBtn'>Save settings</button></div><div class='card'><h3>Data tools</h3><p class='hint'>Saved cards live only in this browser until Supabase sync is enabled. Export JSON regularly before clearing browser data, changing devices or testing beta builds.</p><div class='row-actions'><button class='btn primary' id='exportJsonBtn'>Export data</button><button class='btn' id='importJsonBtn'>Import data</button><a class='btn' id='feedbackLink' href='https://github.com/JGDev1215/ICT/issues/new' target='_blank' rel='noopener'>Beta feedback</a><button class='btn' data-route='component-gallery'>Component gallery</button><button class='btn danger' id='clearDataBtn'>Clear all local data</button><input class='file-input' id='importFile' type='file' accept='application/json,.json'></div></div></section>`;
   }
 
   function sync(){
@@ -2187,6 +2549,31 @@
       notice = lastSettingsError || 'Settings saved.';
       render();
     });
+    on('supabaseLoginBtn', () => {
+      const email = q('supabaseEmail') ? q('supabaseEmail').value.trim() : '';
+      const password = q('supabasePassword') ? q('supabasePassword').value : '';
+      if(!email || !password){
+        notice = 'Enter Supabase email and password.';
+        render();
+        return;
+      }
+      supabaseLogin(email, password).then(ok => {
+        notice = ok ? 'Supabase sync complete.' : syncState.message;
+        render();
+      });
+    });
+    on('supabaseLogoutBtn', () => {
+      supabaseLogout().then(() => {
+        notice = 'Logged out of Supabase.';
+        render();
+      });
+    });
+    on('syncNowBtn', () => {
+      syncFromSupabase().then(ok => {
+        notice = ok ? 'Supabase sync complete.' : syncState.message;
+        render();
+      });
+    });
 
     const themeMode = q('themeMode');
     if(themeMode){
@@ -2287,5 +2674,6 @@
   applyTheme(getSettings().theme);
   if(typeof setInterval === 'function') setInterval(tick, 1000);
   tick();
+  initSupabase();
   render();
 })();

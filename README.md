@@ -19,7 +19,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 - Build step: none
 - Runtime dependencies: none
 - Dev QA dependencies: Playwright, installed only through `npm install`
-- Data storage: browser localStorage and sessionStorage
+- Data storage: browser localStorage/sessionStorage with optional Supabase server sync for Focus Cards
 - Current app version: v0.8.0
 - Main entrypoint: index.html
 - Runtime config: assets/config.js
@@ -137,6 +137,43 @@ vercel --prod
 ```
 
 yfinance is unofficial, not affiliated with Yahoo, and intended here for educational/research use only. For trading-critical or commercial use, replace it with a licensed market-data provider.
+
+## Supabase Focus Card Sync
+
+Focus Cards can be synced to Supabase while keeping localStorage as the immediate offline/cache layer.
+
+Supabase project:
+
+```text
+ICT / cdcqklvvswzipmmvpzaj
+https://cdcqklvvswzipmmvpzaj.supabase.co
+```
+
+The app uses:
+
+- `public.focus_cards` for saved Focus Cards.
+- `public.user_settings` for profile/settings sync.
+- Supabase Auth email/password login from the Profile tab.
+- Row Level Security so each authenticated user can only access their own rows.
+- Explicit authenticated-role grants for browser Data API access.
+
+The frontend includes Supabase JS v2 from jsDelivr. The browser-safe Supabase publishable key is configured in `index.html` before `assets/app.js` loads:
+
+```html
+<script>
+window.ICT_SUPABASE_ANON_KEY = 'sb_publishable_...';
+</script>
+```
+
+Optional project URL override:
+
+```html
+<script>
+window.ICT_SUPABASE_URL = 'https://cdcqklvvswzipmmvpzaj.supabase.co';
+</script>
+```
+
+Never expose the Supabase service-role key in the browser. See `docs/plans/supabase-focus-card-storage-plan.md` for the schema and validation checklist.
 
 ## Price Map Ladder
 
