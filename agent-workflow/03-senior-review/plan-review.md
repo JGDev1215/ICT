@@ -2,32 +2,34 @@
 
 ## Plan Quality
 
-The plan targets the actual audit failures and keeps scope limited to account/sync behavior, status clarity, cache/version strings, tests, and docs.
+APPROVED WITH AMENDMENTS
+
+The plan is focused and preserves the existing sync implementation while improving user-facing copy and controls.
 
 ## Missing Steps
 
-- Ensure new localStorage decision state is user-specific and does not change the saved-card key.
-- Ensure skipped local upload still allows future new cards to sync after the user is signed in.
-- Ensure signup rate-limit copy is improved without pretending the static app can change Supabase project email limits.
+- Ensure smoke tests check absence of visible `Create account` and project URL in Profile output.
+- Ensure docs do not imply real security from static `admin/admin`.
+- Ensure existing first-sync queue behavior remains unchanged except copy.
 
 ## Risk Areas
 
-- `flushSupabaseQueue()` is called from card save paths; blocking it incorrectly could stop all server sync.
-- `syncFromSupabase()` saves merged cards locally; ensure it does not queue remote cards back to Supabase during merge.
-- `onAuthStateChange` can race with explicit login/signup handlers.
+- Creating Auth users directly through SQL must avoid generated columns and keep identity rows valid.
+- Removing rendered signup controls should not break smoke tests that check `supabaseSignup` helper existence if retained.
+- Cache bump must be coordinated across `index.html`, `service-worker.js`, and `VERSION`.
 
 ## Overengineering Concerns
 
-Avoid adding a complex migration or account workspace system in this round. Use a small per-user decision gate.
+Do not build a full role/user system. Single-user UX is enough.
 
 ## Simpler Alternatives
 
-Only fixing the busy-state bug would solve the reload requirement, but it would leave the silent local-card upload issue unresolved. First-sync consent is justified.
+Auto-login/no login was considered but rejected because the user explicitly requested username/password admin access.
 
 ## Required Amendments
 
-- Add smoke assertions for the new first-sync controls and `auth.getUser()`.
-- Keep manual price entry and saved-card storage keys unchanged.
+- Keep Supabase terms out of normal visible Profile card, but retain technical docs in README.
+- Add config override for backing Supabase email.
 
 ## Decision
 

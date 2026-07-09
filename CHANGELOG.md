@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.8.2 — 2026-07-09
+
+### Changed
+
+- Replaced the technical Profile Supabase panel with a single-user Account & Backup card.
+- Changed visible login to username `admin` with a password field, mapped internally to the backing Supabase Auth email `admin@ict.local`.
+- Removed visible signup, retry-sync, project URL, and email-confirmation copy from the normal Profile UI.
+- Reworded first-sync actions to `Back up local cards` and `Keep on this device`.
+- Documented that the static admin login is a convenience gate, not production-grade security.
+
 ## v0.8.1 — 2026-07-09
 
 ### Fixed

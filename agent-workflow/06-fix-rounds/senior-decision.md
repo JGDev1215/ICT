@@ -2,28 +2,17 @@
 
 ## Decision
 
-APPROVED TO STAGE AND COMMIT SELECTIVE SCOPE
+APPROVED
 
 ## Reasoning
 
-The highest-risk audit issues in the static app code were addressed with focused changes:
+The implementation follows the approved plan and addresses the screenshot feedback directly. It removes AI-looking technical clutter from the Profile account card while preserving the server backup behavior.
 
-- first-login sync stall fixed
-- first-sync local upload now requires user choice
-- stale sessions revalidated
-- sync status made clearer
-- cache/version/tests/docs updated
+## Required Before Commit/Push
 
-The changes preserve local-first storage, manual price fallback, export/import paths, and the existing saved-card key.
+- Run final smoke test.
+- Confirm no unrelated local files are staged.
 
-## Required Before Release Claim
+## Release Note
 
-- Deploy to Vercel.
-- Repeat live account-to-Focus-Card Supabase audit.
-- Confirm first-sync upload/skip behavior against a real empty Supabase account.
-
-## Commit Safety
-
-Safe to commit only after selectively staging the intended Supabase fix, docs, tests, cache/version updates, and workflow evidence.
-
-Do not commit with `git add .` because the worktree includes pre-existing unrelated files.
+After deployment, verify the live Vercel page no longer serves cached v0.8.1 assets.

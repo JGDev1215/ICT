@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'v0.8.1';
+  const VERSION = 'v0.8.2';
   const KEY = 'ict_cards_v078';
   const SETTINGS_KEY = 'ict_settings_v1';
   const DRAFT_KEY = 'ict_planner_draft_v1';
@@ -32,6 +32,8 @@
   const SUPABASE_CARDS_TABLE = 'focus_cards';
   const SUPABASE_SETTINGS_TABLE = 'user_settings';
   const DEFAULT_SUPABASE_URL = 'https://cdcqklvvswzipmmvpzaj.supabase.co';
+  const ADMIN_USERNAME = 'admin';
+  const DEFAULT_ADMIN_SUPABASE_EMAIL = 'admin@ict.local';
   const ROUTES = ['home','planner','saved','journal','profile','focus','review','timeline','liquidity-map','risk','component-gallery'];
 
   const instruments = ['MNQ','NQ','MES','ES','MYM','YM','RTY','M2K','MGC','GC','CL','BTCUSD','ETHUSD','EURUSD','GBPUSD'];
@@ -1017,6 +1019,10 @@
     };
   }
 
+  function adminSupabaseEmail(){
+    return cleanUrl(runtimeConfig.adminSupabaseEmail || root.ICT_ADMIN_SUPABASE_EMAIL || DEFAULT_ADMIN_SUPABASE_EMAIL);
+  }
+
   function getSupabaseClient(){
     if(supabaseClient) return supabaseClient;
     const cfg = supabaseConfig();
@@ -1040,6 +1046,24 @@
     if(syncState.firstSyncPaused) return 'Review first sync';
     if(supabaseUser) return 'Connected';
     return getSupabaseClient() ? 'Login required' : 'Local only';
+  }
+
+  function backupStatusLabel(){
+    if(syncState.busy) return 'Backup pending';
+    if(syncState.firstSyncPaused) return 'Backup paused';
+    if(!getSupabaseClient()) return 'Device only';
+    if(syncState.status === 'Sync error' || syncState.status === 'Login failed') return 'Backup error';
+    if(supabaseUser) return 'Backed up';
+    return 'Signed out';
+  }
+
+  function backupStatusMessage(){
+    if(syncState.firstSyncPaused) return "Choose whether to add this browser's existing cards to cloud backup.";
+    if(syncState.status === 'Sync error' || syncState.status === 'Login failed') return syncState.message;
+    if(syncState.busy) return 'Saving the latest card changes.';
+    if(supabaseUser) return syncQueueCount() ? 'Local changes are waiting to back up.' : 'Your Focus Cards are ready for cloud backup.';
+    if(!getSupabaseClient()) return 'Cloud backup is unavailable in this build. Local cards still work on this device.';
+    return 'Sign in to back up Focus Cards for this device.';
   }
 
   function authRedirectUrl(){
@@ -1180,7 +1204,7 @@
     const client = getSupabaseClient();
     if(!client || !supabaseUser || (syncState.busy && !opts.force)) return Promise.resolve(false);
     if(syncState.firstSyncPaused && !opts.allowFirstUpload){
-      setSyncStatus('Review first sync', 'Choose whether to upload existing local cards to this Supabase account.', false);
+      setSyncStatus('Review first sync', 'Choose whether to add existing local cards to cloud backup.', false);
       syncState.firstSyncPaused = true;
       if(route === 'profile') render();
       return Promise.resolve(false);
@@ -1190,7 +1214,7 @@
     const processedDeleteIds = Object.keys(queue.deletes || {});
     const processedSettings = queue.settings;
     if(!processedCardIds.length && !processedDeleteIds.length && !processedSettings) return Promise.resolve(true);
-    setSyncStatus('Syncing', 'Uploading local changes to Supabase.', true);
+    setSyncStatus('Syncing', 'Backing up local changes.', true);
     const jobs = processedCardIds.map(id => upsertRemoteCard(queue.cards[id]))
       .concat(processedDeleteIds.map(deleteRemoteCard));
     if(processedSettings) jobs.push(upsertRemoteSettings(processedSettings));
@@ -1204,12 +1228,12 @@
       setSyncQueue(latest);
       syncState.lastSyncAt = nyTimestamp();
       syncState.firstSyncPaused = false;
-      setSyncStatus('Connected', 'Supabase sync is up to date.', false);
+      setSyncStatus('Connected', 'Cloud backup is up to date.', false);
       const remaining = Object.keys(latest.cards || {}).length + Object.keys(latest.deletes || {}).length + (latest.settings ? 1 : 0);
       if(remaining) return flushSupabaseQueue({allowFirstUpload: !!opts.allowFirstUpload});
       return true;
     }).catch(error => {
-      setSyncStatus('Sync error', error && error.message ? error.message : 'Supabase sync failed. Local cards are still saved.', false);
+      setSyncStatus('Sync error', error && error.message ? error.message : 'Cloud backup failed. Local cards are still saved.', false);
       return false;
     }).then(result => {
       if(route === 'profile') render();
@@ -1221,21 +1245,21 @@
     const opts = isObject(options) ? options : {};
     const client = getSupabaseClient();
     if(!client) {
-      setSyncStatus('Local only', 'Supabase is not configured.', false);
+      setSyncStatus('Local only', 'Cloud backup is unavailable in this build.', false);
       return Promise.resolve(false);
     }
     if(!supabaseUser) {
-      setSyncStatus('Login required', 'Login from Profile to sync Focus Cards.', false);
+      setSyncStatus('Login required', 'Sign in from Profile to back up Focus Cards.', false);
       return Promise.resolve(false);
     }
     if(syncState.busy && !opts.force) return Promise.resolve(false);
-    setSyncStatus('Syncing', 'Loading Focus Cards from Supabase.', true);
+    setSyncStatus('Syncing', 'Checking cloud backup.', true);
     return Promise.all([loadRemoteCards(), loadRemoteSettings()])
       .then(([remoteCards, remoteSettings]) => {
         syncState.remoteCardCount = Array.isArray(remoteCards) ? remoteCards.length : null;
         if(shouldPauseFirstLocalUpload(remoteCards) && !opts.allowFirstUpload){
           syncState.firstSyncPaused = true;
-          setSyncStatus('Review first sync', 'This browser has local cards and this Supabase account has no server cards yet. Choose whether to upload them.', false);
+          setSyncStatus('Review first sync', 'This browser has existing cards. Choose whether to add them to cloud backup.', false);
           render();
           return false;
         }
@@ -1248,12 +1272,12 @@
       .then(result => {
         if(result === false) return false;
         syncState.lastSyncAt = nyTimestamp();
-        setSyncStatus('Connected', 'Supabase sync is up to date.', false);
+        setSyncStatus('Connected', 'Cloud backup is up to date.', false);
         render();
         return true;
       })
       .catch(error => {
-        setSyncStatus('Sync error', error && error.message ? error.message : 'Supabase sync failed. Local cards are still saved.', false);
+        setSyncStatus('Sync error', error && error.message ? error.message : 'Cloud backup failed. Local cards are still saved.', false);
         render();
         return false;
       });
@@ -1285,7 +1309,7 @@
         supabaseSession = null;
         supabaseUser = null;
         syncState.firstSyncPaused = false;
-        setSyncStatus('Login required', 'Saved session is no longer valid. Login again to sync Focus Cards.', false);
+        setSyncStatus('Login required', 'Saved session is no longer valid. Sign in again to back up Focus Cards.', false);
         if(client.auth.signOut) return client.auth.signOut().catch(() => false).then(() => false);
         return false;
       }
@@ -1297,7 +1321,7 @@
   function initSupabase(){
     const client = getSupabaseClient();
     if(!client) {
-      setSyncStatus('Local only', 'Supabase is not configured.', false);
+      setSyncStatus('Local only', 'Cloud backup is unavailable in this build.', false);
       return Promise.resolve(false);
     }
     return client.auth.getSession().then(({data}) => {
@@ -1305,10 +1329,10 @@
       supabaseUser = supabaseSession ? supabaseSession.user : null;
       installAuthListener(client);
       if(!supabaseUser) {
-        setSyncStatus('Login required', 'Logged out. Local cards remain on this device.', false);
+        setSyncStatus('Login required', 'Signed out. Local cards remain on this device.', false);
         return false;
       }
-      setSyncStatus('Syncing', 'Checking saved Supabase session.', true);
+      setSyncStatus('Syncing', 'Checking saved session.', true);
       return validateSupabaseUser(client).then(valid => {
         if(!valid) {
           render();
@@ -1317,7 +1341,7 @@
         return syncFromSupabase({force: true});
       });
     }).catch(error => {
-      setSyncStatus('Sync error', error && error.message ? error.message : 'Supabase initialisation failed.', false);
+      setSyncStatus('Sync error', error && error.message ? error.message : 'Cloud backup could not start.', false);
       return false;
     });
   }
@@ -1325,18 +1349,18 @@
   function supabaseLogin(email, password){
     const client = getSupabaseClient();
     if(!client) {
-      setSyncStatus('Local only', 'Supabase is not configured.', false);
+      setSyncStatus('Local only', 'Cloud backup is unavailable in this build.', false);
       render();
       return Promise.resolve(false);
     }
-    setSyncStatus('Syncing', 'Signing in to Supabase.', true);
+    setSyncStatus('Syncing', 'Signing in.', true);
     return client.auth.signInWithPassword({email, password}).then(({data, error}) => {
       if(error) throw error;
       supabaseSession = data && data.session ? data.session : null;
       supabaseUser = supabaseSession ? supabaseSession.user : null;
       return syncFromSupabase({force: true});
     }).catch(error => {
-      setSyncStatus('Login failed', error && error.message ? error.message : 'Supabase login failed.', false);
+      setSyncStatus('Login failed', error && error.message ? error.message : 'Sign in failed.', false);
       render();
       return false;
     });
@@ -1345,7 +1369,7 @@
   function supabaseSignup(email, password){
     const client = getSupabaseClient();
     if(!client) {
-      setSyncStatus('Local only', 'Supabase is not configured.', false);
+      setSyncStatus('Local only', 'Cloud backup is unavailable in this build.', false);
       render();
       return Promise.resolve(false);
     }
@@ -1371,7 +1395,7 @@
 
   function approveFirstSyncUpload(){
     if(!supabaseUser) {
-      setSyncStatus('Login required', 'Login before uploading local cards.', false);
+      setSyncStatus('Login required', 'Sign in before backing up local cards.', false);
       render();
       return Promise.resolve(false);
     }
@@ -1386,7 +1410,7 @@
 
   function skipFirstSyncUpload(){
     if(!supabaseUser) {
-      setSyncStatus('Login required', 'Login before changing sync settings.', false);
+      setSyncStatus('Login required', 'Sign in before changing backup settings.', false);
       render();
       return Promise.resolve(false);
     }
@@ -1394,7 +1418,7 @@
     clearQueuedLocalUploads();
     syncState.firstSyncPaused = false;
     syncState.lastSyncAt = nyTimestamp();
-    setSyncStatus('Connected', 'Existing local cards will stay on this browser. New saved changes can sync to this account.', false);
+    setSyncStatus('Connected', 'Existing local cards will stay on this browser. New saved changes can use cloud backup.', false);
     render();
     return Promise.resolve(true);
   }
@@ -1408,7 +1432,7 @@
       syncState = Object.assign({}, syncState, {
         configured: true,
         status: 'Login required',
-        message: 'Logged out. Local cards remain on this device.',
+        message: 'Signed out. Local cards remain on this device.',
         busy: false
       });
       render();
@@ -1599,7 +1623,7 @@
   let syncState = {
     configured: false,
     status: 'Local only',
-    message: 'Supabase is not configured.',
+    message: 'Cloud backup is unavailable in this build.',
     busy: false,
     lastSyncAt: '',
     remoteCardCount: null,
@@ -1638,6 +1662,7 @@
     localPriceHelperUrl,
     priceHelperUrls,
     supabaseConfig,
+    adminSupabaseEmail,
     getSyncQueue,
     getUserSyncDecision,
     mergeCards,
@@ -2189,35 +2214,28 @@
   }
 
   function supabasePanelHtml(){
-    const cfg = supabaseConfig();
     const configured = !!getSupabaseClient();
-    const email = supabaseUser && supabaseUser.email ? supabaseUser.email : '';
     const queue = getSyncQueue();
     const pending = syncQueueCount(queue);
-    const decision = getUserSyncDecision();
-    const decisionLabel = decision && decision.localUpload === 'approved'
-      ? 'Local upload approved'
-      : decision && decision.localUpload === 'skipped'
-        ? 'Existing local cards kept local'
-        : supabaseUser && syncState.firstSyncPaused
-          ? 'Waiting for your choice'
-          : '-';
-    const serverCount = syncState.remoteCardCount == null ? '-' : syncState.remoteCardCount;
-    const statusClass = supabaseUser && !syncState.firstSyncPaused ? 'good' : configured ? 'warn' : 'bad';
+    const serverCount = syncState.remoteCardCount == null ? '-' : String(syncState.remoteCardCount);
+    const statusLabel = backupStatusLabel();
+    const statusClass = statusLabel === 'Backed up' ? 'good' : statusLabel === 'Backup error' ? 'bad' : 'warn';
     const firstSyncActions = supabaseUser && syncState.firstSyncPaused
-      ? `<div class='panel'><h3>First sync choice</h3><p class='hint'>This browser has existing local cards and this Supabase account has no server cards yet. Choose before uploading anything to this account.</p><div class='row-actions'><button class='btn primary' id='approveFirstSyncBtn'>Upload local cards</button><button class='btn ghost' id='skipFirstSyncBtn'>Keep local only</button></div></div>`
+      ? `<div class='panel'><h3>Add existing cards to backup?</h3><p class='hint'>This browser has existing cards. Add them to cloud backup?</p><div class='row-actions'><button class='btn primary' id='approveFirstSyncBtn'>Back up local cards</button><button class='btn ghost' id='skipFirstSyncBtn'>Keep on this device</button></div></div>`
       : '';
     const login = supabaseUser
-      ? `<p class='hint good'>Signed in as ${esc(email || 'Supabase user')}.</p>${firstSyncActions}<div class='row-actions'><button class='btn' id='syncNowBtn'>Sync now</button><button class='btn ghost' id='supabaseLogoutBtn'>Logout</button></div>`
-      : `<label class='label' for='supabaseEmail'>Email</label><input class='in' id='supabaseEmail' type='email' autocomplete='email' placeholder='you@example.com'><label class='label' for='supabasePassword'>Password</label><input class='in' id='supabasePassword' type='password' autocomplete='current-password' placeholder='Supabase password'><p class='hint'>New accounts may need email confirmation before login. If signup is rate-limited, try again later or configure Supabase SMTP/email limits.</p><div class='row-actions'><button class='btn primary' id='supabaseLoginBtn'>Login and sync</button><button class='btn' id='supabaseSignupBtn'>Create account</button><button class='btn' id='syncNowBtn'>Retry sync</button></div>`;
-    return `<div class='card'><div class='progress'>Server sync</div><h3>Supabase Focus Cards</h3><p class='hint ${statusClass}'>${esc(syncStatusLabel())}: ${esc(syncState.message)}</p><div class='line'><div class='k'>Project</div><div class='v'>${esc(cfg.url || 'Not configured')}</div></div><div class='line'><div class='k'>Pending local changes</div><div class='v'>${pending}</div></div><div class='line'><div class='k'>Server cards confirmed</div><div class='v'>${esc(serverCount)}</div></div><div class='line'><div class='k'>First sync choice</div><div class='v'>${esc(decisionLabel)}</div></div><div class='line'><div class='k'>Last sync</div><div class='v'>${esc(syncState.lastSyncAt || '-')}</div></div>${configured ? login : `<p class='hint bad'>Set <code>window.ICT_SUPABASE_ANON_KEY</code> before app.js loads to enable Supabase Auth and server storage.</p>`}</div>`;
+      ? `<p class='hint good'>Signed in as ${esc(ADMIN_USERNAME)}.</p>${firstSyncActions}<div class='row-actions'><button class='btn' id='syncNowBtn'>Back up now</button><button class='btn ghost' id='supabaseLogoutBtn'>Sign out</button></div>`
+      : configured
+        ? `<label class='label' for='adminUsername'>Username</label><input class='in' id='adminUsername' autocomplete='username' value='${esc(ADMIN_USERNAME)}' placeholder='admin'><label class='label' for='adminPassword'>Password</label><input class='in' id='adminPassword' type='password' autocomplete='current-password' placeholder='Password'><div class='row-actions'><button class='btn primary' id='adminLoginBtn'>Sign in</button></div>`
+        : `<p class='hint warn'>Cloud backup is unavailable in this build. Local cards still work on this device.</p>`;
+    return `<div class='card'><div class='progress'>Account</div><h3>Account & Backup</h3><p class='hint ${statusClass}'>${esc(statusLabel)}: ${esc(backupStatusMessage())}</p><div class='line'><div class='k'>Local cards</div><div class='v'>${cards.length}</div></div><div class='line'><div class='k'>Cloud backup</div><div class='v'>${pending ? 'Pending' : serverCount}</div></div><div class='line'><div class='k'>Last backup</div><div class='v'>${esc(syncState.lastSyncAt || '-')}</div></div>${login}</div>`;
   }
 
   function profile(){
     const settings = getSettings();
     const m = getMetrics(cards);
     const recent = latestCard();
-    return `<section class='screen'>${pageHead('Trader profile', 'Profile', 'Local settings, server sync and portable data tools.', '')}${supabasePanelHtml()}<div class='card'><h3>Local summary</h3>${line('Saved cards', m.total)}${line('Final saved', m.finalSaved)}${line('Favorites', m.favorites)}${line('Recent plan', recent ? (recent.fields.instrument || 'No instrument') : '')}</div><div class='card'><h3>Settings</h3><label class='label' for='defaultInstrument'>Default instrument</label><input class='in' id='defaultInstrument' value='${esc(settings.defaultInstrument)}' placeholder='MNQ'><label class='label' for='defaultSession'>Default session</label><select class='in' id='defaultSession'>${options(sessions, settings.defaultSession, 'No default')}</select><label class='label' for='themeMode'>Theme</label><select class='in' id='themeMode'><option value='light'${settings.theme === 'light' ? ' selected' : ''}>Light mode</option><option value='dark'${settings.theme === 'dark' ? ' selected' : ''}>Dark mode</option></select><label class='label' for='watchlist'>Watchlist</label><input class='in' id='watchlist' value='${esc(settings.watchlist.join(', '))}' placeholder='MNQ, ES, GC'><div class='grid'><div><label class='label' for='defaultRiskPct'>Default risk %</label><input class='in' id='defaultRiskPct' value='${esc(settings.riskDefaults.plannedRiskPct)}'></div><div><label class='label' for='defaultPlannedR'>Default planned R</label><input class='in' id='defaultPlannedR' value='${esc(settings.riskDefaults.plannedR)}'></div></div><label class='label' for='defaultMaxLoss'>Default max loss</label><input class='in' id='defaultMaxLoss' value='${esc(settings.riskDefaults.maxLoss)}'><button class='btn primary' id='saveSettingsBtn'>Save settings</button></div><div class='card'><h3>Data tools</h3><p class='hint'>Saved cards live only in this browser until Supabase sync is enabled. Export JSON regularly before clearing browser data, changing devices or testing beta builds.</p><div class='row-actions'><button class='btn primary' id='exportJsonBtn'>Export data</button><button class='btn' id='importJsonBtn'>Import data</button><a class='btn' id='feedbackLink' href='https://github.com/JGDev1215/ICT/issues/new' target='_blank' rel='noopener'>Beta feedback</a><button class='btn' data-route='component-gallery'>Component gallery</button><button class='btn danger' id='clearDataBtn'>Clear all local data</button><input class='file-input' id='importFile' type='file' accept='application/json,.json'></div></div></section>`;
+    return `<section class='screen'>${pageHead('Trader profile', 'Profile', 'Local settings, account backup and portable data tools.', '')}${supabasePanelHtml()}<div class='card'><h3>Local summary</h3>${line('Saved cards', m.total)}${line('Final saved', m.finalSaved)}${line('Favorites', m.favorites)}${line('Recent plan', recent ? (recent.fields.instrument || 'No instrument') : '')}</div><div class='card'><h3>Settings</h3><label class='label' for='defaultInstrument'>Default instrument</label><input class='in' id='defaultInstrument' value='${esc(settings.defaultInstrument)}' placeholder='MNQ'><label class='label' for='defaultSession'>Default session</label><select class='in' id='defaultSession'>${options(sessions, settings.defaultSession, 'No default')}</select><label class='label' for='themeMode'>Theme</label><select class='in' id='themeMode'><option value='light'${settings.theme === 'light' ? ' selected' : ''}>Light mode</option><option value='dark'${settings.theme === 'dark' ? ' selected' : ''}>Dark mode</option></select><label class='label' for='watchlist'>Watchlist</label><input class='in' id='watchlist' value='${esc(settings.watchlist.join(', '))}' placeholder='MNQ, ES, GC'><div class='grid'><div><label class='label' for='defaultRiskPct'>Default risk %</label><input class='in' id='defaultRiskPct' value='${esc(settings.riskDefaults.plannedRiskPct)}'></div><div><label class='label' for='defaultPlannedR'>Default planned R</label><input class='in' id='defaultPlannedR' value='${esc(settings.riskDefaults.plannedR)}'></div></div><label class='label' for='defaultMaxLoss'>Default max loss</label><input class='in' id='defaultMaxLoss' value='${esc(settings.riskDefaults.maxLoss)}'><button class='btn primary' id='saveSettingsBtn'>Save settings</button></div><div class='card'><h3>Data tools</h3><p class='hint'>Export JSON regularly before clearing browser data, changing devices or testing beta builds.</p><div class='row-actions'><button class='btn primary' id='exportJsonBtn'>Export data</button><button class='btn' id='importJsonBtn'>Import data</button><a class='btn' id='feedbackLink' href='https://github.com/JGDev1215/ICT/issues/new' target='_blank' rel='noopener'>Beta feedback</a><button class='btn' data-route='component-gallery'>Component gallery</button><button class='btn danger' id='clearDataBtn'>Clear all local data</button><input class='file-input' id='importFile' type='file' accept='application/json,.json'></div></div></section>`;
   }
 
   function sync(){
@@ -2740,53 +2758,45 @@
       notice = lastSettingsError || 'Settings saved.';
       render();
     });
-    on('supabaseLoginBtn', () => {
-      const email = q('supabaseEmail') ? q('supabaseEmail').value.trim() : '';
-      const password = q('supabasePassword') ? q('supabasePassword').value : '';
-      if(!email || !password){
-        notice = 'Enter Supabase email and password.';
+    on('adminLoginBtn', () => {
+      const username = q('adminUsername') ? q('adminUsername').value.trim() : '';
+      const password = q('adminPassword') ? q('adminPassword').value : '';
+      if(username !== ADMIN_USERNAME){
+        notice = 'Use the admin username.';
         render();
         return;
       }
-      supabaseLogin(email, password).then(ok => {
-        notice = ok ? 'Supabase sync complete.' : syncState.message;
-        render();
-      });
-    });
-    on('supabaseSignupBtn', () => {
-      const email = q('supabaseEmail') ? q('supabaseEmail').value.trim() : '';
-      const password = q('supabasePassword') ? q('supabasePassword').value : '';
-      if(!email || !password){
-        notice = 'Enter email and password to create an account.';
+      if(!password){
+        notice = 'Enter the admin password.';
         render();
         return;
       }
-      supabaseSignup(email, password).then(ok => {
-        notice = syncState.message;
+      supabaseLogin(adminSupabaseEmail(), password).then(ok => {
+        notice = ok ? 'Signed in. Backup is ready.' : syncState.message;
         render();
       });
     });
     on('supabaseLogoutBtn', () => {
       supabaseLogout().then(() => {
-        notice = 'Logged out of Supabase.';
+        notice = 'Signed out.';
         render();
       });
     });
     on('approveFirstSyncBtn', () => {
       approveFirstSyncUpload().then(ok => {
-        notice = ok ? 'Local cards uploaded to Supabase.' : syncState.message;
+        notice = ok ? 'Local cards added to cloud backup.' : syncState.message;
         render();
       });
     });
     on('skipFirstSyncBtn', () => {
       skipFirstSyncUpload().then(ok => {
-        notice = ok ? 'Existing local cards kept on this browser.' : syncState.message;
+        notice = ok ? 'Existing local cards will stay on this device.' : syncState.message;
         render();
       });
     });
     on('syncNowBtn', () => {
       syncFromSupabase({force: true}).then(ok => {
-        notice = ok ? 'Supabase sync complete.' : syncState.message;
+        notice = ok ? 'Backup complete.' : syncState.message;
         render();
       });
     });

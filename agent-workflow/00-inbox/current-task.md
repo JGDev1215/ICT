@@ -2,14 +2,15 @@
 
 ## User Task
 
-I want to achieve final decision SAFE to commit for this project.
+PLEASE IMPLEMENT THIS PLAN:
 
-## Interpreted Continuation
+Replace the sloppy Supabase/Profile panel with a clean single-user `admin` access experience:
 
-Continue from the completed audit and Supabase sync fix round by making the current intended change set safe to commit:
-
-- Verify tests/checks.
-- Classify intended versus unrelated worktree changes.
-- Stage only the safe intended scope.
-- Leave unrelated/pre-existing files unstaged.
-- Update workflow decision evidence to `SAFE TO COMMIT` for the staged scope.
+- Replace visible “Supabase Focus Cards” copy with “Account & Backup.”
+- Hide Supabase project URL, signup, retry sync, and technical account-copy.
+- Use username `admin` and password field in the UI.
+- Map `admin` to Supabase email `admin@ict.local` by default.
+- Keep Supabase sync internals for server-side Focus Card storage.
+- Create/ensure the confirmed Supabase Auth user `admin@ict.local` with password `admin`.
+- Update app code, config, README, CHANGELOG, tests, cache/version strings, workflow files.
+- Run smoke and local UI checks.

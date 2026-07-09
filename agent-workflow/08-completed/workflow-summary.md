@@ -2,51 +2,26 @@
 
 ## User Task
 
-I want to achieve final decision SAFE to commit for this project.
-
-## Interpreted Task
-
-Continue from the deployed-site audit and Supabase fix round by making the intended change set safe to commit.
-
-## Local Path
-
-`/Users/soonjeongguan/Desktop/FRAMEWORK`
-
-## GitHub Remote
-
-`https://github.com/JGDev1215/ICT.git`
-
-## Completed Work
-
-- Fixed first-login sync stalling until reload.
-- Added Supabase startup user revalidation.
-- Added first-sync choice before uploading existing browser-local cards into an empty Supabase account.
-- Added Profile controls for `Upload local cards` and `Keep local only`.
-- Added Profile server-sync status lines for server-confirmed card count and first-sync choice.
-- Improved signup rate-limit messaging.
-- Bumped app/cache version to `v0.8.1`.
-- Updated smoke assertions, README, and CHANGELOG.
-
-## Checks Performed
-
-- `pwd`
-- `git remote -v`
-- `git status`
-- `find . -maxdepth 3 -type f | sed 's#^\./##' | sort | head -200`
-- `node tests/smoke.js`
-- Local static server HTTP checks
+Implement the plan to replace the sloppy Supabase panel with single-user admin access.
 
 ## Result
 
-Local fix round complete and intended files are safe for selective commit.
+Implemented locally.
 
-## Final Decision
+## Key Outcomes
 
-SAFE TO COMMIT
+- Profile now shows Account & Backup.
+- Login is username `admin` plus password.
+- `admin` maps to `admin@ict.local`.
+- Supabase account exists and password login works.
+- Old visible Supabase signup/project clutter is gone.
 
-## Remaining Risks
+## Checks
 
-- Changes are not deployed yet.
-- Live Supabase account flow must be retested on Vercel.
-- Supabase project email rate limits are outside static app code.
-- Worktree contains pre-existing unrelated changes, so only the intended staged files should be committed.
+- Smoke passed.
+- Local browser UI check passed.
+- Admin sign-in check passed.
+
+## Next Step
+
+Stage, commit, push, and retest the deployed Vercel URL.

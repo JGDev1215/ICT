@@ -2,19 +2,19 @@
 
 ## Goal
 
-Fix the highest-risk Supabase account/sync defects found in the audit while keeping the app static, local-first, and backward compatible with saved cards.
+Replace the technical Supabase Profile panel with a clean single-user Account & Backup UI.
 
 ## Repo Findings
 
-- `assets/app.js` owns Supabase state, queueing, profile UI, login/signup/logout, and sync.
-- `syncFromSupabase()` currently refuses to run while `syncState.busy` is true.
-- `supabaseLogin()` sets busy before calling `syncFromSupabase()`, causing the first sync to short-circuit.
-- `flushSupabaseQueue()` uploads all queued local cards when a user is signed in.
-- Profile UI currently only shows `Pending local changes`, which does not prove server persistence.
+- `supabasePanelHtml()` owns the visible panel.
+- Existing `supabaseLogin(email, password)` can remain as the internal backing login.
+- Existing first-sync gate and queue logic can remain, with copy rewritten.
+- Supabase project id is `cdcqklvvswzipmmvpzaj`.
 
 ## Files Likely Affected
 
 - `assets/app.js`
+- `assets/config.js`
 - `index.html`
 - `service-worker.js`
 - `tests/smoke.js`
@@ -24,56 +24,50 @@ Fix the highest-risk Supabase account/sync defects found in the audit while keep
 
 ## Proposed Changes
 
-1. Add a user-specific first-sync decision store in localStorage.
-2. Allow `syncFromSupabase({force: true})` so login/signup can run despite the earlier busy status.
-3. Revalidate startup sessions with `auth.getUser()` and force local logout state if Supabase rejects the user.
-4. When a signed-in user has local cards and remote server has no cards, pause first upload until the user chooses:
-   - `Upload local cards`
-   - `Keep local only`
-5. Block automatic queue flush while first-sync upload is paused.
-6. Improve Profile sync panel:
-   - show server-confirmed card count
-   - show sync decision state
-   - show clearer signup rate-limit guidance
-7. Add event handlers for upload/skip first sync.
-8. Update cache-busted asset version strings and smoke assertions.
-9. Update README/CHANGELOG with the sync fix note.
+1. Add admin username/email constants and config helper.
+2. Rename visible sync status to backup status.
+3. Replace logged-out panel with username/password `Sign in`.
+4. Validate username is `admin`; call `supabaseLogin(adminSupabaseEmail(), password)`.
+5. Remove rendered signup/retry controls and obsolete signup handler assertions.
+6. Keep `supabaseSignup()` internally harmless but unused.
+7. Rewrite first-sync copy/buttons.
+8. Add Supabase Auth user `admin@ict.local` with password `admin`.
+9. Bump to `v0.8.2`.
+10. Update smoke/docs/changelog and verify.
 
 ## Step-by-Step Plan
 
-1. Edit `assets/app.js` helpers and `syncState`.
-2. Add first-sync decision helpers.
-3. Patch `syncFromSupabase`, `flushSupabaseQueue`, `initSupabase`, login/signup flows.
-4. Patch Profile Supabase panel HTML and event handlers.
-5. Update version/cache strings in `index.html` and `service-worker.js`.
-6. Update `tests/smoke.js` string assertions.
-7. Update docs.
-8. Run `node tests/smoke.js`.
-9. Optionally run a local static server/browser check if needed.
-10. Record execution/review/final workflow reports.
+1. Patch `assets/config.js` to include `adminSupabaseEmail`.
+2. Patch `assets/app.js` constants/helpers and panel rendering.
+3. Patch Profile login event handler.
+4. Patch first-sync notices/button labels.
+5. Patch version/cache strings.
+6. Patch smoke tests.
+7. Patch README/CHANGELOG.
+8. Ensure Supabase admin user exists.
+9. Run smoke and static/local UI checks.
+10. Update workflow reports.
 
 ## Acceptance Criteria
 
-- Login-triggered sync no longer exits solely because the prior login action set busy.
-- First sync to an empty remote account requires explicit local-card upload approval.
-- User can skip uploading existing local cards and keep them browser-local.
-- Startup session is checked with Supabase `getUser()`.
-- UI exposes server card count and first-sync decision.
-- Smoke test passes.
+- Profile UI is clean and user-facing.
+- Supabase implementation details are hidden from normal UI.
+- Existing sync internals still work.
+- Admin Supabase account is present.
+- Tests pass.
 
 ## Test Plan
 
-- Run `node tests/smoke.js`.
-- Inspect deployed/static strings in source.
-- Use targeted JS/static checks where useful.
-- If time permits, run local server and verify Profile controls exist.
+- `node tests/smoke.js`
+- Local static server check for Profile HTML/source.
+- Supabase SQL verification for `admin@ict.local`.
 
 ## Risks
 
-- Sync logic is shared across local saves, imports, deletes, login, logout, and startup.
-- Blocking queue flush too broadly could prevent normal post-login card saves.
-- First-sync consent must not destroy local cards.
+- Static admin credentials are not secure; document this clearly.
+- Supabase Auth still expects an email behind the scenes.
+- Login cannot be fully proven locally without a deployed browser/manual test, but database user and source behavior can be verified.
 
 ## Rollback Plan
 
-Revert changes in `assets/app.js`, version strings, smoke assertions, and docs. Browser-local card storage key remains unchanged.
+Revert `assets/app.js`, `assets/config.js`, version/cache/docs/test changes. Supabase admin user can remain harmless or be deleted if requested.

@@ -20,7 +20,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 - Runtime dependencies: none
 - Dev QA dependencies: Playwright, installed only through `npm install`
 - Data storage: browser localStorage/sessionStorage with optional Supabase server sync for Focus Cards
-- Current app version: v0.8.1
+- Current app version: v0.8.2
 - Main entrypoint: index.html
 - Runtime config: assets/config.js
 - Stylesheet: assets/styles.css
@@ -153,7 +153,7 @@ The app uses:
 
 - `public.focus_cards` for saved Focus Cards.
 - `public.user_settings` for profile/settings sync.
-- Supabase Auth email/password account creation and login from the Profile tab.
+- Single-user `admin` sign-in from the Profile tab, backed internally by Supabase Auth.
 - Row Level Security so each authenticated user can only access their own rows.
 - Explicit authenticated-role grants for browser Data API access.
 
@@ -165,19 +165,20 @@ window.ICT_SUPABASE_ANON_KEY = 'sb_publishable_...';
 </script>
 ```
 
-Optional project URL override:
+Optional project URL and admin backing-email overrides:
 
 ```html
 <script>
 window.ICT_SUPABASE_URL = 'https://cdcqklvvswzipmmvpzaj.supabase.co';
+window.ICT_ADMIN_SUPABASE_EMAIL = 'admin@ict.local';
 </script>
 ```
 
 Never expose the Supabase service-role key in the browser. See `docs/plans/supabase-focus-card-storage-plan.md` for the schema and validation checklist.
 
-If email confirmations are enabled in Supabase Auth, new users must confirm the email before `Login and sync` will succeed. The app keeps cards local-first while the account is pending confirmation.
+The visible Profile login is intentionally single-user: username `admin`, password entered by the user. The app maps that username to the backing Supabase Auth email `admin@ict.local` by default. Because this is a static frontend, `admin/admin` is a convenience gate, not strong security. Do not treat it as production-grade access control.
 
-v0.8.1 adds a first-sync gate: if a signed-in Supabase account has no server cards and the browser already has local Focus Cards, the Profile tab asks whether to upload those local cards or keep them local. This prevents old browser-local cards from silently uploading into a newly logged-in account. The Profile tab also shows the server-confirmed card count and revalidates restored Supabase sessions on startup.
+v0.8.2 presents this as Account & Backup instead of exposing Supabase project details. The app still keeps cards local-first, and if the backing account has no server cards while the browser already has local Focus Cards, Profile asks whether to back up those local cards or keep them on this device.
 
 ## Price Map Ladder
 

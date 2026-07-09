@@ -2,41 +2,26 @@
 
 ## Review Decision
 
-PASS WITH DEPLOYMENT RETEST REQUIRED
-
-## Scope Reviewed
-
-- Supabase login/startup sync flow
-- First-sync local-card upload gate
-- Profile sync status UI
-- Cache/version bump
-- Smoke test coverage
-- README/CHANGELOG updates
+PASS
 
 ## Findings
 
-No blocking local code issues found in this review.
+No blocking issues found.
 
-## What Was Fixed
+## Review Notes
 
-- Login sync no longer short-circuits because of the existing busy state.
-- Restored Supabase sessions are revalidated with `auth.getUser()`.
-- Existing browser-local cards no longer silently upload to an empty server account.
-- Profile gives the user explicit first-sync choices.
-- Sync status now includes server-confirmed card count and first-sync state.
-- Version/cache strings were bumped to `v0.8.1`.
+- The user-facing Profile panel is now clean and single-user oriented.
+- Supabase implementation details remain in code/docs but are hidden from normal Profile UI.
+- Existing server sync internals remain intact.
+- Static admin login limitation is documented.
+- Smoke test coverage was updated for the new admin UI contract.
 
-## Test Result
+## Residual Risk
 
-- `node tests/smoke.js`: PASS
-- Local HTTP/static source check: PASS
+`admin/admin` is not real security in a static app. It is a convenience gate only, as documented.
 
-## Remaining Risks
+## Tests Reviewed
 
-- Live deployed Supabase behavior must be retested after deployment.
-- Supabase email signup rate limits are still controlled by Supabase project/email-provider configuration.
-- First-sync skip allows future signed-in edits/saves to sync; this is intentional for this phase but should be made explicit in user-facing release notes if needed.
-
-## Recommendation
-
-Safe to proceed to deployment retest after staging the intended files. Do not use a blanket commit because unrelated/pre-existing worktree changes remain.
+- `node tests/smoke.js`
+- local browser UI check
+- Supabase Auth login verification

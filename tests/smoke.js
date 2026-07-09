@@ -91,12 +91,16 @@ ok(appSource.includes('function syncFromSupabase'), 'Supabase sync helper missin
 ok(appSource.includes('function flushSupabaseQueue'), 'Supabase queue flush helper missing');
 ok(appSource.includes('function supabaseSignup'), 'Supabase signup helper missing');
 ok(appSource.includes('auth.signUp'), 'Supabase signup API call missing');
-ok(appSource.includes("id='supabaseSignupBtn'") && appSource.includes('Create account'), 'Supabase signup UI missing');
+ok(appSource.includes("const ADMIN_USERNAME = 'admin'"), 'admin username constant missing');
+ok(appSource.includes("const DEFAULT_ADMIN_SUPABASE_EMAIL = 'admin@ict.local'"), 'admin backing email missing');
+ok(appSource.includes('function adminSupabaseEmail'), 'admin backing email helper missing');
+ok(appSource.includes("id='adminLoginBtn'") && appSource.includes('Sign in'), 'admin sign-in UI missing');
+ok(!appSource.includes("id='supabaseSignupBtn'"), 'signup button should not render in Profile UI');
 ok(appSource.includes('syncFromSupabase({force: true})'), 'Supabase auth actions should force sync after busy login state');
 ok(appSource.includes('auth.getUser'), 'Supabase restored sessions should revalidate the current user');
 ok(appSource.includes('SYNC_ACCOUNT_DECISIONS_KEY'), 'Supabase first-sync decision storage missing');
-ok(appSource.includes("id='approveFirstSyncBtn'") && appSource.includes('Upload local cards'), 'Supabase first-sync upload approval UI missing');
-ok(appSource.includes("id='skipFirstSyncBtn'") && appSource.includes('Keep local only'), 'Supabase first-sync skip UI missing');
+ok(appSource.includes("id='approveFirstSyncBtn'") && appSource.includes('Back up local cards'), 'first-sync backup approval UI missing');
+ok(appSource.includes("id='skipFirstSyncBtn'") && appSource.includes('Keep on this device'), 'first-sync keep-local UI missing');
 ok(appSource.includes('SUPABASE_CARDS_TABLE') && appSource.includes('focus_cards'), 'Supabase focus_cards table binding missing');
 ok(appSource.includes('favorite'), 'favorite field missing');
 ok(appSource.includes('journal'), 'journal field missing');
@@ -365,6 +369,7 @@ metricsFixture.context.ICT_PRICE_API_BASE = 'https://example.vercel.app/api/pric
 ok(api.priceApiBase() === 'https://example.vercel.app/api/price', 'configured price API URL should be preserved');
 delete metricsFixture.context.ICT_PRICE_API_BASE;
 ok(api.supabaseConfig().url === 'https://cdcqklvvswzipmmvpzaj.supabase.co', 'default Supabase project URL invalid');
+ok(api.adminSupabaseEmail() === 'admin@ict.local', 'default admin backing email invalid');
 ok(api.priceHelperUrls('MNQ').includes(api.localPriceHelperUrl('MNQ')), 'price helper URLs should include local fallback without network access');
 ok(api.priceHelperUrl('MNQ U4').endsWith('?symbol=MNQ%20U4'), 'price helper URL should encode symbols');
 ok(api.priceNumber('20123.50') === 20123.5, 'plain decimal price should parse');
@@ -866,7 +871,11 @@ ok(routes.appNode.innerHTML.includes('Wait for confirmation.'), 'journal lesson 
 
 routeApi.go('profile');
 ok(routes.appNode.innerHTML.includes('Profile'), 'profile route did not render');
-ok(routes.appNode.innerHTML.includes('Saved cards live only in this browser'), 'profile backup reminder missing');
+ok(routes.appNode.innerHTML.includes('Account & Backup'), 'profile account backup panel missing');
+ok(routes.appNode.innerHTML.includes('Cloud backup is unavailable in this build'), 'profile local fallback missing when backup client is unavailable');
+ok(!routes.appNode.innerHTML.includes('Supabase Focus Cards'), 'profile should not expose Supabase panel title');
+ok(!routes.appNode.innerHTML.includes('Project</div>'), 'profile should not expose Supabase project URL line');
+ok(!routes.appNode.innerHTML.includes('Create account'), 'profile should not expose account creation');
 ok(routes.appNode.innerHTML.includes("id='exportJsonBtn'>Export data"), 'profile primary JSON export action missing');
 ok(routes.appNode.innerHTML.includes("id='feedbackLink'") && routes.appNode.innerHTML.includes('https://github.com/JGDev1215/ICT/issues/new'), 'profile beta feedback link missing');
 ok(routes.appNode.innerHTML.includes("data-route='component-gallery'"), 'profile component gallery link missing');
