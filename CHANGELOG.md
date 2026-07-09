@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.8.5 — 2026-07-09
+
+### Fixed
+
+- Aligned saved-card Complete/Draft status with Generate Focus Plan validation, including session, bias, price/manual acknowledgement, complete DOL rows, and partial sweep blocking.
+- Preserved the manual-price-needed acknowledgement through Planner draft autosave/restore and saved-card normalization.
+- Labeled Price Map and saved price snapshot sources as manual, hosted yfinance, or local yfinance instead of treating every numeric price as live data.
+- Imported exported Profile settings best-effort through JSON import while preserving card import compatibility.
+- Allowed localhost/file-based local price helper fallback after a hosted unsupported-symbol response.
+- Reconciled current docs around web/mobile-site QA scope, optional Supabase sync, completed v0.8.3/v0.8.4 plans, and local-first source-of-truth wording.
+- Added the first no-build unit test harness, price API boundary tests, npm test scripts, import-file Playwright coverage, service-worker runtime asset smoke coverage, a refactor baseline QA note, tracked developer/user docs entry points, and a `Legacy/README.md` guardrail for historical files.
+
 ## v0.8.4 — 2026-07-09
 
 ### Fixed

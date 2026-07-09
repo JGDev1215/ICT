@@ -12,7 +12,7 @@ Contributor guidance for the ICT DOL Sweep Tracker.
 
 ## Runtime Contracts
 
-- Current app version: `v0.8.4`.
+- Current app version: `v0.8.5`.
 - Current card storage key: `ict_cards_v078`.
 - Bias metadata key: `ict_bias_card_meta_v1`.
 - JSON export schema: `ict_dol_sweep_export_v7`.

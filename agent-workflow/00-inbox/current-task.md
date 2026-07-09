@@ -1,3 +1,3 @@
 # Current Task
 
-create a daily report based on the instructions in the agent.md file and plan for next updates to the app.
+-fix everything that is wrong with this app, make sure all the instructions and plans in the doc folder are carried out. use multiple agents to complete this.

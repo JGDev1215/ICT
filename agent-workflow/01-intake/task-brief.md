@@ -2,38 +2,43 @@
 
 ## Original User Task
 
-create a daily report based on the instructions in the agent.md file and plan for next updates to the app.
+-fix everything that is wrong with this app, make sure all the instructions and plans in the doc folder are carried out. use multiple agents to complete this.
 
 ## Objective
 
-Create a historical daily report under `docs/daily-reports/` that summarizes the July 9, 2026 app work and records a practical next-update plan.
+Make concrete progress toward full app remediation by deriving requirements from current docs, using parallel agents for independent audits, and fixing the first confirmed issues without breaking local-first/static-app constraints.
 
 ## Repo Findings
 
-- Safety check confirmed the working path is `/Users/soonjeongguan/Desktop/FRAMEWORK`.
-- The configured remote is `https://github.com/JGDev1215/ICT.git`.
-- The working tree was clean before this docs task.
-- Documentation routing starts at `docs/README.md`; daily reports belong in `docs/daily-reports/`.
-- Existing daily reports for 2026-07-09 already include `2026-07-09-session-report.md` and `2026-07-09-final-codex-report.md`.
-- Recent commits show v0.8.3 planner/price fixes, live price-provider QA docs, and v0.8.4 review remediation.
+- Safety check passed in `/Users/soonjeongguan/Desktop/FRAMEWORK`.
+- Remote is `https://github.com/JGDev1215/ICT.git`.
+- Existing uncommitted changes from the prior feedback task update `docs/daily-reports/2026-07-09-session-report-2.md` and `agent-workflow/` to clarify that real-device QA is not required.
+- Current docs include active or current-context files under `docs/plans/`, `docs/qa/`, and `docs/release/`.
+- `docs/qa/docs-implementation-checklist-2026-07-08.md`, `docs/qa/release-qa-evidence-2026-07-08.md`, `docs/release/release-decision-log-2026-07-08.md`, and `README.md` still contain physical/real-device QA language that conflicts with the latest product clarification.
+- `README.md` says saved cards are browser-local only and not synced across devices, which is stale now that optional Supabase Account & Backup sync exists.
+- v0.8.4 runtime/version/cache strings appear aligned by search.
+- Parallel agents have been spawned to audit documentation/plans, runtime behavior, and test/QA coverage.
 
 ## Assumptions
 
-- The requested daily report should be a historical report, not a new source-of-truth requirement document.
-- The next-update plan should be included in the report as recommended next steps, not implemented as runtime changes in this task.
-- No commit or push is requested for this task.
+- The broad goal is too large for one safe patch; per AGENTS.md, complete the safest confirmed phase first.
+- Real-device QA should not remain a release gate because the app is intended for web/mobile-site usage only.
+- Production web and mobile-site browser QA remains relevant.
+- Do not commit or push unless explicitly requested.
 
 ## Out of Scope
 
-- Runtime code changes.
-- Production live QA execution.
-- Version/cache bumping.
-- New feature implementation.
+- Big-bang modularization of `assets/app.js`.
+- Framework migration or redesign.
+- Runtime changes without a confirmed defect and approved plan.
+- Destructive data/schema changes.
 - Commit or push.
 
 ## Success Criteria
 
-- [ ] Required workflow files are updated for this task.
-- [ ] A new daily report is created in `docs/daily-reports/` using the repository template.
-- [ ] The report records session actions, checks, decisions, risks, current git state, and recommended next updates.
-- [ ] The task remains docs-only with no unrelated runtime changes.
+- [ ] Multiple agents are used for independent audit work.
+- [ ] Current workflow files record the broad remediation task.
+- [ ] Confirmed current documentation conflicts are corrected.
+- [ ] Optional Supabase sync is described accurately.
+- [ ] No runtime code is changed in Phase 1.
+- [ ] Static checks pass.

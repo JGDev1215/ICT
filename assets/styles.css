@@ -616,6 +616,9 @@ textarea.in,.textarea{min-height:104px;resize:vertical;line-height:1.45}
 .price-map-live.pending{
   color:var(--attention);
 }
+.price-map-live.manual{
+  color:var(--text-muted);
+}
 .price-map-status{
   display:grid;
   gap:6px;
@@ -645,6 +648,9 @@ textarea.in,.textarea{min-height:104px;resize:vertical;line-height:1.45}
 }
 .price-map-live.pending:before{
   background:var(--attention);
+}
+.price-map-live.manual:before{
+  background:var(--text-muted);
 }
 .price-map-body{
   display:grid;

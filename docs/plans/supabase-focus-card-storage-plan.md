@@ -7,7 +7,7 @@
 
 ## Summary
 
-Supabase is the server-side source of truth for Focus Cards, while browser `localStorage` remains the immediate offline/cache layer. The app loads local cards first, then merges Supabase cards after login by newest `updatedAt`.
+Supabase is the optional server-side backup/sync store for Focus Cards, while browser `localStorage` remains the immediate source of truth for the running app. The app loads local cards first, then merges Supabase cards after login by newest `updatedAt`.
 
 Project used:
 

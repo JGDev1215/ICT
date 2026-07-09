@@ -74,6 +74,27 @@ test('planner creates a focus card and preserves it after reload', async ({page}
   await expect(page.getByText('MNQ').first()).toBeVisible();
 });
 
+test('manual price acknowledgement restores and can generate complete no-sweep plan', async ({page}) => {
+  await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
+  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+
+  await page.locator('#instrument').fill('MNQ');
+  await page.locator('#session').selectOption('New York AM');
+  await page.locator("[data-bias='Bullish']").click();
+  await page.locator('#manualPriceNeededAck').check();
+  await page.locator('#dol1Level').fill('20250');
+  await page.locator('#dol1Draw').selectOption('Previous day high (PDH)');
+  await page.locator('#dol1Tf').selectOption('Daily');
+
+  await page.reload();
+  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+  await expect(page.locator('#manualPriceNeededAck')).toBeChecked();
+
+  await page.locator('#nextBtn').click();
+  await expect(page.getByText('Focus card details')).toBeVisible();
+  await expect(page.getByText('Complete draft')).toBeVisible();
+});
+
 test('price auto-detect populates current price from a mocked helper response', async ({page}) => {
   await page.evaluate(() => {
     window.ICT_PRICE_API_BASE = `${window.location.origin}/api/price`;
@@ -101,6 +122,41 @@ test('price auto-detect populates current price from a mocked helper response', 
 
   await page.locator("nav[aria-label='Primary'] [data-route='saved']").click();
   await expect(page.locator('#globalStatus')).toHaveCount(1);
+});
+
+test('local price fallback runs after hosted unsupported response in local context', async ({page}) => {
+  await page.evaluate(() => {
+    window.__priceUrls = [];
+    window.ICT_PRICE_API_BASE = `${window.location.origin}/api/price`;
+    window.fetch = async url => {
+      window.__priceUrls.push(String(url));
+      if(String(url).includes('127.0.0.1:8765')){
+        return new Response(JSON.stringify({
+          symbol: 'CUSTOM',
+          yfSymbol: 'CUSTOM=F',
+          price: 123.45,
+          source: 'local-yfinance',
+          cached: false,
+          timestamp: '2026-07-09T13:35:00Z'
+        }), {
+          status: 200,
+          headers: {'Content-Type': 'application/json'}
+        });
+      }
+      return new Response(JSON.stringify({error: 'unsupported symbol', symbol: 'CUSTOM'}), {
+        status: 400,
+        headers: {'Content-Type': 'application/json'}
+      });
+    };
+  });
+
+  await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
+  await page.locator('#instrument').fill('CUSTOM');
+  await page.locator('#autoPriceBtn').click();
+
+  await expect(page.locator('#currentPrice')).toHaveValue('123.45');
+  await expect(page.locator('#priceStatusMessage')).toContainText('Detected from local yfinance helper');
+  await expect.poll(() => page.evaluate(() => window.__priceUrls.some(url => url.includes('127.0.0.1:8765')))).toBe(true);
 });
 
 test('price auto-detect failure keeps manual price available', async ({page}) => {
@@ -149,6 +205,63 @@ test('clear this device data is local-only and clears sync metadata', async ({pa
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ict_supabase_sync_queue_v1'))).toBeNull();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ict_supabase_tombstones_v1'))).toBeNull();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ict_supabase_account_sync_v1'))).toBeNull();
+});
+
+test('json import through file input imports cards, settings, and schema warnings', async ({page}) => {
+  await page.evaluate(() => window.ICTSweepState.go('profile'));
+  await expect(page.getByRole('heading', {name: 'Profile'})).toBeVisible();
+
+  const payload = {
+    schema: 'ict_dol_sweep_export_v6',
+    settings: {
+      defaultInstrument: 'ES',
+      defaultSession: 'London',
+      theme: 'dark',
+      watchlist: ['ES', 'YM'],
+      riskDefaults: {plannedRiskPct: '0.5', plannedR: '2R', maxLoss: '100'}
+    },
+    cards: [{
+      id: 'import-ui-card',
+      savedAt: '2026-07-09T12:00:00.000Z',
+      updatedAt: '2026-07-09T12:00:00.000Z',
+      fields: {
+        instrument: 'ES',
+        session: 'London',
+        bias: 'Bearish',
+        currentPrice: '5500',
+        dol1Level: '5450',
+        dol1Draw: 'Previous day low (PDL)',
+        dol1Tf: 'Daily'
+      }
+    }]
+  };
+
+  await page.locator('#importFile').setInputFiles({
+    name: 'ict-import.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(payload))
+  });
+
+  await expect(page.locator('.save-state.warn')).toContainText('Imported file uses schema');
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().some(card => card.id === 'import-ui-card'))).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getSettings().defaultInstrument)).toBe('ES');
+
+  await page.evaluate(() => window.ICTSweepState.go('saved'));
+  await expect(page.getByText('ES').first()).toBeVisible();
+});
+
+test('invalid json import through file input shows warning without changing cards', async ({page}) => {
+  await page.evaluate(() => window.ICTSweepState.go('saved'));
+  await expect(page.getByText('Saved Cards')).toBeVisible();
+
+  await page.locator('#importFile').setInputFiles({
+    name: 'invalid-import.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({notCards: true}))
+  });
+
+  await expect(page.locator('.save-state.warn')).toContainText('No valid cards or settings found');
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().length)).toBe(0);
 });
 
 test('bad notices render as alerts', async ({page}) => {

@@ -1,8 +1,9 @@
 # Review Fix Report — 2026-07-09
 
-> Status: Current
+> Status: Historical
 > Last reviewed: 2026-07-09
-> Source of truth: No (remediation plan; verify against current code before implementing)
+> Source of truth: No
+> Implementation status: Completed in v0.8.4; verify current behavior against runtime code, tests, README, and CHANGELOG.
 
 Remediation plan for the findings raised in the fresh systematic review of the ICT DOL Sweep Tracker (v0.8.3). This is a **report only** — no code was changed. Each item lists root cause, the recommended fix, files/lines, regression risks, tests to add, and effort. A full architecture / refactoring review follows the findings.
 

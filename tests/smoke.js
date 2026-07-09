@@ -40,6 +40,7 @@ const styleAsset = match(index, /<link rel="stylesheet" href="([^"]*assets\/styl
 const cacheName = match(serviceWorker, /const CACHE_NAME = '([^']+)'/, 'service worker cache name missing')[1];
 const hostedPriceApiBase = match(configSource, /hostedPriceApiBase: '([^']+)'/, 'hosted price API base missing')[1];
 const hostedPriceUrl = new URL(hostedPriceApiBase);
+const runtimeAssets = Array.from(index.matchAll(/(?:src|href)="([^"]*(?:assets\/[^"]+|manifest\.webmanifest|favicon\.svg|icon-\d+\.svg)[^"]*)"/g)).map(found => found[1]);
 
 ok(appVersion.startsWith('v0.8.'), 'app version should be v0.8.x');
 ok(index.includes(`<title>ICT DOL Sweep Tracker ${appVersion}</title>`), 'index title version missing');
@@ -52,6 +53,9 @@ ok(index.indexOf(configAsset) < index.indexOf(appAsset), 'runtime config should 
 ok(serviceWorker.includes(`'./${configAsset}'`), 'service worker config cache does not match index');
 ok(serviceWorker.includes(`'./${appAsset}'`), 'service worker app cache does not match index');
 ok(serviceWorker.includes(`'./${styleAsset}'`), 'service worker style cache does not match index');
+runtimeAssets.forEach(asset => {
+  ok(serviceWorker.includes(`'./${asset}'`) || asset === 'manifest.webmanifest' || asset === 'favicon.svg', 'service worker cache should include runtime asset reference: ' + asset);
+});
 ok(cacheName.includes(appVersionNumber.replaceAll('.', '')), 'service worker cache name should include app version');
 ok(index.includes('cdn.jsdelivr.net/npm/@supabase/supabase-js@2'), 'Supabase JS CDN missing');
 ok(index.includes("window.ICT_SUPABASE_URL = 'https://cdcqklvvswzipmmvpzaj.supabase.co'"), 'Supabase project URL config missing');
@@ -200,7 +204,10 @@ ok(parsedVercelConfig.outputDirectory === '_site', 'vercel output directory inva
 ok(parsedVercelConfig.buildCommand.includes('cp index.html') && parsedVercelConfig.buildCommand.includes('favicon.svg') && parsedVercelConfig.buildCommand.includes('icon-192.svg') && parsedVercelConfig.buildCommand.includes('icon-512.svg') && parsedVercelConfig.buildCommand.includes('assets/config.js') && parsedVercelConfig.buildCommand.includes('_site/assets'), 'vercel static build command invalid');
 ok(pagesWorkflow.includes('icon-192.svg') && pagesWorkflow.includes('icon-512.svg'), 'GitHub Pages workflow should copy app icons');
 ok(bumpVersionScript.includes('config') && bumpVersionScript.includes('service-worker.js') && bumpVersionScript.includes('README.md'), 'version bump script should update cache and docs targets');
-ok(packageJson.scripts.test === 'node tests/smoke.js', 'npm test should run smoke suite');
+ok(packageJson.scripts.test === 'npm run test:smoke && npm run test:unit && npm run test:api', 'npm test should run smoke, unit, and API boundary suites');
+ok(packageJson.scripts['test:smoke'] === 'node tests/smoke.js', 'npm test:smoke should run smoke suite');
+ok(packageJson.scripts['test:unit'] === 'node tests/unit/run-tests.js', 'npm test:unit should run unit suite');
+ok(packageJson.scripts['test:api'] === 'python3 tests/api/test_price.py', 'npm test:api should run price API boundary suite');
 ok(packageJson.scripts['test:e2e'] === 'playwright test', 'npm test:e2e should run Playwright');
 ok(playwrightConfig.includes('mobile-chrome') && playwrightConfig.includes('mobile-safari') && playwrightConfig.includes('python3 -m http.server 4173'), 'Playwright config should cover mobile Chrome, mobile Safari and static server');
 ok(e2eTest.includes('planner creates a focus card') && e2eTest.includes('planner skip link') && e2eTest.includes('home session chips'), 'E2E tests should cover planner, skip link and Home filters');
@@ -209,6 +216,7 @@ ok(e2eWorkflow.includes('npm ci') && e2eWorkflow.includes('playwright install --
 
 new vm.Script(configSource, {filename: 'assets/config.js'});
 new vm.Script(appSource, {filename: 'assets/app.js'});
+// Legacy bias extension is historical and not loaded by index.html; keep parsing it to catch accidental syntax rot in retained migration context.
 new vm.Script(biasSource, {filename: 'Legacy/assets/bias-extension.js'});
 new vm.Script(serviceWorker, {filename: 'service-worker.js'});
 new vm.Script(bumpVersionScript, {filename: 'tools/bump-version.js'});
@@ -437,6 +445,9 @@ ok(priceValidation.some(message => message.includes('Current price')), 'price va
 ok(priceValidation.some(message => message.includes('DOL 1')), 'price validation should identify zero objective levels');
 const optionalSweepCompletion = api.comp({
   instrument: 'MNQ',
+  session: 'New York AM',
+  bias: 'Bullish',
+  currentPrice: '20000',
   dol1Level: '20250',
   dol1Draw: 'Previous day high (PDH)',
   dol1Tf: 'Daily',
@@ -446,8 +457,21 @@ const optionalSweepCompletion = api.comp({
   sweep1Taken: false
 });
 ok(optionalSweepCompletion.ok === true, 'sweep confidence and hit time should not block completion');
+const noSweepCompletion = api.comp({
+  instrument: 'MNQ',
+  session: 'New York AM',
+  bias: 'Bullish',
+  manualPriceNeededAck: true,
+  dol1Level: '20250',
+  dol1Draw: 'Previous day high (PDH)',
+  dol1Tf: 'Daily'
+});
+ok(noSweepCompletion.ok === true, 'complete DOL with manual price acknowledgement should be complete without requiring a sweep');
 const partialSweepCompletion = api.comp({
   instrument: 'MNQ',
+  session: 'New York AM',
+  bias: 'Bullish',
+  currentPrice: '20000',
   dol1Level: '20250',
   dol1Draw: 'Previous day high (PDH)',
   dol1Tf: 'Daily',
@@ -455,6 +479,7 @@ const partialSweepCompletion = api.comp({
   sweep1Draw: 'Relative equal lows (REL)'
 });
 ok(partialSweepCompletion.ok === false && partialSweepCompletion.sweep.part === 1, 'partial sweep records should keep card in draft status');
+ok(api.comp({instrument: 'MNQ', session: 'New York AM', bias: 'Bullish', dol1Level: '20250', dol1Draw: 'Previous day high (PDH)', dol1Tf: 'Daily'}).ok === false, 'missing current price or manual price acknowledgement should keep card in draft status');
 
 const settingsFixture = runApp();
 const settingsApi = settingsFixture.context.ICTSweepState;
@@ -604,6 +629,8 @@ ok(priceMapMarkup.includes('price-map-current') && priceMapMarkup.includes('CURR
 ok(priceMapMarkup.includes('price-map-row dol above'), 'price map DOL row class missing');
 ok(priceMapMarkup.includes('price-map-row sweep'), 'price map sweep row class missing');
 ok(priceMapMarkup.includes('+250 pts · 1.25%'), 'price map distance label missing');
+ok(priceMapMarkup.includes('Source: manual entry') && priceMapMarkup.includes('price-map-live manual'), 'manual price map source should be labeled separately from live data');
+ok(api.priceMapHtml(priceCard.fields, {source: 'hosted-yfinance'}).includes('Source: hosted yfinance API'), 'hosted price map source label missing');
 const takenPatch = api.focusReviewFields(priceCard, id => ({checked: id === 'focus_dol2Taken'}));
 ok(takenPatch.dol1Taken === false && takenPatch.dol2Taken === true && takenPatch.dol3Taken === false, 'focus DOL taken patch did not reflect checkbox states');
 const takenUpdated = api.updateCard('hit', {fields: takenPatch});
@@ -687,6 +714,20 @@ const schemaWarningImport = api.importCards({
 ok(schemaWarningImport.imported === 1, 'schema mismatch should still import valid cards');
 ok(schemaWarningImport.warning && schemaWarningImport.warning.includes('expected "ict_dol_sweep_export_v7"'), 'schema mismatch should return a warning');
 ok(api.getCards().find(card => card.id === 'schema-warning-import'), 'schema mismatch import should preserve valid card');
+
+const settingsOnlyImport = api.importCards({
+  settings: {
+    defaultInstrument: 'ES',
+    defaultSession: 'London',
+    theme: 'dark',
+    watchlist: ['ES', 'YM'],
+    riskDefaults: {plannedRiskPct: '0.5', plannedR: '2R', maxLoss: '100'}
+  }
+});
+ok(settingsOnlyImport.imported === 0 && settingsOnlyImport.settingsImported === true, 'settings-only import should report imported settings without cards');
+const importedSettings = api.getSettings();
+ok(importedSettings.defaultInstrument === 'ES' && importedSettings.defaultSession === 'London', 'importCards should import exported settings');
+ok(importedSettings.watchlist.join(',') === 'ES,YM', 'imported settings should preserve watchlist');
 
 const duplicateImport = api.importCards({
   cards: [
@@ -907,8 +948,8 @@ ok(routes.appNode.innerHTML.includes('Distance: 250 (1.25%)'), 'focus DOL distan
 ok(routes.appNode.innerHTML.includes('Timeframe: Daily'), 'focus DOL timeframe missing');
 ok(routes.appNode.innerHTML.includes('focus_dol1Taken'), 'focus DOL taken checkbox missing');
 ok(routes.appNode.innerHTML.includes('DOL taken'), 'focus DOL taken label missing');
-ok(routes.appNode.innerHTML.includes('Vercel yfinance API'), 'focus hosted price source note missing');
-ok(routes.appNode.innerHTML.includes('local helper fallback'), 'focus local price fallback note missing');
+ok(routes.appNode.innerHTML.includes('Price source: manual'), 'focus saved price source note missing');
+ok(routes.appNode.innerHTML.includes('Source: manual entry'), 'focus price map should use saved manual source');
 ok(routes.appNode.innerHTML.includes('Market Context'), 'focus market context section missing');
 ok(routes.appNode.innerHTML.includes('Monthly range.'), 'focus market context note missing');
 ok(routes.appNode.innerHTML.includes('Potential next phase: Expansion'), 'focus potential next phase missing');

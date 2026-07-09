@@ -1,4 +1,4 @@
-# Remaining Docs Implementation Checklist - 2026-07-08
+# Remaining Web And Mobile-Site QA Checklist - 2026-07-08
 
 > Status: Current
 > Last reviewed: 2026-07-09
@@ -7,7 +7,7 @@
 
 ## Purpose
 
-This file tracks only items still open after the 2026-07-08 implementation and decision pass.
+This file tracks only items still open after the 2026-07-08 implementation and decision pass. The app is intended to run on the web or via the mobile site; physical-device testing is not required.
 
 - Repository: `JGDev1215/ICT`
 - Decision log: `docs/release/release-decision-log-2026-07-08.md`
@@ -15,19 +15,19 @@ This file tracks only items still open after the 2026-07-08 implementation and d
 
 ## External Release QA Still Required
 
-Agent-assisted browser QA is recorded in `docs/qa/release-qa-evidence-2026-07-08.md`. The remaining items require real devices or manual browser verification and cannot be completed from code alone.
+Agent-assisted browser QA is recorded in `docs/qa/release-qa-evidence-2026-07-08.md`. Remaining checks should be recorded from the deployed web/mobile-site experience.
 
-- [ ] Record physical iOS Safari safe-area, Add to Home Screen, and offline/PWA QA results.
-- [ ] Record physical Android Chrome install, file-picker/import, and offline/PWA QA results.
-- [ ] Record full screen-reader audit if moving from beta to public release.
-- [ ] Record physical-device pass/fail evidence in this checklist or a new current QA evidence file.
+- [ ] Record v0.8.5 production web QA after deployment: visible version/assets, admin login, Focus Card create/save/final-save/sync/reload, and clear-device behavior.
+- [ ] Record mobile-site browser QA at supported responsive viewport widths, including bottom navigation, Planner sticky actions, import/export usability, touch targets, and offline shell reload where supported by the browser test context.
+- [ ] Record assistive-technology/browser accessibility follow-up if moving from beta to public release.
 
 ## GitHub Housekeeping Still Required
 
-- [ ] Keep GitHub Issue `#7` open until physical iOS/Android/PWA/offline release evidence is recorded.
+- [ ] If GitHub Issue `#7` is still open, repurpose it from physical-device evidence to production web/mobile-site QA evidence, or close it if superseded.
 
 ## Completed By Agent-Assisted QA
 
+- Live production price-provider endpoint QA for one supported symbol and one unsupported symbol is recorded in `docs/qa/live-price-provider-qa-2026-07-09.md`. The live app shell still reported v0.8.4 during that endpoint check, so v0.8.5 deployment UI QA remains open.
 - Mobile Chrome emulation at 390px and 430px.
 - Mobile Safari/WebKit emulation at 390px and 430px.
 - Bottom nav and Planner sticky CTA visibility/tappability.

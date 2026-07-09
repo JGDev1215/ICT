@@ -4,7 +4,10 @@
   "private": true,
   "description": "Static ICT DOL Sweep Tracker beta QA tooling.",
   "scripts": {
-    "test": "node tests/smoke.js",
+    "test": "npm run test:smoke && npm run test:unit && npm run test:api",
+    "test:smoke": "node tests/smoke.js",
+    "test:unit": "node tests/unit/run-tests.js",
+    "test:api": "python3 tests/api/test_price.py",
     "test:e2e": "playwright test",
     "version:bump": "node tools/bump-version.js"
   },

@@ -37,6 +37,8 @@ Do not create new top-level markdown files unless they are root-level project do
 | QA evidence, release checks, test notes | `docs/qa/` |
 | Release decision or release rationale | `docs/release/` |
 | Database schema, SQL, persistence setup | `docs/database/` |
+| Developer notes and contributor guidance | `docs/developer/` |
+| End-user notes and help content | `docs/user/` |
 | Completed or superseded fix list | `docs/archive/completed-fix-lists/` |
 | Historical plan, old setup guide, legacy handover | `docs/archive/historical-plans/` |
 | Superseded design pack or old agent prompt pack | `docs/archive/superseded-design/` |
@@ -46,12 +48,20 @@ Do not create new top-level markdown files unless they are root-level project do
 | Document | Purpose |
 | --- | --- |
 | [`plans/supabase-focus-card-storage-plan.md`](plans/supabase-focus-card-storage-plan.md) | Current Supabase Focus Card backup plan and validation checklist. |
+| [`plans/FINAL_SAFE_REFACTOR_IMPLEMENTATION_PROMPT_2026-07-09.md`](plans/FINAL_SAFE_REFACTOR_IMPLEMENTATION_PROMPT_2026-07-09.md) | Future safe-refactor prompt; do not execute without a separate approved no-feature refactor plan. |
+| [`plans/planner-validation-price-autodetect-plan-2026-07-09.md`](plans/planner-validation-price-autodetect-plan-2026-07-09.md) | Historical v0.8.3 planner validation and price auto-detect implementation plan. |
+| [`plans/review-fix-report-2026-07-09.md`](plans/review-fix-report-2026-07-09.md) | Historical v0.8.4 review remediation report and architecture notes. |
 | [`daily-reports/README.md`](daily-reports/README.md) | End-of-session report format and save-location guidance. |
 | [`database/supabase-focus-card-storage.sql`](database/supabase-focus-card-storage.sql) | Supabase table, RLS, index, and trigger setup artifact. |
+| [`developer/README.md`](developer/README.md) | Developer notes folder policy and current no-build app guardrails. |
 | [`implementation-reports/focus-card-dol-risk-implementation-report.md`](implementation-reports/focus-card-dol-risk-implementation-report.md) | Completed Focus Card DOL/risk implementation report. |
-| [`qa/docs-implementation-checklist-2026-07-08.md`](qa/docs-implementation-checklist-2026-07-08.md) | Remaining external QA and release housekeeping checklist. |
+| [`qa/docs-implementation-checklist-2026-07-08.md`](qa/docs-implementation-checklist-2026-07-08.md) | Remaining production web/mobile-site QA and release housekeeping checklist. |
 | [`qa/release-qa-evidence-2026-07-08.md`](qa/release-qa-evidence-2026-07-08.md) | Recorded QA evidence from the July 8 release pass. |
+| [`qa/live-price-provider-qa-2026-07-09.md`](qa/live-price-provider-qa-2026-07-09.md) | Production price-provider endpoint QA for supported and unsupported symbols. |
+| [`qa/refactor-baseline-2026-07-09.md`](qa/refactor-baseline-2026-07-09.md) | Safe-refactor baseline evidence before any JavaScript extraction. |
+| [`qa/api-price-boundary-tests-2026-07-09.md`](qa/api-price-boundary-tests-2026-07-09.md) | Network-free `/api/price` boundary test evidence. |
 | [`release/release-decision-log-2026-07-08.md`](release/release-decision-log-2026-07-08.md) | Release decisions, deferred items, and rationale. |
+| [`user/README.md`](user/README.md) | User notes folder policy and current user-facing guarantees. |
 
 ## Archive
 

@@ -40,12 +40,16 @@ Decision pass for `docs/qa/docs-implementation-checklist-2026-07-08.md`.
 
 ## External Release Gates Still Pending
 
-These cannot be completed from the codebase alone:
+These should be recorded against the deployed web/mobile-site experience before public release:
 
-- Manual iOS Safari real-device QA.
-- Manual Android Chrome real-device QA.
-- PWA install verification.
-- Offline/service-worker verification in real browsers.
-- Full accessibility audit beyond automated smoke and keyboard skip-link coverage.
+- v0.8.5 production web QA for version/assets, admin login, Focus Card create/save/final-save/sync/reload, and clear-device behavior.
+- Mobile-site browser QA at supported responsive viewport widths for navigation, sticky actions, import/export usability, touch targets, and offline shell reload where supported by the browser test context.
+- Assistive-technology/browser accessibility follow-up beyond automated smoke and keyboard skip-link coverage.
 
-Until those are recorded, the recommendation is beta testing only, not public release.
+Physical-device testing is not required because the app is intended to run on the web or via the mobile site. Until the web/mobile-site gates are recorded, the recommendation is beta testing only, not public release.
+
+## External Release Gates Completed After Original Pass
+
+| Item | Decision | Evidence |
+|---|---|---|
+| Live price-provider endpoint QA | Completed for current production endpoint | `docs/qa/live-price-provider-qa-2026-07-09.md` records HTTP 200 for `MNQ` and HTTP 400 unsupported-symbol behavior. The live app shell still reported v0.8.4 during the check, so v0.8.5 deployment UI QA remains pending. |

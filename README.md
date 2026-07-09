@@ -17,10 +17,10 @@ A lightweight browser-based ICT planning tool for one focused job:
 
 - App type: static HTML/CSS/JavaScript
 - Build step: none
-- Runtime dependencies: none
+- Runtime dependencies: no build-time bundle; optional Supabase JS is loaded from CDN for Account & Backup
 - Dev QA dependencies: Playwright, installed only through `npm install`
 - Data storage: browser localStorage/sessionStorage with optional Supabase server sync for Focus Cards
-- Current app version: v0.8.4
+- Current app version: v0.8.5
 - Main entrypoint: index.html
 - Runtime config: assets/config.js
 - Stylesheet: assets/styles.css
@@ -313,7 +313,7 @@ ict_dol_sweep_cards_v2
 ict_slips_v1
 ```
 
-Data is not sent to a backend server. Clearing browser storage may remove saved cards, so users should use JSON export for backup.
+Data is local-first in the browser. If Account & Backup is enabled and the user signs in, Focus Cards and settings can sync to Supabase; otherwise the app remains usable without backend access. Clearing browser storage may remove local saved cards, so users should use JSON export for portable backup.
 
 The Profile page also includes a local-data backup reminder beside the Export JSON / Import JSON tools. `Clear this device data` removes cards, settings, planner drafts, local backup session state and pending sync metadata from the current browser only. It does not delete Supabase cloud backup; signing in again can restore backed-up Focus Cards.
 
@@ -341,15 +341,23 @@ Then open:
 http://localhost:8000
 ```
 
-## Smoke Test
+## Tests
 
-A lightweight static smoke test is included:
+Run the fast local test suite:
 
 ```bash
-node tests/smoke.js
+npm test
 ```
 
-The test checks the main files, app syntax, bias extension syntax, storage keys, migration, normalized card shape including Market Context, export/import round trip, import deduplication, final-save analytics, and primary mobile routes.
+`npm test` runs the static smoke suite, the Node unit helper suite, and the Python price API boundary suite:
+
+```bash
+npm run test:smoke
+npm run test:unit
+npm run test:api
+```
+
+The smoke test checks the main files, app syntax, retained legacy bias extension syntax, storage keys, migration, normalized card shape including Market Context, export/import round trip, import deduplication, final-save analytics, service-worker/cache alignment, and primary mobile routes. The unit helper suite protects core parsing, completion, distance, risk, normalization, export/import, and price-map helper behavior before future refactors. The API boundary suite tests `/api/price` missing-symbol, unsupported-symbol, provider-unavailable, and mocked successful response behavior without live market calls.
 
 ## Browser E2E Tests
 
@@ -415,11 +423,15 @@ ICT/
 │   │   └── superseded-design/
 │   ├── database/
 │   ├── daily-reports/
+│   ├── developer/
 │   ├── implementation-reports/
 │   ├── plans/
 │   ├── qa/
-│   └── release/
+│   ├── release/
+│   └── user/
 ├── tests/
+│   ├── api/
+│   ├── unit/
 │   ├── smoke.js
 │   └── e2e/
 ├── .github/
@@ -442,7 +454,7 @@ ICT/
 ## Known Limitations
 
 - Hosted yfinance lookup is optional; manual price entry remains the primary fallback.
-- Saved cards are browser-local only and are not synced across devices.
+- Saved cards are local-first in the current browser. Account & Backup can optionally sync Focus Cards and settings through Supabase after sign-in; JSON export remains the portable manual backup.
 - Screenshot support is metadata-only for v1.
-- Automated browser coverage now exists, but it does not replace real-device QA.
-- A linked PWA manifest and install icons are included, but manual iOS Safari, Android Chrome, PWA install, and offline behavior still need verification before a public release.
+- Automated browser coverage now exists, but production web and mobile-site browser QA should still be recorded after deployment.
+- A linked PWA manifest and install icons are included. Browser-based offline/service-worker behavior should be verified for the supported deployment before a public release; physical-device testing is not required for this web/mobile-site app.

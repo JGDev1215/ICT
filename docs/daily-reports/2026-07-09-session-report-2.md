@@ -117,8 +117,8 @@ Checks for this daily-report task:
 ## Risks Or Open Questions
 
 - v0.8.4 live production post-deployment QA still needs to be performed after the deployment has served the updated assets.
-- Real-device iOS Safari and Android Chrome behavior still need physical-device verification beyond Playwright emulation.
-- Full screen-reader behavior for the persistent live region should be checked with at least VoiceOver or another real assistive technology.
+- Production web and mobile-site browser behavior still need post-deployment responsive QA beyond mocked provider tests.
+- Full assistive-technology behavior for the persistent live region should be checked in the supported browser context where practical.
 - Account & Backup edge cases still need focused QA around local clear, sign-out, re-sign-in, cloud restore, and stale sync metadata.
 - Live price-provider behavior depends on yfinance/provider availability and should continue to preserve manual entry whenever provider lookup fails.
 
@@ -137,9 +137,10 @@ Checks for this daily-report task:
    - Save production v0.8.4 QA results in `docs/qa/`.
    - Record any live-only failures separately from mocked Playwright provider coverage.
 
-3. Complete physical-device QA:
-   - iOS Safari: layout, safe-area behavior, Add to Home Screen, offline reload, import/export usability.
-   - Android Chrome: install behavior, offline reload, import/export usability, touch targets.
+3. Complete mobile-site browser QA:
+   - Verify responsive layouts at the supported mobile viewport widths.
+   - Verify mobile-site navigation, sticky actions, import/export usability, offline reload behavior, and touch targets through browser-based production checks.
+   - Do not treat physical-device testing as required for this app because it is intended to run on the web or via the mobile site.
 
 4. Run an accessibility follow-up:
    - Check persistent live-region announcements with real assistive technology.

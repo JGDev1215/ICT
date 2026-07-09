@@ -1,6 +1,7 @@
-> Status: Current
+> Status: Historical
 > Last reviewed: 2026-07-09
-> Source of truth: Yes
+> Source of truth: No
+> Implementation status: Completed in v0.8.3; verify current behavior against runtime code, tests, README, and CHANGELOG.
 
 # Planner Validation and Price Auto-Detect Fix Plan
 
