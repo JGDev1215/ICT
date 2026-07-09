@@ -40,6 +40,8 @@ ALLOWED_ORIGINS = {
 CACHE_TTL_SECONDS = 30
 PRICE_CACHE = {}
 ROOT_DIR = Path(__file__).resolve().parents[1]
+# Retained for local single-function serving. Production Vercel serves static
+# assets separately and routes only /api/price to this function.
 STATIC_FILES = {
     "/": ROOT_DIR / "index.html",
     "/index.html": ROOT_DIR / "index.html",

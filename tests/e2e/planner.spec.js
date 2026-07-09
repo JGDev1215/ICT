@@ -97,6 +97,10 @@ test('price auto-detect populates current price from a mocked helper response', 
   await expect(page.locator('#instrument')).toHaveValue('MNQ');
   await expect(page.locator('#currentPrice')).toHaveValue('29750.5');
   await expect(page.locator('#priceStatusMessage')).toContainText('Detected from hosted yfinance API');
+  await expect(page.locator('#globalStatus')).toContainText('Price auto-detected from hosted yfinance API');
+
+  await page.locator("nav[aria-label='Primary'] [data-route='saved']").click();
+  await expect(page.locator('#globalStatus')).toHaveCount(1);
 });
 
 test('price auto-detect failure keeps manual price available', async ({page}) => {
@@ -115,8 +119,47 @@ test('price auto-detect failure keeps manual price available', async ({page}) =>
 
   await expect(page.locator('#currentPrice')).toHaveValue('12345');
   await expect(page.locator('#priceStatusMessage')).toContainText('Unsupported symbol');
+  await expect(page.locator('#globalStatus')).toContainText('Unsupported symbol');
   await page.locator('#currentPrice').fill('12346');
   await expect(page.locator('#currentPrice')).toHaveValue('12346');
+});
+
+test('clear this device data is local-only and clears sync metadata', async ({page}) => {
+  await page.evaluate(() => {
+    const api = window.ICTSweepState;
+    const card = api.createBlankDraft({id: 'clear-e2e', fields: {instrument: 'MNQ'}});
+    api.saveCards([card]);
+    localStorage.setItem('ict_supabase_sync_queue_v1', JSON.stringify({cards: {queued: card}, deletes: {old: true}, settings: {theme: 'dark'}}));
+    localStorage.setItem('ict_supabase_tombstones_v1', JSON.stringify({old: '2026-07-09T00:00:00.000Z'}));
+    localStorage.setItem('ict_supabase_account_sync_v1', JSON.stringify({user: {localUpload: 'approved'}}));
+    api.go('profile');
+  });
+
+  await expect(page.getByText('Clear this device data')).toBeVisible();
+  page.once('dialog', async dialog => {
+    expect(dialog.message()).toContain('Cloud backup is not deleted');
+    await dialog.accept();
+  });
+  await page.locator('#clearDataBtn').click();
+
+  await expect(page.locator('.save-state.warn')).toContainText('This device data was cleared');
+  await expect(page.locator('.save-state.warn')).toHaveAttribute('role', 'status');
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().length)).toBe(0);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('ict_cards_v078'))).toBeNull();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('ict_supabase_sync_queue_v1'))).toBeNull();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('ict_supabase_tombstones_v1'))).toBeNull();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('ict_supabase_account_sync_v1'))).toBeNull();
+});
+
+test('bad notices render as alerts', async ({page}) => {
+  await page.evaluate(() => {
+    window.ICTSweepState.setNotice('Forced failure notice.', 'bad');
+    window.ICTSweepState.go('home');
+  });
+
+  await expect(page.locator('.save-state.bad')).toContainText('Forced failure notice.');
+  await expect(page.locator('.save-state.bad')).toHaveAttribute('role', 'alert');
+  await expect(page.locator('#globalStatus')).toContainText('Forced failure notice.');
 });
 
 test('planner skip link reaches sticky actions without changing route', async ({page}) => {

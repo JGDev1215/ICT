@@ -20,7 +20,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 - Runtime dependencies: none
 - Dev QA dependencies: Playwright, installed only through `npm install`
 - Data storage: browser localStorage/sessionStorage with optional Supabase server sync for Focus Cards
-- Current app version: v0.8.3
+- Current app version: v0.8.4
 - Main entrypoint: index.html
 - Runtime config: assets/config.js
 - Stylesheet: assets/styles.css
@@ -119,6 +119,8 @@ window.ICT_CONFIG = Object.assign({
   priceRefreshSeconds: 30
 }, window.ICT_CONFIG || {});
 ```
+
+The local `127.0.0.1:8765` helper is used only from localhost, `127.0.0.1`, file-based local testing, or an explicit local fallback override. Production HTTPS pages skip that fallback and keep manual price entry available.
 
 For one-off embeds, the legacy override still works when it is defined before `assets/app.js` loads:
 
@@ -313,7 +315,9 @@ ict_slips_v1
 
 Data is not sent to a backend server. Clearing browser storage may remove saved cards, so users should use JSON export for backup.
 
-The Profile page also includes a local-data backup reminder beside the Export JSON / Import JSON tools.
+The Profile page also includes a local-data backup reminder beside the Export JSON / Import JSON tools. `Clear this device data` removes cards, settings, planner drafts, local backup session state and pending sync metadata from the current browser only. It does not delete Supabase cloud backup; signing in again can restore backed-up Focus Cards.
+
+JSON imports preserve compatibility with `ict_dol_sweep_export_v7`. Files with another schema are imported best-effort when they contain valid cards, and the app shows a warning instead of blocking the import.
 
 The Profile page includes a Beta feedback link to:
 

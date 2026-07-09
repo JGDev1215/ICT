@@ -2,53 +2,70 @@
 
 ## Goal
 
-Run live production QA for the hosted price-provider behavior after pushing the Planner validation and price auto-detect fix.
+Implement the v0.8.4 review feedback remediation patch with focused runtime, documentation, and test changes.
 
 ## Repo Findings
 
-- Production URL: `https://ictict-lake.vercel.app`.
-- The app should now expose `v0.8.3` once the Vercel deployment completes.
-- The direct price endpoint and Planner UI both need live-provider checks.
+- `docs/plans/review-fix-report-2026-07-09.md` confirms H1/M1/M2/M3/L1/L2/L3/L4/SW1 as the scoped remediation items.
+- Existing tests expose app internals through `window.ICTSweepState`, allowing targeted smoke tests.
+- Playwright already covers Planner and release QA flows and can add clear-device/notice/live-region tests.
 
 ## Files Likely Affected
 
+- `assets/app.js`
+- `api/price.py`
+- `index.html`
+- `service-worker.js`
+- `README.md`
+- `CHANGELOG.md`
+- `CLAUDE.md`
+- `tests/smoke.js`
+- `tests/e2e/planner.spec.js`
 - `agent-workflow/*`
 
 ## Proposed Changes
 
-- No app code changes planned.
-- Update workflow evidence only.
+- Add notice severity and persistent live-region helpers.
+- Convert touched notices to `setNotice`.
+- Add local-only clear-device helper and UI copy.
+- Add import reader error handling and schema warnings.
+- Guard local price fallback by origin.
+- Add comment for `api/price.py` static serving.
+- Bump to v0.8.4 and update docs/tests.
 
 ## Step-by-Step Plan
 
-1. Poll the live app HTML until it serves `v0.8.3` or a timeout makes deployment delay clear.
-2. Call `https://ictict-lake.vercel.app/api/price?symbol=MNQ` and verify a positive numeric price response.
-3. Call `https://ictict-lake.vercel.app/api/price?symbol=NOTREAL` and verify graceful unsupported-symbol behavior.
-4. Use Playwright against `https://ictict-lake.vercel.app` to verify Planner Auto-detect for `MNQ` populates current price and visible detected status.
-5. Use Playwright to verify unsupported-symbol fallback preserves manual price entry.
-6. Record execution, review, senior decision, final approval, and summary.
+1. Update workflow evidence and approved plan.
+2. Inspect current functions around notices, clear data, import, price helpers, version/cache, and tests.
+3. Patch `assets/app.js` in small sections.
+4. Patch `api/price.py` comment.
+5. Run version bump tooling for v0.8.4 if safe, then adjust docs/tests.
+6. Add smoke and Playwright coverage.
+7. Run required checks.
+8. Review diff for unrelated changes and update final workflow evidence.
 
 ## Acceptance Criteria
 
-- Live deployment is confirmed to be the pushed `v0.8.3` build, or deployment delay is documented.
-- Supported live provider lookup succeeds for `MNQ`.
-- Unsupported live provider lookup fails gracefully.
-- Planner UI works with live provider for supported symbol.
-- Planner UI keeps manual entry usable after unsupported lookup.
+- Clear-device behavior cannot silently queue cloud deletes and does not leave stale sync metadata.
+- Error notices no longer render as success.
+- A persistent live region is present and updated after re-renders.
+- Manual price fallback remains available.
+- Storage/export compatibility is preserved.
+- v0.8.4 cache and docs are consistent.
 
 ## Test Plan
 
-- `curl -L https://ictict-lake.vercel.app`
-- `curl -i https://ictict-lake.vercel.app/api/price?symbol=MNQ`
-- `curl -i https://ictict-lake.vercel.app/api/price?symbol=NOTREAL`
-- Playwright live browser script against `https://ictict-lake.vercel.app`
+- `node tests/smoke.js`
+- `npx playwright test tests/e2e/planner.spec.js`
+- `npx playwright test`
+- `python3 -m py_compile api/price.py`
 
 ## Risks
 
-- Vercel deployment may lag behind the pushed commit.
-- yfinance/provider availability may be transient.
-- Live browser service worker cache may serve old assets unless a fresh context or cache-busted reload is used.
+- Shared notice rendering touches many flows.
+- Local clear while Supabase auth events are active may re-render unexpectedly.
+- Price helper URL tests require simulating different origins in the smoke harness.
 
 ## Rollback Plan
 
-No code rollback is planned for QA-only work. If a production defect is found, create a separate fix plan before editing app code.
+Revert this task's changes only. Existing workflow/report changes from before this task must not be reverted unless explicitly requested.

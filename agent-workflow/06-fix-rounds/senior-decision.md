@@ -6,12 +6,12 @@ APPROVED
 
 ## Reasoning
 
-The live production price-provider QA passed for supported `MNQ`, unsupported `NOTREAL`, and Planner manual fallback behavior.
+The required v0.8.4 fixes are implemented, scoped to the approved plan, and verified by smoke, targeted browser, full browser, and Python checks.
 
 ## Required Fixes
 
-None.
+None remaining.
 
 ## Next Action
 
-Finalize QA workflow evidence and report results to the user.
+Handoff for user review. Do not commit or push unless explicitly instructed.

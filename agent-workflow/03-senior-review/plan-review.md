@@ -2,29 +2,33 @@
 
 ## Plan Quality
 
-The plan is appropriately scoped to live QA and avoids app code changes.
+The plan is focused on the approved v0.8.4 remediation scope and avoids broad modularization.
 
 ## Missing Steps
 
-None.
+No blocking missing steps. The execution must preserve existing uncommitted workflow/report work.
 
 ## Risk Areas
 
-- Deployment lag could make a valid push appear stale.
-- Provider/network issues could be transient and should be reported as observed rather than treated as code defects without evidence.
+- Notice severity conversion could miss some failure paths.
+- Persistent live-region implementation must not break route rendering or Playwright selectors.
+- Clear-device behavior must not accidentally queue remote deletes or trigger immediate restore.
+- Version/cache updates must stay aligned with service worker and smoke assertions.
 
 ## Overengineering Concerns
 
-Do not add permanent test files for a one-off live QA pass unless a repeatable regression is discovered.
+Do not split `assets/app.js` or redesign shell markup beyond the minimum needed for persistent live announcements.
 
 ## Simpler Alternatives
 
-Use direct `curl` for endpoint checks and a short Playwright one-off script for UI behavior.
+Use in-file helpers and existing test harness instead of introducing modules or dependencies.
 
 ## Required Amendments
 
-None.
+- Keep `api/price.py` static serving and only document/comment it.
+- Add explicit tests for local-only clear and production price fallback.
+- Use v0.8.4 cache/version updates because JS behavior changes are shipping.
 
 ## Decision
 
-APPROVED
+APPROVED WITH AMENDMENTS

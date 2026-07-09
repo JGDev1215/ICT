@@ -1,25 +1,30 @@
 # Approved Plan
 
-## Decision
+## Goal
 
-Approved.
+Implement the v0.8.4 review feedback patch while preserving local-first behavior, storage/export compatibility, manual price fallback, and optional Supabase sync.
 
-## Execution Scope
+## Approved Scope
 
-Run live production QA only. Do not edit runtime app code.
+- Device-local clear-data behavior and copy.
+- Notice severity and persistent live-region behavior.
+- Import reader error and unknown-schema warning.
+- Production HTTPS price fallback guard.
+- `api/price.py` static-serving comment only.
+- v0.8.4 version/cache/docs/tests.
 
-## Steps Approved For Execution
+## Execution Rules
 
-1. Poll live production HTML/assets for `v0.8.3`.
-2. Test live supported endpoint: `/api/price?symbol=MNQ`.
-3. Test live unsupported endpoint: `/api/price?symbol=NOTREAL`.
-4. Test live Planner Auto-detect for supported `MNQ`.
-5. Test live Planner fallback/manual entry behavior for unsupported symbol.
-6. Record results in workflow reports.
+- Do not modularize `assets/app.js`.
+- Do not delete `api/price.py` static serving.
+- Do not change storage key or export schema.
+- Do not make Supabase schema changes.
+- Preserve existing uncommitted workflow/report work.
+- Do not commit or push.
 
-## Acceptance Criteria
+## Approved Tests
 
-- Live app version is confirmed or deployment lag documented.
-- Supported live provider lookup returns positive numeric price.
-- Unsupported live lookup fails gracefully.
-- Planner Auto-detect and fallback behavior work against production.
+- `node tests/smoke.js`
+- `npx playwright test tests/e2e/planner.spec.js`
+- `npx playwright test`
+- `python3 -m py_compile api/price.py`

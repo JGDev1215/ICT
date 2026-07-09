@@ -3,21 +3,27 @@
 User task:
 
 ```text
-git status
-git diff
-git add .
-git commit -m "fix: validate planner saves and price auto-detect"
-git push
+PLEASE IMPLEMENT THIS PLAN:
+# v0.8.4 Review Feedback Fix Plan
 
-Next TasK: Live production price-provider behavior still needs post-deployment QA because automated price tests use mocked provider responses.
+Ship a focused v0.8.4 remediation patch for the review findings in `docs/plans/review-fix-report-2026-07-09.md`.
+
+Primary items:
+- Make Clear all local data device-local only and explicit.
+- Add notice severity and persistent live-region behavior.
+- Add FileReader import error handling.
+- Add soft import schema warning.
+- Skip local 127.0.0.1 price fallback on production HTTPS.
+- Keep api/price.py static serving with documentation/comment.
+- Update CLAUDE.md, README, CHANGELOG, version/cache strings, smoke and Playwright tests.
+- Preserve local-first behavior, manual price fallback, storage key, export schema, migrations, and optional Supabase sync.
+- Do not modularize assets/app.js.
+- Do not commit or push unless explicitly instructed.
 ```
 
-Commit/push portion completed before this live-QA workflow:
+Current uncommitted work identified before implementation:
 
-- Commit: `18c3149 fix: validate planner saves and price auto-detect`
-- Push: `main` pushed to `https://github.com/JGDev1215/ICT.git`
+- Existing modified `agent-workflow/*` files from the prior prompt/planning task.
+- Untracked `docs/plans/review-fix-report-2026-07-09.md`.
 
-Current task scope:
-
-- Run live production QA for the hosted price-provider behavior after the pushed Planner/price fix.
-- Do not make app code changes unless QA finds a defect that requires a separate planned fix.
+These are preserved and incorporated into this implementation task.

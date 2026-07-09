@@ -83,12 +83,15 @@ ok(hostedPriceUrl.pathname === '/api/price', 'default hosted price API URL inval
 ok(appSource.includes("root.location.origin") && appSource.includes("/api/price"), 'same-origin Vercel price API fallback missing');
 ok(appSource.includes('priceHelperUrl'), 'price helper URL boundary missing');
 ok(appSource.includes('localPriceHelperUrl'), 'local price helper fallback missing');
+ok(appSource.includes('function localPriceFallbackAllowed'), 'local price fallback host guard missing');
 ok(appSource.includes('function cleanUrl'), 'URL sanitizer missing');
 ok(appSource.includes('priceHistoryEvent === false'), 'metadata-only update price-history guard missing');
 ok(appSource.includes('fetchJsonWithTimeout'), 'price API timeout helper missing');
 ok(appSource.includes('function getMetrics'), 'getMetrics helper missing');
 ok(appSource.includes('function exportCards'), 'exportCards helper missing');
 ok(appSource.includes('function importCards'), 'importCards helper missing');
+ok(appSource.includes('reader.onerror'), 'import file read errors should surface a notice');
+ok(appSource.includes('function importSchemaWarning'), 'import schema warning helper missing');
 ok(appSource.includes('DEFAULT_SUPABASE_URL'), 'default Supabase URL missing');
 ok(appSource.includes('function getSupabaseClient'), 'Supabase client helper missing');
 ok(appSource.includes('function syncFromSupabase'), 'Supabase sync helper missing');
@@ -113,6 +116,7 @@ ok(appSource.includes('marketContext'), 'market context field missing');
 ok(appSource.includes('Bias Determination For Session'), 'session-scoped bias label missing');
 ok(appSource.includes('Before 10:30am NY'), 'pre-10:30 NY warning missing');
 ok(appSource.includes('Start new analysis'), 'home action missing');
+ok(appSource.includes('function setNotice') && appSource.includes('function announce') && appSource.includes('globalStatus'), 'notice severity and persistent live-region helpers missing');
 ok(appSource.includes('function renderShell'), 'app shell renderer missing');
 ok(appSource.includes('function renderTabBar'), 'tab bar renderer missing');
 ok(appSource.includes('ROUTES.includes(routeName)'), 'hash router should ignore non-route anchors');
@@ -146,6 +150,7 @@ ok(css.includes('.override-panel'), 'override panel css missing');
 ok(css.includes('.price-history-compact'), 'compact price history css missing');
 ok(css.includes('.draft-state'), 'visible draft-state styling missing');
 ok(css.includes('.skip-link'), 'skip link styling missing');
+ok(css.includes('.sr-only'), 'screen-reader-only utility missing');
 ok(css.includes('.price-validation'), 'price validation styling missing');
 ok(css.includes('.price-status'), 'price status styling missing');
 ok(readme.includes('## Price Map Ladder'), 'README price map section missing');
@@ -404,8 +409,13 @@ ok(api.priceApiBase() === 'https://example.vercel.app/api/price', 'configured pr
 delete metricsFixture.context.ICT_PRICE_API_BASE;
 ok(api.supabaseConfig().url === 'https://cdcqklvvswzipmmvpzaj.supabase.co', 'default Supabase project URL invalid');
 ok(api.adminSupabaseEmail() === 'admin@ict.local', 'default admin backing email invalid');
-ok(api.priceHelperUrls('MNQ').includes(api.localPriceHelperUrl('MNQ')), 'price helper URLs should include local fallback without network access');
+ok(!api.priceHelperUrls('MNQ').includes(api.localPriceHelperUrl('MNQ')), 'production HTTPS price helper URLs should skip local fallback');
+metricsFixture.context.location = {hostname: 'localhost', origin: 'http://localhost:8000', protocol: 'http:'};
+ok(api.priceHelperUrls('MNQ').includes(api.localPriceHelperUrl('MNQ')), 'localhost price helper URLs should include local fallback');
+metricsFixture.context.location = {hostname: hostedPriceUrl.hostname, origin: hostedPriceUrl.origin, protocol: 'https:'};
 ok(api.priceHelperUrl(' mnq ').endsWith('?symbol=MNQ'), 'price helper URL should normalize symbols before lookup');
+ok(api.noticeClass('bad') === 'bad' && api.noticeRole('bad') === 'alert', 'bad notices should render as alerts');
+ok(api.noticeClass('warn') === 'warn' && api.noticeRole('warn') === 'status', 'warn notices should render as status messages');
 ok(api.priceNumber('20123.50') === 20123.5, 'plain decimal price should parse');
 ok(api.priceNumber('20,123.50') === 20123.5, 'comma thousands price should parse without changing meaning');
 ok(api.priceNumber('N/A') === null, 'N/A price should not parse as numeric');
@@ -624,6 +634,26 @@ ok(api.getCards().find(card => card.id === 'hit').priceHistory.length === histor
 ok(api.deleteCard('draft-miss') === true, 'deleteCard did not report deletion');
 ok(!api.getCards().find(card => card.id === 'draft-miss'), 'deleteCard did not remove card');
 
+const clearFixture = runApp({
+  ict_cards_v078: JSON.stringify([api.normaliseCard({id: 'clear-card', fields: {instrument: 'MNQ'}})]),
+  ict_settings_v1: JSON.stringify({defaultInstrument: 'ES'}),
+  ict_planner_draft_v1: JSON.stringify({fields: {instrument: 'NQ'}}),
+  ict_bias_card_meta_v1: JSON.stringify({some: 'meta'}),
+  ict_supabase_sync_queue_v1: JSON.stringify({cards: {queued: {}}, deletes: {old: true}, settings: {defaultInstrument: 'YM'}}),
+  ict_supabase_tombstones_v1: JSON.stringify({old: '2026-07-09T00:00:00.000Z'}),
+  ict_supabase_account_sync_v1: JSON.stringify({user: {localUpload: 'approved'}}),
+  ict_cards_v077: JSON.stringify([{id: 'legacy-clear'}])
+});
+const clearApi = clearFixture.context.ICTSweepState;
+ok(clearApi.getCards().length === 1, 'clear fixture should start with one card');
+clearApi.clearDeviceData();
+const clearDump = clearFixture.storage.dump();
+ok(clearApi.getCards().length === 0, 'clearDeviceData should clear in-memory cards');
+ok(clearDump.ict_cards_v078 == null, 'clearDeviceData should remove current card storage');
+ok(clearDump.ict_settings_v1 == null && clearDump.ict_planner_draft_v1 == null && clearDump.ict_bias_card_meta_v1 == null, 'clearDeviceData should remove local app metadata');
+ok(clearDump.ict_supabase_sync_queue_v1 == null && clearDump.ict_supabase_tombstones_v1 == null && clearDump.ict_supabase_account_sync_v1 == null, 'clearDeviceData should remove local sync metadata');
+ok(clearDump.ict_cards_v077 == null, 'clearDeviceData should remove legacy card keys');
+
 const exported = api.exportCards();
 ok(exported.schema === 'ict_dol_sweep_export_v7', 'export schema invalid');
 ok(exported.analytics.sample === 2, 'export analytics invalid');
@@ -649,6 +679,14 @@ const beforeInvalidImportCount = api.getCards().length;
 const invalidImport = api.importCards({notCards: true});
 ok(invalidImport.imported === 0, 'invalid import payload should not import cards');
 ok(api.getCards().length === beforeInvalidImportCount, 'invalid import should not alter saved cards');
+
+const schemaWarningImport = api.importCards({
+  schema: 'ict_dol_sweep_export_v6',
+  cards: [api.normaliseCard({id: 'schema-warning-import', fields: {instrument: 'CL'}})]
+});
+ok(schemaWarningImport.imported === 1, 'schema mismatch should still import valid cards');
+ok(schemaWarningImport.warning && schemaWarningImport.warning.includes('expected "ict_dol_sweep_export_v7"'), 'schema mismatch should return a warning');
+ok(api.getCards().find(card => card.id === 'schema-warning-import'), 'schema mismatch import should preserve valid card');
 
 const duplicateImport = api.importCards({
   cards: [
@@ -913,7 +951,7 @@ ok(!routes.appNode.innerHTML.includes('Create account'), 'profile should not exp
 ok(routes.appNode.innerHTML.includes("id='exportJsonBtn'>Export data"), 'profile primary JSON export action missing');
 ok(routes.appNode.innerHTML.includes("id='feedbackLink'") && routes.appNode.innerHTML.includes('https://github.com/JGDev1215/ICT/issues/new'), 'profile beta feedback link missing');
 ok(routes.appNode.innerHTML.includes("data-route='component-gallery'"), 'profile component gallery link missing');
-ok(routes.appNode.innerHTML.includes('Clear all local data'), 'profile clear action missing');
+ok(routes.appNode.innerHTML.includes('Clear this device data'), 'profile clear action missing');
 
 routeApi.go('component-gallery');
 ok(routes.appNode.innerHTML.includes('Component Gallery'), 'component gallery route did not render');

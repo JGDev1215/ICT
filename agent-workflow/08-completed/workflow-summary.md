@@ -2,7 +2,7 @@
 
 ## User Task
 
-Commit and push the Planner validation / price auto-detect fix, then run live production price-provider QA.
+Implement the approved v0.8.4 Review Feedback Fix Plan.
 
 ## Local Path
 
@@ -27,29 +27,22 @@ Commit and push the Planner validation / price auto-detect fix, then run live pr
 
 ## Files Changed
 
-- `agent-workflow/00-inbox/current-task.md`
-- `agent-workflow/01-intake/task-brief.md`
-- `agent-workflow/02-plans/implementation-plan.md`
-- `agent-workflow/03-senior-review/plan-review.md`
-- `agent-workflow/03-senior-review/approved-plan.md`
-- `agent-workflow/04-execution/execution-report.md`
-- `agent-workflow/05-code-review/review-report.md`
-- `agent-workflow/06-fix-rounds/senior-decision.md`
-- `agent-workflow/07-final-review/final-approval.md`
-- `agent-workflow/08-completed/workflow-summary.md`
+- `CHANGELOG.md`
+- `CLAUDE.md`
+- `README.md`
+- `api/price.py`
+- `assets/app.js`
+- `assets/styles.css`
+- `index.html`
+- `service-worker.js`
+- `tests/e2e/planner.spec.js`
+- `tests/smoke.js`
+- `agent-workflow/*`
 
 ## Workflow Files Created
 
-- `agent-workflow/00-inbox/current-task.md`
-- `agent-workflow/01-intake/task-brief.md`
-- `agent-workflow/02-plans/implementation-plan.md`
-- `agent-workflow/03-senior-review/plan-review.md`
-- `agent-workflow/03-senior-review/approved-plan.md`
-- `agent-workflow/04-execution/execution-report.md`
-- `agent-workflow/05-code-review/review-report.md`
-- `agent-workflow/06-fix-rounds/senior-decision.md`
-- `agent-workflow/07-final-review/final-approval.md`
-- `agent-workflow/08-completed/workflow-summary.md`
+- Updated required workflow files for this task.
+- Created `agent-workflow/06-fix-rounds/fix-report.md`.
 
 ## Checks Performed
 
@@ -57,14 +50,11 @@ Commit and push the Planner validation / price auto-detect fix, then run live pr
 - `git remote -v`
 - `git status`
 - `find . -maxdepth 3 -type f | sed 's#^\./##' | sort | head -200`
-- `git diff`
-- `git add .`
-- `git commit -m "fix: validate planner saves and price auto-detect"`
-- `git push`
-- `curl -L https://ictict-lake.vercel.app`
-- `curl -i https://ictict-lake.vercel.app/api/price?symbol=MNQ`
-- `curl -i https://ictict-lake.vercel.app/api/price?symbol=NOTREAL`
-- One-off Playwright live browser QA script
+- `node tests/smoke.js`
+- `npx playwright test tests/e2e/planner.spec.js`
+- `npx playwright test`
+- `python3 -m py_compile api/price.py`
+- `git diff --check`
 
 ## Final Decision
 
@@ -72,4 +62,4 @@ SAFE TO COMMIT
 
 ## Recommended Next Step
 
-Commit the workflow-only live QA evidence if a persistent audit trail is desired.
+Review the diff, then commit if approved.

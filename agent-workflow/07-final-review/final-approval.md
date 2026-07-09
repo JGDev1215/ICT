@@ -23,28 +23,32 @@ YES
 ## Tests / Checks Completed
 
 - Safety check passed.
-- Production app version check passed: `v0.8.3`.
-- Live `MNQ` price API check passed with HTTP `200` and price `29682.5`.
-- Live `NOTREAL` price API check passed with HTTP `400` and `unsupported symbol`.
-- Live Planner UI check passed for supported auto-detect and unsupported fallback/manual price preservation.
+- `node tests/smoke.js` passed.
+- `npx playwright test tests/e2e/planner.spec.js` passed: 30 passed.
+- `npx playwright test` passed: 44 passed, 1 skipped.
+- `python3 -m py_compile api/price.py` passed.
+- `git diff --check` passed.
 
 ## Files Changed
 
-- `agent-workflow/00-inbox/current-task.md`
-- `agent-workflow/01-intake/task-brief.md`
-- `agent-workflow/02-plans/implementation-plan.md`
-- `agent-workflow/03-senior-review/plan-review.md`
-- `agent-workflow/03-senior-review/approved-plan.md`
-- `agent-workflow/04-execution/execution-report.md`
-- `agent-workflow/05-code-review/review-report.md`
-- `agent-workflow/06-fix-rounds/senior-decision.md`
-- `agent-workflow/07-final-review/final-approval.md`
-- `agent-workflow/08-completed/workflow-summary.md`
+- `CHANGELOG.md`
+- `CLAUDE.md`
+- `README.md`
+- `api/price.py`
+- `assets/app.js`
+- `assets/styles.css`
+- `index.html`
+- `service-worker.js`
+- `tests/e2e/planner.spec.js`
+- `tests/smoke.js`
+- `agent-workflow/*`
+- `docs/plans/review-fix-report-2026-07-09.md` remains untracked input/report file.
 
 ## Remaining Risks
 
-- yfinance is an external provider and can have transient outages or delayed data.
+- Physical-device iOS/Android PWA QA and full screen-reader audit remain external gates.
+- Cloud backup is intentionally not deleted by `Clear this device data`; signing in again can restore backed-up cards.
 
 ## Recommended Commit Message
 
-`docs: record live price provider qa`
+`fix: address review feedback for local clear and notices`

@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'v0.8.3';
+  const VERSION = 'v0.8.4';
   const KEY = 'ict_cards_v078';
   const SETTINGS_KEY = 'ict_settings_v1';
   const DRAFT_KEY = 'ict_planner_draft_v1';
@@ -35,6 +35,7 @@
   const ADMIN_USERNAME = 'admin';
   const DEFAULT_ADMIN_SUPABASE_EMAIL = 'admin@ict.local';
   const ROUTES = ['home','planner','saved','journal','profile','focus','review','timeline','liquidity-map','risk','component-gallery'];
+  const NOTICE_LEVELS = ['good','warn','bad'];
 
   const instruments = ['MNQ','NQ','MES','ES','MYM','YM','RTY','M2K','MGC','GC','CL','BTCUSD','ETHUSD','EURUSD','GBPUSD'];
   const draws = [
@@ -454,7 +455,7 @@
   }
 
   function priceStatusHtml(){
-    return `<div class='price-status ${priceStatusClass()}' id='priceStatusMessage' role='status'>${esc(priceStatusMessage())}</div>`;
+    return `<div class='price-status ${priceStatusClass()}' id='priceStatusMessage'>${esc(priceStatusMessage())}</div>`;
   }
 
   function trimSlash(s){
@@ -482,8 +483,16 @@
     const normal = normalizePriceSymbol(symbol);
     const urls = [priceHelperUrl(normal)];
     const local = localPriceHelperUrl(normal);
-    if(!urls.includes(local)) urls.push(local);
+    if(localPriceFallbackAllowed() && !urls.includes(local)) urls.push(local);
     return urls;
+  }
+
+  function localPriceFallbackAllowed(){
+    if(runtimeConfig.localPriceFallback === true || runtimeConfig.useLocalPriceApi === true) return true;
+    if(!root.location) return true;
+    const host = root.location.hostname || '';
+    const protocol = root.location.protocol || '';
+    return host === 'localhost' || host === '127.0.0.1' || protocol === 'file:' || host === '';
   }
 
   function fetchJsonWithTimeout(url, ms){
@@ -775,6 +784,13 @@
     return [];
   }
 
+  function importSchemaWarning(payload){
+    if(payload && !Array.isArray(payload) && payload.schema && payload.schema !== SCHEMA){
+      return 'Imported file uses schema "' + asText(payload.schema) + '"; expected "' + SCHEMA + '". Cards were normalized best-effort.';
+    }
+    return '';
+  }
+
   function persistCards(nextCards){
     const store = storage();
     if(!store) return true;
@@ -969,8 +985,10 @@
   }
 
   function importCards(payload){
-    const incoming = extractPayload(payload).map(normaliseCard);
-    if(!incoming.length) return {imported: 0, cards: getCards()};
+    const parsed = typeof payload === 'string' ? parse(payload, null) : payload;
+    const warning = importSchemaWarning(parsed);
+    const incoming = extractPayload(parsed).map(normaliseCard);
+    if(!incoming.length) return warning ? {imported: 0, cards: getCards(), warning} : {imported: 0, cards: getCards()};
 
     const byId = {};
     cards.concat(incoming).forEach(card => {
@@ -982,8 +1000,8 @@
     });
     const merged = Object.values(byId).sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
     saveCards(merged);
-    if(lastStorageError) return {imported: 0, cards: getCards(), error: lastStorageError};
-    return {imported: incoming.length, cards: getCards()};
+    if(lastStorageError) return warning ? {imported: 0, cards: getCards(), error: lastStorageError, warning} : {imported: 0, cards: getCards(), error: lastStorageError};
+    return warning ? {imported: incoming.length, cards: getCards(), warning} : {imported: incoming.length, cards: getCards()};
   }
 
   function getSyncQueue(){
@@ -1499,6 +1517,32 @@
     });
   }
 
+  function clearDeviceData(){
+    const store = storage();
+    if(store){
+      [KEY, SETTINGS_KEY, DRAFT_KEY, 'ict_bias_card_meta_v1', SYNC_QUEUE_KEY, SYNC_TOMBSTONES_KEY, SYNC_ACCOUNT_DECISIONS_KEY]
+        .concat(LEGACY)
+        .forEach(k => store.removeItem(k));
+    }
+    const client = getSupabaseClient();
+    const signOut = (supabaseUser || supabaseSession) && client && client.auth && client.auth.signOut
+      ? client.auth.signOut().catch(() => false)
+      : Promise.resolve(false);
+    supabaseSession = null;
+    supabaseUser = null;
+    syncState = Object.assign({}, syncState, {
+      configured: !!client,
+      status: client ? 'Login required' : 'Local only',
+      message: client ? 'This device was cleared. Sign in again to restore cloud backup.' : 'Cloud backup is unavailable in this build.',
+      busy: false,
+      firstSyncPaused: false
+    });
+    cards = [];
+    reviewId = '';
+    startDraft(null, {persist: false});
+    return signOut;
+  }
+
   function profileFormSettings(lookup, themeOverride){
     const find = typeof lookup === 'function' ? lookup : id => doc ? doc.getElementById(id) : null;
     const current = getSettings();
@@ -1722,6 +1766,7 @@
   let cards = loadCards();
   let reviewId = '';
   let notice = '';
+  let noticeLevel = 'good';
   let homeSession = 'All';
   let priceFetchState = '';
   let lastPriceSource = 'manual';
@@ -1744,6 +1789,69 @@
     remoteCardCount: null,
     firstSyncPaused: false
   };
+
+  function normaliseNoticeLevel(level){
+    return NOTICE_LEVELS.includes(level) ? level : 'good';
+  }
+
+  function noticeClass(level){
+    return normaliseNoticeLevel(level);
+  }
+
+  function noticeRole(level){
+    return normaliseNoticeLevel(level) === 'bad' ? 'alert' : 'status';
+  }
+
+  function ensureLiveRegion(){
+    if(!doc) return null;
+    let node = doc.getElementById && doc.getElementById('globalStatus');
+    if(node) return node;
+    if(!doc.createElement) return null;
+    node = doc.createElement('div');
+    node.id = 'globalStatus';
+    node.className = 'sr-only';
+    if(node.setAttribute){
+      node.setAttribute('role', 'status');
+      node.setAttribute('aria-live', 'polite');
+      node.setAttribute('aria-atomic', 'true');
+    } else {
+      node.role = 'status';
+      node.ariaLive = 'polite';
+      node.ariaAtomic = 'true';
+    }
+    if(app && app.parentNode && app.parentNode.insertBefore) app.parentNode.insertBefore(node, app);
+    else if(doc.body && doc.body.appendChild) doc.body.appendChild(node);
+    return node;
+  }
+
+  function announce(message, level){
+    const text = asText(message);
+    if(!text) return;
+    const node = ensureLiveRegion();
+    if(!node) return;
+    const nextLevel = normaliseNoticeLevel(level);
+    const role = noticeRole(nextLevel);
+    const live = nextLevel === 'bad' ? 'assertive' : 'polite';
+    if(node.setAttribute){
+      node.setAttribute('role', role);
+      node.setAttribute('aria-live', live);
+      node.setAttribute('aria-atomic', 'true');
+    } else {
+      node.role = role;
+      node.ariaLive = live;
+      node.ariaAtomic = 'true';
+    }
+    node.textContent = '';
+    if(typeof setTimeout === 'function') setTimeout(() => { node.textContent = text; }, 0);
+    else node.textContent = text;
+  }
+
+  function setNotice(message, level){
+    notice = asText(message);
+    noticeLevel = normaliseNoticeLevel(level);
+    announce(notice, noticeLevel);
+    return notice;
+  }
 
   const api = {
     KEY,
@@ -1779,6 +1887,11 @@
     priceHelperUrl,
     localPriceHelperUrl,
     priceHelperUrls,
+    localPriceFallbackAllowed,
+    noticeClass,
+    noticeRole,
+    setNotice,
+    clearDeviceData,
     supabaseConfig,
     adminSupabaseEmail,
     getSyncQueue,
@@ -2227,7 +2340,7 @@
 
   function renderShell(content){
     const skip = route === 'planner' ? `<a class='skip-link' href='#plannerActions'>Skip to planner actions</a>` : '';
-    return `<div class='app-shell'>${skip}<main class='app-main'>${notice ? `<div class='save-state good' role='status'>${esc(notice)}</div>` : ''}${content}</main>${fabHtml()}${renderTabBar(activeTab())}</div>`;
+    return `<div class='app-shell'>${skip}<main class='app-main'>${notice ? `<div class='save-state ${noticeClass(noticeLevel)}' role='${noticeRole(noticeLevel)}'>${esc(notice)}</div>` : ''}${content}</main>${fabHtml()}${renderTabBar(activeTab())}</div>`;
   }
 
   function home(){
@@ -2248,7 +2361,7 @@
     const draftMessage = lastDraftState || (plannerHasInput(f, marketContextDraft, plannerCardId) ? 'Autosave ready. Planner changes are kept locally before you save a card.' : 'No active planner draft.');
     const validation = plannerValidationState(f, marketContextDraft, plannerCardId);
     const validationHtml = plannerValidationMode ? plannerValidationHtml(validation, plannerValidationMode) : '';
-    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats your inputs only. It does not call external AI, forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<label class='check-row'><input type='checkbox' id='manualPriceNeededAck' ${manualPriceNeededAck ? 'checked' : ''}> <span>Manual price needed before generation</span></label><div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button>${priceCountdownHtml()}</div>${priceStatusHtml()}<p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the configured yfinance price API when available, then falls back to the local helper at 127.0.0.1:8765.</p>${priceValidationHtml(f)}<label class='label'>Bias Determination For Session</label><div class='segmented' role='group' aria-label='Bias Determination For Session'>${biasOptions.map(b => `<button class='segmented-option' data-bias='${b}' aria-pressed='${f.bias === b ? 'true' : 'false'}'>${esc(b)}</button>`).join('')}</div><p class='hint'>Session bias is a planning label for the selected session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Market Context</div><h3>Phase map by timeframe</h3><p class='sub'>Record observed context only. Potential next phase is a conservative planning note, not a trade signal or forecast.</p>${marketContextPlanner(marketContextDraft)}</div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}<div class='panel'><h3>FVG Formation</h3><label class='check-row'><input type='checkbox' id='fvg' ${f.fvg ? 'checked' : ''}> <span>FVG formed after sweep</span></label>${selectDisabled('fvgTf', 'FVG timeframe', tfs, '- FVG timeframe -', !f.fvg)}</div></div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div id='plannerValidation'>${validationHtml}</div><div class='panel draft-state'><div><strong>Draft state</strong><p class='hint' id='draftState'>${esc(draftMessage)}</p></div><button class='btn ghost' id='discardDraftBtn'>Discard draft</button></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' id='plannerActions' style='bottom:var(--bottom-nav-height)' tabindex='-1'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
+    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats your inputs only. It does not call external AI, forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<label class='check-row'><input type='checkbox' id='manualPriceNeededAck' ${manualPriceNeededAck ? 'checked' : ''}> <span>Manual price needed before generation</span></label><div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button>${priceCountdownHtml()}</div>${priceStatusHtml()}<p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the configured yfinance price API when available. Local development can also use the helper at 127.0.0.1:8765.</p>${priceValidationHtml(f)}<label class='label'>Bias Determination For Session</label><div class='segmented' role='group' aria-label='Bias Determination For Session'>${biasOptions.map(b => `<button class='segmented-option' data-bias='${b}' aria-pressed='${f.bias === b ? 'true' : 'false'}'>${esc(b)}</button>`).join('')}</div><p class='hint'>Session bias is a planning label for the selected session only. Before 10:30am NY, full-day prediction is not supported by this tool.</p></div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Market Context</div><h3>Phase map by timeframe</h3><p class='sub'>Record observed context only. Potential next phase is a conservative planning note, not a trade signal or forecast.</p>${marketContextPlanner(marketContextDraft)}</div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}<div class='panel'><h3>FVG Formation</h3><label class='check-row'><input type='checkbox' id='fvg' ${f.fvg ? 'checked' : ''}> <span>FVG formed after sweep</span></label>${selectDisabled('fvgTf', 'FVG timeframe', tfs, '- FVG timeframe -', !f.fvg)}</div></div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div id='plannerValidation'>${validationHtml}</div><div class='panel draft-state'><div><strong>Draft state</strong><p class='hint' id='draftState'>${esc(draftMessage)}</p></div><button class='btn ghost' id='discardDraftBtn'>Discard draft</button></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' id='plannerActions' style='bottom:var(--bottom-nav-height)' tabindex='-1'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
   }
 
   function saved(){
@@ -2358,7 +2471,7 @@
     const settings = getSettings();
     const m = getMetrics(cards);
     const recent = latestCard();
-    return `<section class='screen'>${pageHead('Trader profile', 'Profile', 'Local settings, account backup and portable data tools.', '')}${supabasePanelHtml()}<div class='card'><h3>Local summary</h3>${line('Saved cards', m.total)}${line('Final saved', m.finalSaved)}${line('Favorites', m.favorites)}${line('Recent plan', recent ? (recent.fields.instrument || 'No instrument') : '')}</div><div class='card'><h3>Settings</h3><label class='label' for='defaultInstrument'>Default instrument</label><input class='in' id='defaultInstrument' value='${esc(settings.defaultInstrument)}' placeholder='MNQ'><label class='label' for='defaultSession'>Default session</label><select class='in' id='defaultSession'>${options(sessions, settings.defaultSession, 'No default')}</select><label class='label' for='themeMode'>Theme</label><select class='in' id='themeMode'><option value='light'${settings.theme === 'light' ? ' selected' : ''}>Light mode</option><option value='dark'${settings.theme === 'dark' ? ' selected' : ''}>Dark mode</option></select><label class='label' for='watchlist'>Watchlist</label><input class='in' id='watchlist' value='${esc(settings.watchlist.join(', '))}' placeholder='MNQ, ES, GC'><div class='grid'><div><label class='label' for='defaultRiskPct'>Default risk %</label><input class='in' id='defaultRiskPct' value='${esc(settings.riskDefaults.plannedRiskPct)}'></div><div><label class='label' for='defaultPlannedR'>Default planned R</label><input class='in' id='defaultPlannedR' value='${esc(settings.riskDefaults.plannedR)}'></div></div><label class='label' for='defaultMaxLoss'>Default max loss</label><input class='in' id='defaultMaxLoss' value='${esc(settings.riskDefaults.maxLoss)}'><button class='btn primary' id='saveSettingsBtn'>Save settings</button></div><div class='card'><h3>Data tools</h3><p class='hint'>Export JSON regularly before clearing browser data, changing devices or testing beta builds.</p><div class='row-actions'><button class='btn primary' id='exportJsonBtn'>Export data</button><button class='btn' id='importJsonBtn'>Import data</button><a class='btn' id='feedbackLink' href='https://github.com/JGDev1215/ICT/issues/new' target='_blank' rel='noopener'>Beta feedback</a><button class='btn' data-route='component-gallery'>Component gallery</button><button class='btn danger' id='clearDataBtn'>Clear all local data</button><input class='file-input' id='importFile' type='file' accept='application/json,.json'></div></div></section>`;
+    return `<section class='screen'>${pageHead('Trader profile', 'Profile', 'Local settings, account backup and portable data tools.', '')}${supabasePanelHtml()}<div class='card'><h3>Local summary</h3>${line('Saved cards', m.total)}${line('Final saved', m.finalSaved)}${line('Favorites', m.favorites)}${line('Recent plan', recent ? (recent.fields.instrument || 'No instrument') : '')}</div><div class='card'><h3>Settings</h3><label class='label' for='defaultInstrument'>Default instrument</label><input class='in' id='defaultInstrument' value='${esc(settings.defaultInstrument)}' placeholder='MNQ'><label class='label' for='defaultSession'>Default session</label><select class='in' id='defaultSession'>${options(sessions, settings.defaultSession, 'No default')}</select><label class='label' for='themeMode'>Theme</label><select class='in' id='themeMode'><option value='light'${settings.theme === 'light' ? ' selected' : ''}>Light mode</option><option value='dark'${settings.theme === 'dark' ? ' selected' : ''}>Dark mode</option></select><label class='label' for='watchlist'>Watchlist</label><input class='in' id='watchlist' value='${esc(settings.watchlist.join(', '))}' placeholder='MNQ, ES, GC'><div class='grid'><div><label class='label' for='defaultRiskPct'>Default risk %</label><input class='in' id='defaultRiskPct' value='${esc(settings.riskDefaults.plannedRiskPct)}'></div><div><label class='label' for='defaultPlannedR'>Default planned R</label><input class='in' id='defaultPlannedR' value='${esc(settings.riskDefaults.plannedR)}'></div></div><label class='label' for='defaultMaxLoss'>Default max loss</label><input class='in' id='defaultMaxLoss' value='${esc(settings.riskDefaults.maxLoss)}'><button class='btn primary' id='saveSettingsBtn'>Save settings</button></div><div class='card'><h3>Data tools</h3><p class='hint'>Export JSON regularly before clearing browser data, changing devices or testing beta builds. Clearing this device does not delete cloud backup.</p><div class='row-actions'><button class='btn primary' id='exportJsonBtn'>Export data</button><button class='btn' id='importJsonBtn'>Import data</button><a class='btn' id='feedbackLink' href='https://github.com/JGDev1215/ICT/issues/new' target='_blank' rel='noopener'>Beta feedback</a><button class='btn' data-route='component-gallery'>Component gallery</button><button class='btn danger' id='clearDataBtn'>Clear this device data</button><input class='file-input' id='importFile' type='file' accept='application/json,.json'></div></div></section>`;
   }
 
   function sync(){
@@ -2411,7 +2524,7 @@
     const validation = plannerValidationState(f, marketContextDraft, plannerCardId);
     if(openDetails ? !validation.canGenerateFocusPlan : !validation.canSaveDraft){
       plannerValidationMode = openDetails ? 'generate' : 'draft';
-      notice = openDetails ? 'Complete the required planner fields before generating.' : 'Add planning input before saving a draft.';
+      setNotice(openDetails ? 'Complete the required planner fields before generating.' : 'Add planning input before saving a draft.', 'warn');
       render();
       return;
     }
@@ -2423,7 +2536,7 @@
       c = createBlankDraft({fields: f, marketContext: marketContextDraft, priceSource: lastPriceSource});
       const saved = saveCards([c].concat(cards)).find(card => card.id === c.id);
       if(!saved){
-        notice = lastStorageError || 'Draft could not be saved.';
+        setNotice(lastStorageError || 'Draft could not be saved.', 'bad');
         render();
         return;
       }
@@ -2431,13 +2544,13 @@
       plannerCardId = c.id;
     }
     if(lastStorageError || !c){
-      notice = lastStorageError || 'Draft could not be saved.';
+      setNotice(lastStorageError || 'Draft could not be saved.', 'bad');
       render();
       return;
     }
     reviewId = c.id;
     route = openDetails ? 'focus' : 'planner';
-    notice = openDetails ? 'Focus plan saved.' : 'Draft saved.';
+    setNotice(openDetails ? 'Focus plan saved.' : 'Draft saved.', 'good');
     persistPlannerDraft();
     writeRouteHash();
     render();
@@ -2548,7 +2661,7 @@
     on('discardDraftBtn', () => {
       if(plannerHasInput(f, marketContextDraft, plannerCardId) && !confirm('Discard the current planner draft?')) return;
       discardPlannerDraft();
-      notice = 'Planner draft discarded.';
+      setNotice('Planner draft discarded.', 'warn');
       render();
     });
     on('autoPriceBtn', () => {
@@ -2556,23 +2669,24 @@
       const symbol = normalizePriceSymbol(f.instrument);
       f.instrument = symbol;
       if(!symbol){
-        notice = 'Enter an instrument before auto-detecting price.';
+        setNotice('Enter an instrument before auto-detecting price.', 'warn');
         render();
         return;
       }
       if(!validPriceSymbol(symbol)){
         priceFetchState = 'unsupported';
-        notice = 'Unsupported symbol for auto-detect. Enter the price manually.';
+        setNotice('Unsupported symbol for auto-detect. Enter the price manually.', 'warn');
         render();
         return;
       }
       if(typeof fetch !== 'function'){
         priceFetchState = 'unavailable';
-        notice = 'Auto-detect price needs browser fetch support.';
+        setNotice('Auto-detect price needs browser fetch support.', 'warn');
         render();
         return;
       }
       priceFetchState = 'loading';
+      announce(priceStatusMessage(), 'warn');
       render();
       fetchPrice(symbol)
         .then(data => {
@@ -2584,14 +2698,14 @@
           lastPriceSource = data.helperUrl === localPriceHelperUrl(symbol) ? 'local-yfinance' : 'hosted-yfinance';
           manualPriceNeededAck = false;
           const source = lastPriceSource === 'local-yfinance' ? 'local yfinance helper' : 'hosted yfinance API';
-          notice = 'Price auto-detected from ' + source + '.';
+          setNotice('Price auto-detected from ' + source + '.', 'good');
           plannerValidationMode = '';
           render();
         })
         .catch(err => {
           const kind = priceErrorKind(err);
           priceFetchState = kind === 'unsupported' ? 'unsupported' : kind === 'malformed' ? 'malformed' : 'unavailable';
-          notice = priceStatusMessage();
+          setNotice(priceStatusMessage(), 'warn');
           render();
         });
     });
@@ -2619,7 +2733,7 @@
     doc.querySelectorAll('[data-favorite]').forEach(n => {
       n.onclick = () => {
         const updated = toggleFavorite(n.getAttribute('data-favorite'));
-        notice = updated ? 'Favorite updated.' : (lastStorageError || 'Favorite could not be updated.');
+        setNotice(updated ? 'Favorite updated.' : (lastStorageError || 'Favorite could not be updated.'), updated ? 'good' : 'bad');
         render();
       };
     });
@@ -2738,7 +2852,7 @@
 
     on('verifyBtn', () => {
       saveCards(cards);
-      notice = lastStorageError || 'Saved data verified and normalised.';
+      setNotice(lastStorageError || 'Saved data verified and normalised.', lastStorageError ? 'bad' : 'good');
       render();
     });
     on('exportTextBtn', () => down('ict-dol-sweep-cards.txt', cards.map(text).join(NL + NL + '---' + NL + NL) || 'No saved cards.', 'text/plain'));
@@ -2753,7 +2867,12 @@
         const reader = new FileReader();
         reader.onload = () => {
           const result = importCards(String(reader.result || ''));
-          notice = result.error || (result.imported ? result.imported + ' card(s) imported.' : 'No valid cards found in the JSON file.');
+          const message = result.error || result.warning || (result.imported ? result.imported + ' card(s) imported.' : 'No valid cards found in the JSON file.');
+          setNotice(message, result.error ? 'bad' : result.warning || !result.imported ? 'warn' : 'good');
+          render();
+        };
+        reader.onerror = () => {
+          setNotice('Could not read the selected file. Try again or choose another file.', 'bad');
           render();
         };
         reader.readAsText(file);
@@ -2776,7 +2895,7 @@
       if(!c) return;
       const outcome = q('reviewOutcome').value || 'Open';
       if(finalSave && outcome === 'Open'){
-        notice = 'Choose a non-Open outcome before Final save.';
+        setNotice('Choose a non-Open outcome before Final save.', 'warn');
         render();
         return;
       }
@@ -2835,11 +2954,11 @@
         }
       });
       if(!saved){
-        notice = lastStorageError || 'Changes could not be saved.';
+        setNotice(lastStorageError || 'Changes could not be saved.', 'bad');
         render();
         return;
       }
-      notice = finalSave ? 'Final saved.' : 'Changes saved. Card is no longer final-saved.';
+      setNotice(finalSave ? 'Final saved.' : 'Changes saved. Card is no longer final-saved.', 'good');
       render();
     }
 
@@ -2850,7 +2969,7 @@
       const t = c && text(c);
       if(!t) return;
       (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => {
-        notice = 'Card copied.';
+        setNotice('Card copied.', 'good');
         render();
       }).catch(() => {
         const box = doc.createElement('textarea');
@@ -2859,7 +2978,7 @@
         box.select();
         doc.execCommand('copy');
         box.remove();
-        notice = 'Card copied.';
+        setNotice('Card copied.', 'good');
         render();
       });
     });
@@ -2869,12 +2988,12 @@
       if(!t) return;
       if(navigator.share){
         navigator.share({title: 'ICT DOL Sweep Card', text: t}).then(() => {
-          notice = 'Share sheet opened.';
+          setNotice('Share sheet opened.', 'good');
           render();
         }).catch(() => {});
       } else if(navigator.clipboard) {
         navigator.clipboard.writeText(t).then(() => {
-          notice = 'Share text copied.';
+          setNotice('Share text copied.', 'good');
           render();
         });
       }
@@ -2895,12 +3014,12 @@
       const c = cur();
       if(c && confirm('Delete this saved card?')){
         if(!deleteCard(c.id)){
-          notice = lastStorageError || 'Card could not be deleted.';
+          setNotice(lastStorageError || 'Card could not be deleted.', 'bad');
           render();
           return;
         }
         reviewId = '';
-        notice = 'Card deleted.';
+        setNotice('Card deleted.', 'good');
         go('saved');
       }
     });
@@ -2909,55 +3028,55 @@
       const c = cards.find(x => x.id === reviewId) || latestCard();
       if(c && q('timelineNote')){
         const saved = updateCard(c.id, {notes: q('timelineNote').value.trim(), finalSaved: false, priceHistoryEvent: false});
-        notice = saved ? 'Timeline note saved.' : (lastStorageError || 'Timeline note could not be saved.');
+        setNotice(saved ? 'Timeline note saved.' : (lastStorageError || 'Timeline note could not be saved.'), saved ? 'good' : 'bad');
         render();
       }
     });
 
     on('saveSettingsBtn', () => {
       saveSettings(profileFormSettings(q));
-      notice = lastSettingsError || 'Settings saved.';
+      setNotice(lastSettingsError || 'Settings saved.', lastSettingsError ? 'bad' : 'good');
       render();
     });
     on('adminLoginBtn', () => {
       const username = q('adminUsername') ? q('adminUsername').value.trim() : '';
       const password = q('adminPassword') ? q('adminPassword').value : '';
       if(username !== ADMIN_USERNAME){
-        notice = 'Use the admin username.';
+        setNotice('Use the admin username.', 'warn');
         render();
         return;
       }
       if(!password){
-        notice = 'Enter the admin password.';
+        setNotice('Enter the admin password.', 'warn');
         render();
         return;
       }
       supabaseLogin(adminSupabaseEmail(), password).then(ok => {
-        notice = ok ? 'Signed in. Backup is ready.' : syncState.message;
+        setNotice(ok ? 'Signed in. Backup is ready.' : syncState.message, ok ? 'good' : 'bad');
         render();
       });
     });
     on('supabaseLogoutBtn', () => {
       supabaseLogout().then(() => {
-        notice = 'Signed out.';
+        setNotice('Signed out.', 'good');
         render();
       });
     });
     on('approveFirstSyncBtn', () => {
       approveFirstSyncUpload().then(ok => {
-        notice = ok ? 'Local cards added to cloud backup.' : syncState.message;
+        setNotice(ok ? 'Local cards added to cloud backup.' : syncState.message, ok ? 'good' : 'bad');
         render();
       });
     });
     on('skipFirstSyncBtn', () => {
       skipFirstSyncUpload().then(ok => {
-        notice = ok ? 'Existing local cards will stay on this device.' : syncState.message;
+        setNotice(ok ? 'Existing local cards will stay on this device.' : syncState.message, ok ? 'good' : 'bad');
         render();
       });
     });
     on('syncNowBtn', () => {
       syncFromSupabase({force: true}).then(ok => {
-        notice = ok ? 'Backup complete.' : syncState.message;
+        setNotice(ok ? 'Backup complete.' : syncState.message, ok ? 'good' : 'bad');
         render();
       });
     });
@@ -2966,21 +3085,25 @@
     if(themeMode){
       themeMode.onchange = () => {
         saveSettings(profileFormSettings(q, themeMode.value));
-        notice = lastSettingsError || 'Theme updated.';
+        setNotice(lastSettingsError || 'Theme updated.', lastSettingsError ? 'bad' : 'good');
         render();
       };
     }
 
     on('clearDataBtn', () => {
-      if(confirm('Clear all local cards, settings and bias metadata?')){
-        const store = storage();
-        if(store){
-          [KEY, SETTINGS_KEY, DRAFT_KEY, 'ict_bias_card_meta_v1'].concat(LEGACY).forEach(k => store.removeItem(k));
-        }
-        cards = [];
-        startDraft(null, {persist: false});
-        notice = 'Local data cleared.';
+      if(confirm('Clear cards, settings, planner drafts, local backup session and pending sync data on this device only? Cloud backup is not deleted and may return after signing in again.')){
+        const clearMessage = 'This device data was cleared. Cloud backup is unchanged; sign in again to restore backed-up cards.';
+        const signOut = clearDeviceData();
+        setNotice(clearMessage, 'warn');
         go('home', {replace: true});
+        if(signOut && signOut.then){
+          signOut.then(() => {
+            if(route === 'home'){
+              setNotice(clearMessage, 'warn');
+              render();
+            }
+          });
+        }
       }
     });
   }
@@ -3003,7 +3126,7 @@
     } else if(item.cat === 'Killzone'){
       f.session = 'New York AM';
     }
-    notice = item.name + ' added to draft.';
+    setNotice(item.name + ' added to draft.', 'good');
     persistPlannerDraft();
     go('planner');
   }
@@ -3038,8 +3161,10 @@
     else if(route === 'journal') content = journal();
     else if(route === 'profile') content = profile();
     else if(route === 'component-gallery') content = componentGallery();
+    ensureLiveRegion();
     app.innerHTML = renderShell(content);
     notice = '';
+    noticeLevel = 'good';
     bind();
   }
 

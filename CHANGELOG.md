@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.8.4 — 2026-07-09
+
+### Fixed
+
+- Changed Profile clearing to an explicit device-local reset that removes local sync metadata without deleting cloud backup or queuing remote deletes.
+- Added notice severity so errors and warnings no longer render as success messages.
+- Added a persistent screen-reader announcement region for notices and price auto-detect status updates.
+- Added JSON import file-read error feedback and soft warnings for mismatched export schemas.
+- Skipped the local `127.0.0.1` price-helper fallback on production HTTPS pages to avoid mixed-content noise while preserving manual price entry.
+- Updated version/cache process guidance and documented the retained local static-serving fallback in `api/price.py`.
+
 ## v0.8.3 — 2026-07-09
 
 ### Added

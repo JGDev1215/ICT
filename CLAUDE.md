@@ -12,7 +12,7 @@ Contributor guidance for the ICT DOL Sweep Tracker.
 
 ## Runtime Contracts
 
-- Current app version: `v0.8.0`.
+- Current app version: `v0.8.4`.
 - Current card storage key: `ict_cards_v078`.
 - Bias metadata key: `ict_bias_card_meta_v1`.
 - JSON export schema: `ict_dol_sweep_export_v7`.
@@ -39,6 +39,8 @@ When changing shipped JS/CSS behavior:
 4. Update `CACHE_NAME` and `STATIC_ASSETS` in `service-worker.js`.
 5. Update matching expectations in `tests/smoke.js`.
 6. Run smoke and relevant browser E2E tests before handoff.
+
+Editing shipped JS/CSS without a matching cache-bust bump can strand service-worker clients on stale assets.
 
 When changing stored data:
 
@@ -82,4 +84,5 @@ python3 -m venv .venv
 - GitHub Pages serves the static app only. It cannot run `api/price.py`.
 - Vercel serves the optional price API at `/api/price?symbol=MNQ` and includes static files through `vercel.json`.
 - `api/price.py` has a CORS allow-list and a short in-memory cache. Update both deliberately if deployment domains change.
+- Its static-file serving branch is retained for local single-function testing; production Vercel static assets are served separately.
 - If the Vercel production URL changes, update `assets/config.js` or set `window.ICT_PRICE_API_BASE` before `assets/app.js` loads for a one-off override.
