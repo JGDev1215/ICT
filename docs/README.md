@@ -1,7 +1,7 @@
 # Documentation Map
 
 > Status: Current
-> Last reviewed: 2026-07-09
+> Last reviewed: 2026-07-10
 > Source of truth: Yes
 
 This folder stores current project documentation plus an archive of historical plans and prompt packs. Runtime behavior is defined by the root app files, not by archived planning notes.
@@ -55,7 +55,7 @@ Do not create new top-level markdown files unless they are root-level project do
 | [`database/supabase-focus-card-storage.sql`](database/supabase-focus-card-storage.sql) | Supabase table, RLS, index, and trigger setup artifact. |
 | [`developer/README.md`](developer/README.md) | Developer notes folder policy and current no-build app guardrails. |
 | [`implementation-reports/focus-card-dol-risk-implementation-report.md`](implementation-reports/focus-card-dol-risk-implementation-report.md) | Completed Focus Card DOL/risk implementation report. |
-| [`qa/docs-implementation-checklist-2026-07-08.md`](qa/docs-implementation-checklist-2026-07-08.md) | Remaining production web/mobile-site QA and release housekeeping checklist. |
+| [`qa/docs-implementation-checklist-2026-07-08.md`](qa/docs-implementation-checklist-2026-07-08.md) | Production web/mobile-site QA and release housekeeping checklist. |
 | [`qa/release-qa-evidence-2026-07-08.md`](qa/release-qa-evidence-2026-07-08.md) | Recorded QA evidence from the July 8 release pass. |
 | [`qa/live-price-provider-qa-2026-07-09.md`](qa/live-price-provider-qa-2026-07-09.md) | Production price-provider endpoint QA for supported and unsupported symbols. |
 | [`qa/refactor-baseline-2026-07-09.md`](qa/refactor-baseline-2026-07-09.md) | Safe-refactor baseline evidence before any JavaScript extraction. |

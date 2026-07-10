@@ -18,7 +18,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 - Runtime dependencies: no build-time bundle; optional Supabase JS is loaded from CDN for Account & Backup
 - Dev QA dependencies: Playwright, installed only through `npm install`
 - Data storage: browser localStorage/sessionStorage with optional Supabase server sync for Focus Cards
-- Current app version: v0.8.11
+- Current app version: v0.8.12
 - Main entrypoint: index.html
 - Runtime config: assets/config.js
 - Stylesheet: assets/styles.css
@@ -199,7 +199,7 @@ The ladder shows:
 
 The module uses `.price-map`, `.price-map-current`, `.price-map-row.dol`, `.price-map-row.sweep`, `.price-map-empty`, `.price-map-loading`, and `.price-map-error` hooks.
 
-## Focus Card Details
+## Plan Review
 
 Plan Review starts with the Price Map Dashboard, then timestamp/price snapshot tools, DOL/Sweep review stacks, trade highlights, outcome, and review notes.
 
@@ -221,13 +221,13 @@ Price data may be delayed by 5 minutes. Users can override price manually before
 
 ## Legacy Bias Data
 
-Bias Determination, Market Context, FVG, route-evidence, active-DOL, and potential-risk data from older saved cards is preserved in local storage, JSON export, and JSON import for migration compatibility. These fields are no longer shown in the active Planner or Focus Card Details workflow.
+Bias Determination, Market Context, FVG, route-evidence, active-DOL, and potential-risk data from older saved cards is preserved in local storage, JSON export, and JSON import for migration compatibility. These fields are no longer shown in the active Planner or Plan Review workflow.
 
 ## Saved Cards
 
 The Saved tab includes search, filter chips, final-save metrics, export/import controls, and a local card list. Filters include Final Saved, Drafts, Hits, Misses, and Favorites.
 
-Each saved card opens into a Focus Card Details screen with:
+Each saved card opens into a Plan Review screen with:
 
 - Hero summary with instrument, session, date, status, and outcome.
 - Price snapshot with manual/static current price and DOL distance feedback.

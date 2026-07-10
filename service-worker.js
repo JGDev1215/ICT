@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ict-sweep-tracker-v0811-access-price-planner-20260710';
+const CACHE_NAME = 'ict-sweep-tracker-v0812-docs-audit-20260710';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -6,9 +6,9 @@ const STATIC_ASSETS = [
   './favicon.svg',
   './icon-192.svg',
   './icon-512.svg',
-  './assets/config.js?v=0.8.11-access-price-planner-20260710',
-  './assets/styles.css?v=0.8.11-access-price-planner-20260710',
-  './assets/app.js?v=0.8.11-access-price-planner-20260710'
+  './assets/config.js?v=0.8.12-docs-audit-20260710',
+  './assets/styles.css?v=0.8.12-docs-audit-20260710',
+  './assets/app.js?v=0.8.12-docs-audit-20260710'
 ];
 
 self.addEventListener('install', event => {

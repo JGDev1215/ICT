@@ -22,29 +22,33 @@ YES
 
 ## Tests / Checks Completed
 
-- `npm test` PASS.
-- `npm run test:e2e -- --reporter=dot` PASS: 89 passed, 1 existing WebKit offline skip.
-- `git diff --check` PASS.
+- `npm test`: PASS
+- `npm run test:e2e -- --reporter=dot`: PASS, 89 passed and 1 existing WebKit offline limitation skipped.
+- `git diff --check`: PASS
+- Supabase docs and connected project metadata checked.
 
 ## Files Changed
 
 - `assets/app.js`
-- `assets/styles.css`
 - `index.html`
 - `service-worker.js`
 - `tests/smoke.js`
-- `tests/e2e/planner.spec.js`
-- `tests/e2e/release-qa.spec.js`
 - `README.md`
 - `CHANGELOG.md`
 - `CLAUDE.md`
+- `docs/README.md`
+- `docs/plans/supabase-focus-card-storage-plan.md`
+- `docs/qa/docs-implementation-checklist-2026-07-08.md`
+- `docs/qa/production-web-mobile-qa-2026-07-09.md`
+- `docs/release/release-decision-log-2026-07-08.md`
 - `agent-workflow/*`
 
 ## Remaining Risks
 
-- Device-local passcode is a convenience gate only.
-- Optional live price lookup can fail; Manual override remains available.
+- Production deployment state must update after push before live URLs show v0.8.12.
+- Manual screen-reader testing remains a recommended external check only if a future public-release process requires evidence beyond browser automation.
+- Supabase leaked-password protection should be enabled if the project is upgraded to Pro or above.
 
 ## Recommended Commit Message
 
-feat: add app passcode and focus price modes
+docs: close outstanding audit tasks

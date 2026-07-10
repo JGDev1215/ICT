@@ -6,7 +6,7 @@ APPROVED
 
 ## Reasoning
 
-The requested v0.8.11 scope was implemented, tests passed, and changes stayed within the local-first static app constraints.
+The implementation followed the approved plan, resolved current documentation contradictions, closed the current release checklist with evidence, and passed the required automated checks.
 
 ## Required Fixes
 
@@ -14,4 +14,4 @@ None.
 
 ## Next Action
 
-Handoff with test results and commit recommendation.
+Commit and push the v0.8.12 documentation-audit release when ready.

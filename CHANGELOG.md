@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.8.12 — 2026-07-10
+
+### Fixed
+
+- Replaced the remaining active Planner hint that still referred to Focus Card Details with Plan Review language.
+- Updated current Supabase backup documentation to describe the 4-digit Account & Backup PIN flow and separate app passcode gate.
+- Closed the current release checklist's browser accessibility and Supabase leaked-password-protection follow-ups with v0.8.12 audit evidence.
+
+### Changed
+
+- Updated cache-busted assets and service-worker cache names for the documentation audit release.
+
 ## v0.8.11 — 2026-07-10
 
 ### Added

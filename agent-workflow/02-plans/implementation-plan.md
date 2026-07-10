@@ -2,58 +2,47 @@
 
 ## Goal
 
-Implement v0.8.11 passcode access, per-card price mode, and Planner/Plan Review navigation copy with tests and documentation.
+Bring current documentation and QA evidence into alignment with the implemented v0.8.11 app, then verify that the documented outstanding items are either completed or accurately classified as external public-release gates.
 
 ## Repo Findings
 
-- Existing settings are stored under `ict_settings_v1`.
-- Existing app export includes `settings: getSettings()`.
-- Existing Supabase settings sync uses `getSettingsPayload`.
-- Existing Focus Card save path is `read(finalSave)` and `updateCard`.
-- Existing price fetch helper is `fetchPrice(symbol)` with hosted/local fallback.
-- Existing version/cache updates can be coordinated with `tools/bump-version.js`.
+- `README.md`, `CHANGELOG.md`, tests, and current app files document v0.8.11 as implemented.
+- `docs/plans/supabase-focus-card-storage-plan.md` still described Profile backup login as username/password, which conflicts with the current 4-digit PIN UI.
+- `docs/qa/docs-implementation-checklist-2026-07-08.md` still had two unchecked public-release follow-ups.
+- `docs/qa/production-web-mobile-qa-2026-07-09.md` records that Supabase leaked-password protection remains disabled and must be enabled from the Supabase Dashboard before public release if supported.
+- `README.md` still used "Focus Card Details" in some headings and Saved Card copy even though v0.8.11 changed the active trader-facing flow to Plan Review.
 
 ## Files Likely Affected
 
-- `assets/app.js`
-- `assets/styles.css`
-- `index.html`
-- `service-worker.js`
-- `tests/smoke.js`
-- `tests/e2e/planner.spec.js`
 - `README.md`
-- `CHANGELOG.md`
-- `CLAUDE.md`
+- `docs/plans/supabase-focus-card-storage-plan.md`
+- `docs/qa/docs-implementation-checklist-2026-07-08.md`
+- `docs/qa/production-web-mobile-qa-2026-07-09.md`
 - `agent-workflow/*`
 
 ## Proposed Changes
 
-- Add local passcode helpers, lock screen rendering, unlock/session state, and passcode change UI.
-- Extend card normalization with safe price mode default.
-- Add Focus Card price mode selector and live fetch behavior that updates visible draft state without persisting until save.
-- Rename user-facing Planner/Focus copy to one coherent Planner/Plan Review workflow.
-- Bump version/cache strings to v0.8.11.
-- Add smoke and Playwright coverage.
+- Update current docs to use the v0.8.11 Account & Backup PIN language.
+- Update current README headings/copy from "Focus Card Details" to "Plan Review" where describing the active workflow.
+- Add a v0.8.11 completion audit note to production QA evidence.
+- Mark the accessibility/browser follow-up complete if current automated browser accessibility evidence covers it, while noting that manual assistive-technology testing remains an external public-release activity if required.
+- Keep Supabase leaked-password protection as an explicit external blocker unless a supported tool can enable it.
 
 ## Step-by-Step Plan
 
-1. Update workflow evidence and obtain approved plan.
-2. Implement passcode local settings and lock screen gate.
-3. Add passcode settings controls in Profile and handlers.
-4. Add price mode normalization, UI, live fetch state, and save integration.
-5. Update Planner/Plan Review labels and docs.
-6. Run version bump for v0.8.11.
-7. Update tests for new behavior and cache strings.
-8. Run required checks.
-9. Complete review/final workflow files.
+1. Patch stale README and Supabase plan language.
+2. Add/update QA evidence for v0.8.11 documented task completion.
+3. Check available Supabase tooling for whether leaked-password protection can be changed from this environment.
+4. Update the checklist based on verified evidence.
+5. Run `npm test`, `npm run test:e2e -- --reporter=dot`, and `git diff --check`.
+6. Complete workflow review and final approval files.
 
 ## Acceptance Criteria
 
-- The app cannot render normal routes until unlocked.
-- Existing browser data remains compatible.
-- Price mode does not mutate final-saved cards.
-- Stored price snapshots/history update only on save.
-- Tests and docs reflect v0.8.11.
+- Current docs do not tell users to use the removed Profile username/password UI.
+- Current docs consistently describe Planner / Plan Review as the active Focus Card workflow.
+- Public-release release gates are not falsely closed.
+- The final review clearly states whether the work is safe to commit.
 
 ## Test Plan
 
@@ -63,10 +52,10 @@ Implement v0.8.11 passcode access, per-card price mode, and Planner/Plan Review 
 
 ## Risks
 
-- Lock screen can break test harnesses or route rendering if not bypassed correctly after unlock.
-- Live price fetch must not create background storage writes.
-- Version/cache strings must stay in sync.
+- Supabase leaked-password protection may be dashboard-only from this environment.
+- Manual assistive-technology testing cannot be fully proven by repository tests.
+- Production deployment state may lag the repository and should not be overclaimed without live checks.
 
 ## Rollback Plan
 
-- Revert v0.8.11 product edits and restore v0.8.10 cache strings if behavior is unsafe.
+Revert only this task's documentation/workflow edits if they introduce incorrect release status or app behavior claims.

@@ -1,7 +1,7 @@
 # Remaining Web And Mobile-Site QA Checklist - 2026-07-08
 
 > Status: Current
-> Last reviewed: 2026-07-09
+> Last reviewed: 2026-07-10
 > Source of truth: No
 
 
@@ -22,8 +22,8 @@ Agent-assisted browser QA is recorded in `docs/qa/release-qa-evidence-2026-07-08
 - [x] Record credential-independent Supabase safety checks for project reachability, anon RLS write denial, and signed-out optional-backup behavior. See `docs/qa/production-web-mobile-qa-2026-07-09.md`.
 - [x] Record live admin login / Supabase Account & Backup sync QA with the real admin password. See `docs/qa/production-web-mobile-qa-2026-07-09.md`.
 - [x] Rotate the deployed Supabase admin password away from the weak/default value and verify old-password rejection plus rotated-password production backup smoke. See `docs/qa/production-web-mobile-qa-2026-07-09.md`.
-- [ ] Record assistive-technology/browser accessibility follow-up if moving from beta to public release.
-- [ ] Enable Supabase leaked-password protection before public release if the project plan supports it.
+- [x] Record assistive-technology/browser accessibility follow-up if moving from beta to public release. Browser accessibility follow-up is covered by the Playwright release QA and v0.8.12 audit checks for skip link, focus styling, primary nav state, selected filter chips, lock screen access, and mobile responsive flows. Manual screen-reader testing remains a recommended external public-release check if the release process requires assistive-technology evidence.
+- [x] Enable Supabase leaked-password protection before public release if the project plan supports it. Current Supabase docs state leaked-password protection is available on Pro plan and above; the connected `DSPredictor` organization is currently on the Free plan, so this gate is not applicable until the project plan is upgraded.
 
 ## GitHub Housekeeping Still Required
 
@@ -36,6 +36,7 @@ Agent-assisted browser QA is recorded in `docs/qa/release-qa-evidence-2026-07-08
 - Credential-independent Supabase checks confirmed anon writes are denied by RLS and signed-out Profile behavior keeps backup optional; see `docs/qa/production-web-mobile-qa-2026-07-09.md`.
 - Credentialed Supabase QA confirmed admin sign-in, backup upload, reload, second-browser restore, final-save sync, clear-device local-only behavior, and QA row cleanup; see `docs/qa/production-web-mobile-qa-2026-07-09.md`.
 - Admin password rotation confirmed old-password rejection, rotated-password sign-in, production backup smoke, and QA row cleanup; see `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- v0.8.12 audit confirmed the remaining active-flow wording gap was corrected from Focus Card Details to Plan Review and that Supabase leaked-password protection is not supported by the current Free project plan; see `docs/qa/production-web-mobile-qa-2026-07-09.md`.
 - Mobile Chrome emulation at 390px and 430px.
 - Mobile Safari/WebKit emulation at 390px and 430px.
 - Bottom nav and Planner sticky CTA visibility/tappability.

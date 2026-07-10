@@ -2,30 +2,34 @@
 
 ## Summary of Changes
 
-Implemented v0.8.11 with a device-local app passcode gate, Profile passcode change controls, per-card Focus Card price mode, Planner/Plan Review wording cleanup, version/cache updates, documentation updates, and matching smoke/E2E coverage.
+- Bumped the app to v0.8.12 for a shipped copy/cache release.
+- Replaced the remaining active Planner hint that referred to Focus Card Details with Plan Review language.
+- Updated smoke assertions for v0.8.12 cache keys and Plan Review copy.
+- Updated README, CHANGELOG, docs index, Supabase backup plan, production QA evidence, release checklist, and release decision log.
+- Recorded Supabase leaked-password protection as not applicable to the current Free project plan, based on current Supabase docs and connected organization metadata.
 
 ## Files Changed
 
 - `assets/app.js`
-- `assets/styles.css`
 - `index.html`
 - `service-worker.js`
 - `tests/smoke.js`
-- `tests/e2e/planner.spec.js`
-- `tests/e2e/release-qa.spec.js`
 - `README.md`
 - `CHANGELOG.md`
 - `CLAUDE.md`
+- `docs/README.md`
+- `docs/plans/supabase-focus-card-storage-plan.md`
+- `docs/qa/docs-implementation-checklist-2026-07-08.md`
+- `docs/qa/production-web-mobile-qa-2026-07-09.md`
+- `docs/release/release-decision-log-2026-07-08.md`
 - `agent-workflow/*`
 
 ## Implementation Notes
 
-- App passcode defaults to `5880`, is stored in local settings, and uses `sessionStorage` for session unlock state.
-- Exported/imported settings and Supabase settings payloads use sanitized public settings without `appPasscode`.
-- Focus Card price mode supports Manual override and Live auto-update on editable cards.
-- Live price display does not persist price history until Save changes or Final save.
-- Final-saved cards remain locked and do not expose price mode controls.
-- Routes remain stable; visible copy now presents Planner and Plan Review as one flow.
+- The old Planner validation plan remains Historical and was not revived.
+- The future safe-refactor prompt remains unexecuted because it requires a separate approved no-feature refactor plan.
+- The Account & Backup PIN remains separate from the app-wide device-local passcode.
+- Supabase leaked-password protection is documented as a future gate only if the project is upgraded to Pro or above.
 
 ## Deviations From Approved Plan
 
@@ -33,10 +37,12 @@ None.
 
 ## Checks Performed
 
-- `npm test` PASS.
-- `npm run test:e2e -- --reporter=dot` PASS: 89 passed, 1 existing WebKit offline skip.
-- `git diff --check` PASS.
+- `npm test`: PASS
+- `npm run test:e2e -- --reporter=dot`: PASS, 89 passed and 1 existing WebKit offline limitation skipped.
+- `git diff --check`: PASS
+- Supabase docs search for leaked-password protection: PASS
+- Supabase project and organization metadata check: PASS
 
 ## Known Issues
 
-- App passcode is a convenience gate for a private static app, not cryptographic authentication.
+- Manual screen-reader testing was not performed from this CLI environment. Browser accessibility coverage is recorded; manual assistive-technology testing remains optional external evidence if a future public-release process requires it.

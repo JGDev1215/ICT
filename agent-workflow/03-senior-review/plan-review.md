@@ -2,31 +2,31 @@
 
 ## Plan Quality
 
-The plan is specific, scoped, and aligned with the requested v0.8.11 changes.
+The plan is appropriately scoped to current source-of-truth documents and avoids reviving archived or historical plans.
 
 ## Missing Steps
 
-None.
+The plan should verify whether a supported Supabase tool can change leaked-password protection before declaring it external-only.
 
 ## Risk Areas
 
-- Keep passcode local-only and out of export/remote settings.
-- Preserve final-saved card locking.
-- Do not change Planner validation requirements from the completed Historical plan.
-- Keep cache/version strings synchronized.
+- Public-release gates must not be marked complete without evidence.
+- Documentation must not imply the private single-user PIN is production-grade authentication.
+- README copy changes should not touch unrelated release history.
 
 ## Overengineering Concerns
 
-Do not add backend auth, encryption claims, or route rewrites.
+No code refactor or feature work is needed unless the audit finds a current implementation contradiction.
 
 ## Simpler Alternatives
 
-Use localStorage/sessionStorage convenience gate and stable existing routes.
+Keep the remediation to documentation and QA evidence unless source tests expose a current behavior bug.
 
 ## Required Amendments
 
-None.
+- Use Supabase guidance before making or classifying Supabase security findings.
+- Run the required checks after patching docs.
 
 ## Decision
 
-APPROVED
+APPROVED WITH AMENDMENTS

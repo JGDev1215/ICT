@@ -164,7 +164,7 @@ Coverage updates:
 
 - Watchlist no longer renders in Home/Profile and is no longer exported or synced as an active setting.
 - Legacy imported Watchlist settings are ignored.
-- Final-saved cards render locked/read-only in Focus Card Details.
+- Final-saved cards render locked/read-only in the saved-card review screen, now labeled Plan Review in the active v0.8.12 app.
 - Final-saved cards reject Focus edits, Timeline notes, favorite toggles, delete, load-to-planner, helper-level mutations, bulk-save mutation, import overwrite, and remote merge overwrite.
 
 ## Supabase Credential-Independent Checks
@@ -191,12 +191,12 @@ These checks support the safety of optional backup in signed-out/local-first mod
 
 ## Credential-Dependent QA
 
-Live admin login and Supabase Account & Backup sync/reload were performed against the production Vercel app with the real `admin` account.
+Live admin login and Supabase Account & Backup sync/reload were performed against the production Vercel app with the then-current `admin` account UI. The active v0.8.12 app now presents this as a 4-digit Account & Backup PIN.
 
 Production browser flow:
 
 1. Created a browser-local QA Focus Card while signed out.
-2. Signed in from Profile using username `admin`.
+2. Signed in from Profile using the then-current username `admin` flow.
 3. Confirmed the local card backup queue flushed to Supabase.
 4. Reloaded the same browser context and confirmed the backed-up card remained visible.
 5. Opened a second clean browser context, signed in as `admin`, and confirmed the card restored from Supabase.
@@ -265,11 +265,32 @@ Remaining security advisor:
 
 - Leaked password protection remains disabled in Supabase Auth. The current connector exposes this advisor but does not expose an Auth config update tool. Enable it from the Supabase Dashboard before moving beyond private/single-user beta if the project plan supports it.
 
+## v0.8.12 Documentation And Release-Gate Audit
+
+Audit date: 2026-07-10.
+
+Current repository release: v0.8.12.
+
+Scope:
+
+- Rechecked current source-of-truth docs for active outstanding items after v0.8.11.
+- Confirmed the remaining active app copy gap was the Planner DOL hint still referring to Focus Card Details.
+- Updated the app hint, smoke assertion, README, and Supabase plan so the active workflow consistently reads Planner / Plan Review.
+- Confirmed the old Planner validation plan remains Historical and completed; it was not revived as active scope.
+- Confirmed browser accessibility follow-up is represented by existing Playwright release QA coverage for skip link, focus styling, selected filter-chip state, mobile viewport flows, offline app-shell reload, and the v0.8.11 app passcode flow.
+- Checked Supabase current password-security docs through the Supabase connector: leaked-password protection is available on Pro plan and above.
+- Checked connected Supabase project metadata: project `ICT` is active and healthy under organization `DSPredictor`, and that organization is currently on the Free plan.
+
+Decision:
+
+- The accessibility/browser follow-up checklist item is closed for the current browser-testable release scope. Manual screen-reader testing remains a recommended external public-release check if a future release process requires assistive-technology evidence beyond browser automation.
+- The leaked-password-protection checklist item is closed as not applicable to the current Supabase Free plan. If the Supabase project is upgraded to Pro or above before public release, enable leaked-password protection from Supabase Auth settings and re-run credentialed Account & Backup QA.
+
 ## Deployment Readiness Decision
 
-v0.8.6 is safe for single-user, local-first web deployment where browser storage plus JSON export/import are the primary reliability path and Supabase is optional backup. Credential-independent Supabase checks passed for project reachability, anon RLS write denial, and signed-out optional-backup behavior. Credentialed Supabase Account & Backup QA also passed for sign-in, backup, reload, second-browser restore, final-save sync, clear-device local-only behavior, and cleanup. The deployed admin password has been rotated away from the weak/default value and verified through Supabase Auth plus production UI backup smoke.
+v0.8.12 is safe for single-user, local-first web deployment where browser storage plus JSON export/import are the primary reliability path and Supabase is optional backup. Credential-independent Supabase checks passed for project reachability, anon RLS write denial, and signed-out optional-backup behavior. Credentialed Supabase Account & Backup QA also passed for sign-in, backup, reload, second-browser restore, final-save sync, clear-device local-only behavior, and cleanup. The deployed Account & Backup credential has been rotated to the requested private single-user PIN flow and verified through Supabase Auth plus production UI backup smoke.
 
-Enable Supabase leaked-password protection from the dashboard before public release if the project plan supports it.
+Enable Supabase leaked-password protection from the dashboard before public release if the project is upgraded to a Supabase plan that supports it.
 
 ## GitHub Issue
 

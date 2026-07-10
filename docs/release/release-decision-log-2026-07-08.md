@@ -1,7 +1,7 @@
 # Release Decision Log - 2026-07-08
 
 > Status: Current
-> Last reviewed: 2026-07-09
+> Last reviewed: 2026-07-10
 > Source of truth: No
 
 
@@ -38,18 +38,19 @@ Decision pass for `docs/qa/docs-implementation-checklist-2026-07-08.md`.
 | Legacy in-page Planner/Saved tablist plan | Superseded | Current app uses route-based screens and bottom navigation; implementing `setView()`/`updateSavedCount()` would add obsolete architecture. |
 | Branch/worktree handoff evidence retention | Retired as release evidence | README, CHANGELOG, tests, and release checklist are sufficient current evidence. Historical multi-agent guides are retained only as context. |
 
-## External Release Gates Still Pending
+## External Release Gates Status
 
-These should be recorded against the deployed web/mobile-site experience before public release:
+The original web/mobile-site gates have been recorded in the later QA evidence:
 
-- v0.8.5 production web QA for version/assets, admin login, Focus Card create/save/final-save/sync/reload, and clear-device behavior.
-- Mobile-site browser QA at supported responsive viewport widths for navigation, sticky actions, import/export usability, touch targets, and offline shell reload where supported by the browser test context.
-- Assistive-technology/browser accessibility follow-up beyond automated smoke and keyboard skip-link coverage.
+- Production web shell, version/assets, Focus Card create/save/final-save/sync/reload, and clear-device behavior are recorded in `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- Mobile-site browser QA for supported responsive viewport widths, navigation, sticky actions, import/export usability, touch targets, and offline shell reload is recorded in `docs/qa/production-web-mobile-qa-2026-07-09.md`.
+- Browser accessibility follow-up for skip link, focus styling, selected filter-chip state, mobile flows, and app passcode access is recorded in `docs/qa/docs-implementation-checklist-2026-07-08.md` and `docs/qa/production-web-mobile-qa-2026-07-09.md`.
 
-Physical-device testing is not required because the app is intended to run on the web or via the mobile site. Until the web/mobile-site gates are recorded, the recommendation is beta testing only, not public release.
+Physical-device testing is not required because the app is intended to run on the web or via the mobile site. Manual screen-reader testing remains a recommended external public-release check if a future release process requires assistive-technology evidence beyond browser automation.
 
 ## External Release Gates Completed After Original Pass
 
 | Item | Decision | Evidence |
 |---|---|---|
-| Live price-provider endpoint QA | Completed for current production endpoint | `docs/qa/live-price-provider-qa-2026-07-09.md` records HTTP 200 for `MNQ` and HTTP 400 unsupported-symbol behavior. The live app shell still reported v0.8.4 during the check, so v0.8.5 deployment UI QA remains pending. |
+| Live price-provider endpoint QA | Completed for current production endpoint | `docs/qa/live-price-provider-qa-2026-07-09.md` records HTTP 200 for `MNQ` and HTTP 400 unsupported-symbol behavior. |
+| Supabase leaked-password protection | Not applicable to current project plan | Supabase docs state leaked-password protection is available on Pro plan and above. The connected `DSPredictor` organization is currently on the Free plan, so this gate becomes active only if the project is upgraded before public release. |

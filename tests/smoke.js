@@ -42,11 +42,11 @@ const hostedPriceApiBase = match(configSource, /hostedPriceApiBase: '([^']+)'/, 
 const hostedPriceUrl = new URL(hostedPriceApiBase);
 const runtimeAssets = Array.from(index.matchAll(/(?:src|href)="([^"]*(?:assets\/[^"]+|manifest\.webmanifest|favicon\.svg|icon-\d+\.svg)[^"]*)"/g)).map(found => found[1]);
 
-ok(appVersion === 'v0.8.11', 'app version should be v0.8.11');
-ok(configAsset.includes('v=0.8.11-access-price-planner-20260710'), 'config asset cache key should match v0.8.11 access price planner');
-ok(appAsset.includes('v=0.8.11-access-price-planner-20260710'), 'app asset cache key should match v0.8.11 access price planner');
-ok(styleAsset.includes('v=0.8.11-access-price-planner-20260710'), 'style asset cache key should match v0.8.11 access price planner');
-ok(cacheName === 'ict-sweep-tracker-v0811-access-price-planner-20260710', 'service worker cache name should match v0.8.11 access price planner');
+ok(appVersion === 'v0.8.12', 'app version should be v0.8.12');
+ok(configAsset.includes('v=0.8.12-docs-audit-20260710'), 'config asset cache key should match v0.8.12 docs audit');
+ok(appAsset.includes('v=0.8.12-docs-audit-20260710'), 'app asset cache key should match v0.8.12 docs audit');
+ok(styleAsset.includes('v=0.8.12-docs-audit-20260710'), 'style asset cache key should match v0.8.12 docs audit');
+ok(cacheName === 'ict-sweep-tracker-v0812-docs-audit-20260710', 'service worker cache name should match v0.8.12 docs audit');
 ok(index.includes(`<title>ICT DOL Sweep Tracker ${appVersion}</title>`), 'index title version missing');
 ok(index.includes(`ICT DOL Sweep Tracker ${appVersion} · Educational tool. Not financial advice.`), 'index footer version missing');
 ok(!index.includes('assets/bias-extension.js'), 'obsolete bias extension should not be loaded');
@@ -891,7 +891,7 @@ ok(routes.appNode.innerHTML.includes('127.0.0.1:8765'), 'planner local price fal
 ok(!routes.appNode.innerHTML.includes('DOL confidence'), 'planner DOL confidence should not be emphasized');
 ok(routes.appNode.innerHTML.includes('dol1Tf'), 'planner DOL timeframe field missing');
 ok(!routes.appNode.innerHTML.includes("id='dol1Taken'"), 'planner should not render DOL taken checkbox');
-ok(routes.appNode.innerHTML.includes('DOL taken is confirmed from Focus Card Details'), 'planner DOL taken review hint missing');
+ok(routes.appNode.innerHTML.includes('DOL taken is confirmed in Plan Review'), 'planner DOL taken review hint missing');
 ok(routes.appNode.innerHTML.includes('sweep1Tf'), 'planner sweep timeframe field missing');
 ok(routes.appNode.innerHTML.includes('Sweep taken'), 'planner sweep taken checkbox missing');
 ok(!routes.appNode.innerHTML.includes('Validation of bias'), 'planner should not render validation of bias label');

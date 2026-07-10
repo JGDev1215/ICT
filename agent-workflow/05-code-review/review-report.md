@@ -22,15 +22,15 @@ NO
 
 ## What Was Done Well
 
-- Kept passcode local-only and excluded it from export/import and remote settings payloads.
-- Preserved final-saved card locking.
-- Kept Planner validation behavior intact.
-- Added smoke and E2E coverage for the new high-risk flows.
-- Used the version bump helper for coordinated cache and version updates.
+- Fixed the only active app-copy contradiction found in current source.
+- Kept archived and historical documents from becoming active requirements.
+- Used Supabase docs and connected project metadata before closing the leaked-password-protection checklist item.
+- Preserved local-first app behavior and storage contracts.
+- Ran the required smoke, unit, API, E2E, and diff checks.
 
 ## Issues Found
 
-None blocking.
+No blocking issues found.
 
 ## Required Fixes
 
@@ -38,13 +38,14 @@ None.
 
 ## Recommended Improvements
 
-- Consider a later UX pass for passcode recovery/reset copy if this is used across more devices.
+- If the project moves from private beta to a formal public launch, perform manual screen-reader QA and record it as external release evidence.
+- If the Supabase organization is upgraded to Pro or above, enable leaked-password protection from Supabase Auth settings and re-run credentialed Account & Backup QA.
 
 ## Regression Risks
 
-- Local passcode protection depends on browser storage; clearing browser data resets the passcode to the default.
-- Live price mode depends on the optional price helper; manual mode remains the fallback.
+- Low. Runtime change is limited to one copy string and version/cache references.
+- Documentation changes may need another pass after deployment if production URLs lag the committed version.
 
 ## Final Reviewer Notes
 
-Automated checks passed after fixing E2E expectations around clear-device returning to the lock screen.
+The current documented outstanding checklist is closed with evidence. Remaining items are conditional future release actions, not current blockers under the present project plan and app scope.

@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'v0.8.11';
+  const VERSION = 'v0.8.12';
   const KEY = 'ict_cards_v078';
   const SETTINGS_KEY = 'ict_settings_v1';
   const DRAFT_KEY = 'ict_planner_draft_v1';
@@ -2381,7 +2381,7 @@
 
   function row(p, i, t, l){
     if(p === 'dol'){
-      return `<div class='panel'><div class='progress'>${t} ${i} of 3</div><div class='grid'><div>${input(p + i + 'Level', 'Price level', 'price level or N/A')}</div><div>${select(p + i + 'Draw', 'Draw rationale', draws, '- select draw rationale -')}</div></div>${select(p + i + 'Tf', 'Timeframe used', liquidityTimeframes, '- timeframe -')}<p class='hint'>DOL taken is confirmed from Focus Card Details after review.</p></div>`;
+      return `<div class='panel'><div class='progress'>${t} ${i} of 3</div><div class='grid'><div>${input(p + i + 'Level', 'Price level', 'price level or N/A')}</div><div>${select(p + i + 'Draw', 'Draw rationale', draws, '- select draw rationale -')}</div></div>${select(p + i + 'Tf', 'Timeframe used', liquidityTimeframes, '- timeframe -')}<p class='hint'>DOL taken is confirmed in Plan Review after review.</p></div>`;
     }
     return `<div class='panel'><div class='progress'>${t} ${i} of 3</div><div class='grid'><div>${input(p + i + 'Level', t + ' liquidity price level', 'price level or N/A')}</div><div>${select(p + i + 'Draw', l, draws, '- select liquidity draw -')}</div></div><div class='grid'><div>${select(p + i + 'Tf', 'Timeframe used', liquidityTimeframes, '- timeframe -')}</div><label class='check-row'><input type='checkbox' id='${p + i}Taken' ${f[p + i + 'Taken'] ? 'checked' : ''}> <span>Sweep taken</span></label></div><div class='grid'><div>${select(p + i + 'Confidence', t + ' confidence', conf, '- confidence -')}</div><div>${select(p + i + 'HitTime', 'Hit time', times, '- expected hit time -')}</div></div></div>`;
   }

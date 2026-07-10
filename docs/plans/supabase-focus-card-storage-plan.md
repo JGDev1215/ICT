@@ -1,7 +1,7 @@
 # Supabase Focus Card Storage Plan
 
 > Status: Current
-> Last reviewed: 2026-07-09
+> Last reviewed: 2026-07-10
 > Source of truth: Yes
 
 
@@ -56,8 +56,9 @@ Do not expose the Supabase service-role key in the frontend.
 ## Runtime Behavior
 
 - Profile shows a user-facing Account & Backup card, not Supabase implementation details.
-- The visible login is single-user admin access: username `admin`, password supplied by the user.
-- The frontend maps `admin` to the backing Supabase Auth email `admin@ict.local` unless `window.ICT_ADMIN_SUPABASE_EMAIL` / `adminSupabaseEmail` config overrides it.
+- The visible login is single-user admin access: a 4-digit Account & Backup PIN.
+- The frontend maps that PIN to the backing Supabase Auth email `admin@ict.local` unless `window.ICT_ADMIN_SUPABASE_EMAIL` / `adminSupabaseEmail` config overrides it.
+- The Account & Backup PIN is separate from the app-wide device-local passcode gate.
 - Profile includes login/logout and manual backup controls for the authenticated admin user.
 - Card create/edit/final-save/favorite/delete updates localStorage first.
 - If logged in, the app syncs the change to Supabase.
@@ -68,9 +69,9 @@ Do not expose the Supabase service-role key in the frontend.
 
 ## Validation Checklist
 
-- Confirm one Supabase Auth user exists and is confirmed: `admin@ict.local` with the deployment password.
+- Confirm one Supabase Auth user exists and is confirmed: `admin@ict.local` with the deployed Account & Backup PIN as its backing Auth password.
 - Confirm the publishable key is present in `index.html` or an injected config script before `assets/app.js`.
-- Login from Profile with username `admin`.
+- Unlock the app with the app passcode, then sign in from Profile with the Account & Backup PIN.
 - Create a Focus Card and confirm a row appears in `public.focus_cards`.
 - Refresh the app and confirm the card reloads.
 - Open the app in a second browser, login, and confirm the card appears.
