@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.8.11 — 2026-07-10
+
+### Added
+
+- Added a device-local app passcode gate with default passcode `5880` and Profile controls for changing it.
+- Added editable Focus Card price mode selection for Manual override or Live auto-update.
+
+### Changed
+
+- Renamed the visible Planner-to-review flow so Planner and Plan Review read as one workflow while keeping existing routes stable.
+- Excluded the app passcode from JSON export/import and Supabase settings sync payloads.
+- Updated cache-busted assets and service-worker cache names for the access, price mode, and planner wording release.
+
+### Tests
+
+- Added smoke and Playwright coverage for app passcode access, local passcode changes, price mode behavior, final-card price lock behavior, and updated Planner/Plan Review labels.
+
 ## v0.8.10 — 2026-07-09
 
 ### Changed

@@ -42,11 +42,11 @@ const hostedPriceApiBase = match(configSource, /hostedPriceApiBase: '([^']+)'/, 
 const hostedPriceUrl = new URL(hostedPriceApiBase);
 const runtimeAssets = Array.from(index.matchAll(/(?:src|href)="([^"]*(?:assets\/[^"]+|manifest\.webmanifest|favicon\.svg|icon-\d+\.svg)[^"]*)"/g)).map(found => found[1]);
 
-ok(appVersion === 'v0.8.10', 'app version should be v0.8.10');
-ok(configAsset.includes('v=0.8.10-final-lock-20260709'), 'config asset cache key should match v0.8.10 final lock');
-ok(appAsset.includes('v=0.8.10-final-lock-20260709'), 'app asset cache key should match v0.8.10 final lock');
-ok(styleAsset.includes('v=0.8.10-final-lock-20260709'), 'style asset cache key should match v0.8.10 final lock');
-ok(cacheName === 'ict-sweep-tracker-v0810-final-lock-20260709', 'service worker cache name should match v0.8.10 final lock');
+ok(appVersion === 'v0.8.11', 'app version should be v0.8.11');
+ok(configAsset.includes('v=0.8.11-access-price-planner-20260710'), 'config asset cache key should match v0.8.11 access price planner');
+ok(appAsset.includes('v=0.8.11-access-price-planner-20260710'), 'app asset cache key should match v0.8.11 access price planner');
+ok(styleAsset.includes('v=0.8.11-access-price-planner-20260710'), 'style asset cache key should match v0.8.11 access price planner');
+ok(cacheName === 'ict-sweep-tracker-v0811-access-price-planner-20260710', 'service worker cache name should match v0.8.11 access price planner');
 ok(index.includes(`<title>ICT DOL Sweep Tracker ${appVersion}</title>`), 'index title version missing');
 ok(index.includes(`ICT DOL Sweep Tracker ${appVersion} · Educational tool. Not financial advice.`), 'index footer version missing');
 ok(!index.includes('assets/bias-extension.js'), 'obsolete bias extension should not be loaded');
@@ -132,9 +132,12 @@ ok(appSource.includes('function renderShell'), 'app shell renderer missing');
 ok(appSource.includes('function renderTabBar'), 'tab bar renderer missing');
 ok(appSource.includes('ROUTES.includes(routeName)'), 'hash router should ignore non-route anchors');
 ok(appSource.includes('component-gallery'), 'component gallery route missing');
-ok(appSource.includes('AI Trade Plan Builder'), 'planner screen missing');
+ok(appSource.includes('Build a plan for review'), 'planner screen missing');
 ok(appSource.includes('Saved focus cards'), 'saved screen missing');
-ok(appSource.includes('Focus card details'), 'focus card details screen missing');
+ok(appSource.includes('Plan Review'), 'plan review screen missing');
+ok(appSource.includes('DEFAULT_APP_PASSCODE') && appSource.includes("'5880'"), 'default app passcode missing');
+ok(appSource.includes('function changeAppPasscode'), 'app passcode change helper missing');
+ok(appSource.includes('focusPriceMode') && appSource.includes('Live auto-update'), 'focus price mode selector missing');
 ok(appSource.includes('Execution timeline'), 'timeline screen missing');
 ok(appSource.includes('Setup Library'), 'liquidity map screen missing');
 ok(!appSource.includes('Risk tracker'), 'risk tracker screen should be removed');
@@ -178,7 +181,7 @@ ok(readme.includes('## Hosted Price API'), 'README hosted price API section miss
 ok(readme.includes('## Supabase Focus Card Sync'), 'README Supabase sync section missing');
 ok(readme.includes('Vercel Python Function'), 'README Vercel API contract missing');
 ok(readme.includes('window.ICT_PRICE_API_BASE'), 'README price API override missing');
-ok(readme.includes('Planner generated preview') && readme.includes('Focus Card Details'), 'README price map integration contract missing');
+ok(readme.includes('Planner Plan preview') && readme.includes('Plan Review'), 'README price map integration contract missing');
 ok(changelog.includes('Price Map ladder'), 'changelog price map support entry missing');
 ok(license.includes('MIT License') && license.includes('WITHOUT WARRANTY'), 'MIT license file missing expected terms');
 const manifestJson = JSON.parse(manifest);
@@ -293,6 +296,7 @@ function runApp(seed, options){
     }
   };
   const storage = makeStorage(seed, runOptions);
+  const session = makeStorage(runOptions.sessionSeed || {}, {});
   const context = {
     console,
     Date,
@@ -312,6 +316,7 @@ function runApp(seed, options){
     },
     document,
     localStorage: storage,
+    sessionStorage: session,
     location: runOptions.location,
     history: runOptions.history,
     navigator: {clipboard: {writeText(){ return Promise.resolve(); }}},
@@ -324,7 +329,11 @@ function runApp(seed, options){
   vm.createContext(context);
   new vm.Script(configSource, {filename: 'assets/config.js'}).runInContext(context);
   new vm.Script(appSource, {filename: 'assets/app.js'}).runInContext(context);
-  return {context, storage, appNode};
+  if(!runOptions.locked && context.ICTSweepState){
+    context.ICTSweepState.unlockApp(context.ICTSweepState.getSettings().appPasscode || '5880');
+    context.ICTSweepState.go('home', {replace: true});
+  }
+  return {context, storage, session, appNode};
 }
 
 const legacyCard = {
@@ -491,17 +500,34 @@ ok(api.comp({instrument: 'MNQ', session: 'New York AM', dol1Level: '20250', dol1
 
 const settingsFixture = runApp();
 const settingsApi = settingsFixture.context.ICTSweepState;
+const lockedFixture = runApp(null, {locked: true});
+const lockedApi = lockedFixture.context.ICTSweepState;
+ok(lockedFixture.appNode.innerHTML.includes('Enter app passcode'), 'app should start locked');
+ok(!lockedFixture.appNode.innerHTML.includes('ICT Sweep Tracker'), 'locked app should not render normal app content');
+ok(lockedApi.unlockApp('1234') === false, 'wrong app passcode should not unlock');
+ok(lockedApi.isAppUnlocked() === false, 'wrong app passcode should keep app locked');
+ok(lockedApi.unlockApp('5880') === true, 'default app passcode should unlock');
+ok(lockedApi.isAppUnlocked() === true, 'default app passcode should set unlocked state');
+const changedPasscode = lockedApi.changeAppPasscode('5880', '4321', '4321');
+ok(changedPasscode.ok === true, 'app passcode should change with current passcode');
+lockedApi.lockApp();
+ok(lockedApi.unlockApp('5880') === false, 'old app passcode should stop working after change');
+ok(lockedApi.unlockApp('4321') === true, 'new app passcode should unlock');
 const savedSettings = settingsApi.saveSettings({
   defaultInstrument: 'NQ',
   defaultSession: 'New York AM',
+  appPasscode: '2468',
   theme: 'dark',
   riskDefaults: {plannedRiskPct: '0.5', plannedR: '2R', maxLoss: '150'}
 });
 ok(savedSettings.defaultInstrument === 'NQ', 'default instrument setting did not save');
 ok(savedSettings.defaultSession === 'New York AM', 'default session setting did not save');
+ok(savedSettings.appPasscode === '2468', 'local app passcode setting did not save');
 ok(savedSettings.theme === 'dark', 'theme setting did not save');
 ok(!Object.prototype.hasOwnProperty.call(savedSettings, 'watchlist'), 'watchlist should not be an active setting');
 ok(savedSettings.riskDefaults.plannedRiskPct === '0.5', 'risk default percent did not save');
+ok(!Object.prototype.hasOwnProperty.call(settingsApi.publicSettings(savedSettings), 'appPasscode'), 'public settings should exclude app passcode');
+ok(!Object.prototype.hasOwnProperty.call(settingsApi.exportCards().settings, 'appPasscode'), 'exported settings should exclude app passcode');
 const reloadedSettingsFixture = runApp(settingsFixture.storage.dump());
 const reloadedSettingsApi = reloadedSettingsFixture.context.ICTSweepState;
 const reloadedSettings = reloadedSettingsApi.getSettings();
@@ -735,6 +761,7 @@ const exported = api.exportCards();
 ok(exported.schema === 'ict_dol_sweep_export_v7', 'export schema invalid');
 ok(exported.analytics.sample === 2, 'export analytics invalid');
 ok(!Object.prototype.hasOwnProperty.call(exported.settings, 'watchlist'), 'exported settings should not include watchlist');
+ok(!Object.prototype.hasOwnProperty.call(exported.settings, 'appPasscode'), 'exported settings should not include app passcode');
 ok(exported.cards.find(card => card.id === 'editable-review').journal.lesson === 'Wait for confirmation.', 'export lost journal');
 ok(exported.cards.find(card => card.id === 'editable-review').risk.maxLoss === '$50', 'export lost risk');
 ok(exported.cards.find(card => card.id === 'editable-review').marketContext.Daily.phase === 'Retracement', 'export lost market context');
@@ -770,6 +797,7 @@ const settingsOnlyImport = api.importCards({
   settings: {
     defaultInstrument: 'ES',
     defaultSession: 'London',
+    appPasscode: '9999',
     theme: 'dark',
     riskDefaults: {plannedRiskPct: '0.5', plannedR: '2R', maxLoss: '100'}
   }
@@ -777,6 +805,7 @@ const settingsOnlyImport = api.importCards({
 ok(settingsOnlyImport.imported === 0 && settingsOnlyImport.settingsImported === true, 'settings-only import should report imported settings without cards');
 const importedSettings = api.getSettings();
 ok(importedSettings.defaultInstrument === 'ES' && importedSettings.defaultSession === 'London', 'importCards should import exported settings');
+ok(importedSettings.appPasscode === '5880', 'importCards should ignore imported app passcode');
 ok(!Object.prototype.hasOwnProperty.call(importedSettings, 'watchlist'), 'importCards should ignore legacy watchlist settings');
 
 const duplicateImport = api.importCards({
@@ -838,9 +867,9 @@ const malformedHash = runApp(null, {location: {hash: '#%E0%A4%A', hostname: 'loc
 ok(malformedHash.appNode.innerHTML.includes('ICT Sweep Tracker'), 'malformed hash should fall back to a rendered home route');
 
 routeApi.go('planner');
-ok(routes.appNode.innerHTML.includes('AI Trade Plan Builder'), 'planner route did not render');
+ok(routes.appNode.innerHTML.includes('Build a plan for review'), 'planner route did not render');
 ok(routes.appNode.innerHTML.includes("class='skip-link' href='#plannerActions'"), 'planner skip link missing');
-ok(routes.appNode.innerHTML.includes('Generate Focus Plan'), 'planner CTA did not render');
+ok(routes.appNode.innerHTML.includes('Review Plan'), 'planner CTA did not render');
 ok(routes.appNode.innerHTML.includes("id='plannerActions'"), 'planner sticky action target missing');
 ok(routes.appNode.innerHTML.includes('Draft state'), 'planner visible draft state missing');
 ok(routes.appNode.innerHTML.includes("id='discardDraftBtn'"), 'planner discard draft action missing');
@@ -996,7 +1025,7 @@ ok(routes.appNode.innerHTML.includes('star'), 'saved favorite affordance missing
 ok(routes.appNode.innerHTML.includes('Export JSON'), 'saved export action missing');
 
 routeApi.go('focus', {id: 'route-card'});
-ok(routes.appNode.innerHTML.includes('Focus card details'), 'focus route did not render');
+ok(routes.appNode.innerHTML.includes('Plan Review'), 'focus route did not render');
 ok(routes.appNode.innerHTML.includes('Price Map Dashboard'), 'focus price map dashboard missing');
 ok(!routes.appNode.innerHTML.includes('Focus DOL'), 'focus should not render active DOL panel');
 ok(!routes.appNode.innerHTML.includes('Active draw on liquidity'), 'focus should not render active DOL selector');
@@ -1008,6 +1037,9 @@ ok(routes.appNode.innerHTML.includes('audit-strip'), 'audit strip missing');
 ok(routes.appNode.innerHTML.includes('Last saved'), 'last saved audit label missing');
 ok(routes.appNode.innerHTML.includes('Latest saved price'), 'latest saved price card missing');
 ok(routes.appNode.innerHTML.includes('snapshot-card'), 'snapshot card markup missing');
+ok(routes.appNode.innerHTML.includes('focusPriceMode'), 'focus price mode selector missing');
+ok(routes.appNode.innerHTML.includes('Manual override'), 'focus manual price mode missing');
+ok(routes.appNode.innerHTML.includes('Live auto-update'), 'focus live price mode missing');
 ok(routes.appNode.innerHTML.includes('Override price before saving'), 'override price panel missing');
 ok(routes.appNode.innerHTML.includes('Recent price captures'), 'compact price history missing');
 ok(routes.appNode.innerHTML.includes('Last saved'), 'last saved timestamp missing');

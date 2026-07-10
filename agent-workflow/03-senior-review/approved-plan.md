@@ -2,23 +2,27 @@
 
 ## Goal
 
-Create the end-of-day report, verify the worktree, commit all pending changes, and push to GitHub.
+Implement v0.8.11 exactly as a focused local-first static-app release.
 
 ## Approved Scope
 
-- Add a historical daily report under `docs/daily-reports/`.
-- Run final checks.
-- Stage all changes.
-- Commit all changes.
-- Push the current `main` branch to `origin`.
+- Device-local app passcode gate with default `5880`.
+- Profile passcode change controls.
+- Per-card Focus Card price mode: live auto-update or manual override.
+- Planner/Plan Review wording cleanup with stable routes.
+- Version/cache/docs/tests update.
 
-## Constraints
+## Non-Scope
 
-- Do not revert any existing worktree changes.
-- Do not create unrelated product changes.
+- Git commit or push.
+- Supabase schema changes.
+- Backend app authentication.
+- Full workflow redesign.
 
-## Verification
+## Execution Rules
 
-- `npm test`
-- `npm run test:e2e -- --reporter=dot`
-- `git diff --check`
+- Preserve saved-card compatibility.
+- Keep export schema unchanged unless unavoidable.
+- Do not expose or sync app passcode.
+- Do not mutate final-saved cards.
+- Run required tests before handoff.

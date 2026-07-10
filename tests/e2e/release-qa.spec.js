@@ -1,5 +1,12 @@
 const {test, expect} = require('@playwright/test');
 
+async function unlockApp(page){
+  await expect(page.locator('#appPasscodeInput')).toBeVisible();
+  await page.locator('#appPasscodeInput').fill('5880');
+  await page.locator('#unlockAppBtn').click();
+  await expect(page.locator('#appPasscodeInput')).toHaveCount(0);
+}
+
 async function resetApp(page){
   await page.goto('/');
   await page.evaluate(() => {
@@ -7,6 +14,7 @@ async function resetApp(page){
     sessionStorage.clear();
   });
   await page.reload();
+  await unlockApp(page);
 }
 
 async function seedCard(page){
@@ -63,7 +71,7 @@ test.describe('release QA evidence', () => {
       expect(navBox.y).toBeGreaterThan(700);
 
       await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
-      await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+      await expect(page.getByText('Build a plan for review')).toBeVisible();
       await expect(page.locator('#plannerActions')).toBeVisible();
       await page.locator('#instrument').focus();
       await expect(page.locator('#instrument')).toBeFocused();
@@ -97,7 +105,7 @@ test.describe('release QA evidence', () => {
 
     const routes = [
       ['home', 'ICT Sweep Tracker'],
-      ['planner', 'AI Trade Plan Builder'],
+      ['planner', 'Build a plan for review'],
       ['saved', 'Saved Cards'],
       ['profile', 'Profile'],
       ['liquidity-map', 'Setup Library'],
@@ -118,7 +126,7 @@ test.describe('release QA evidence', () => {
     await expect(page.getByRole('button', {name: /Journal/})).toHaveCount(0);
 
     await page.evaluate(() => window.ICTSweepState.go('focus', {id: 'release-card'}));
-    await expect(page.getByText('Focus card details')).toBeVisible();
+    await expect(page.getByText('Plan Review')).toBeVisible();
     await expect(page.getByText('Price Map Dashboard')).toBeVisible();
 
     await page.evaluate(() => window.ICTSweepState.go('timeline', {id: 'release-card'}));
@@ -154,7 +162,7 @@ test.describe('release QA evidence', () => {
       await page.reload({waitUntil: 'domcontentloaded'});
       await expect(page.getByText('ICT Sweep Tracker')).toBeVisible();
       await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
-      await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+      await expect(page.getByText('Build a plan for review')).toBeVisible();
     } finally {
       await context.setOffline(false);
     }

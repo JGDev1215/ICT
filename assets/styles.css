@@ -108,6 +108,23 @@ img,svg,canvas,video{max-width:100%}
   white-space:nowrap;
   border:0;
 }
+.hidden{display:none!important}
+.access-shell .app-main{
+  max-width:520px;
+  margin:0 auto;
+}
+.access-screen{
+  min-height:60vh;
+  display:grid;
+  align-content:center;
+}
+.access-card{
+  margin-top:var(--space-4);
+}
+.passcode-input{
+  font-variant-numeric:tabular-nums;
+  letter-spacing:0;
+}
 
 .material-symbols-rounded{
   font-family:'Material Symbols Rounded';

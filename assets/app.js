@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'v0.8.10';
+  const VERSION = 'v0.8.11';
   const KEY = 'ict_cards_v078';
   const SETTINGS_KEY = 'ict_settings_v1';
   const DRAFT_KEY = 'ict_planner_draft_v1';
@@ -83,6 +83,8 @@
   const PRICE_DELAY_DISCLAIMER = 'Price may be delayed. Manual override is available.';
   const LOCKED_CARD_MESSAGE = 'Final-saved cards are locked and cannot be changed.';
   const PRICE_SYMBOL_PATTERN = /^[A-Z0-9._=/-]{1,24}$/;
+  const DEFAULT_APP_PASSCODE = '5880';
+  const APP_UNLOCK_KEY = 'ict_app_unlocked_v1';
   const marketPhaseKeys = {
     Monthly: 'monthly',
     Weekly: 'weekly',
@@ -108,6 +110,7 @@
     defaultInstrument: '',
     defaultSession: '',
     theme: 'light',
+    appPasscode: DEFAULT_APP_PASSCODE,
     riskDefaults: {
       plannedRiskPct: '',
       plannedR: '',
@@ -119,8 +122,21 @@
     return typeof localStorage !== 'undefined' ? localStorage : null;
   }
 
+  function sessionStore(){
+    return typeof sessionStorage !== 'undefined' ? sessionStorage : null;
+  }
+
   function normTheme(value){
     return value === 'dark' ? 'dark' : 'light';
+  }
+
+  function normPasscode(value, fallback){
+    const text = asText(value);
+    return /^\d{4}$/.test(text) ? text : (fallback || DEFAULT_APP_PASSCODE);
+  }
+
+  function normPriceMode(value){
+    return value === 'live' ? 'live' : 'manual';
   }
 
   function applyTheme(theme){
@@ -456,6 +472,27 @@
     return `<div class='price-status ${priceStatusClass()}' id='priceStatusMessage'>${esc(priceStatusMessage())}</div>`;
   }
 
+  function focusLivePriceReady(cardId){
+    return liveFocusPrice.cardId === cardId && liveFocusPrice.state === 'ok' && liveFocusPrice.price;
+  }
+
+  function focusLivePriceMessage(card){
+    if(!card || card.priceMode !== 'live') return '';
+    if(liveFocusPrice.cardId !== card.id || !liveFocusPrice.state) return 'Live price will update while this plan review is open.';
+    if(liveFocusPrice.state === 'loading') return 'Updating live price. Manual save remains in your control.';
+    if(liveFocusPrice.state === 'ok') return 'Live price updated. Save changes to capture it.';
+    return liveFocusPrice.message || 'Live price unavailable. Switch to Manual override if needed.';
+  }
+
+  function focusDisplayFields(card){
+    const fields = normFields(card && card.fields);
+    if(card && card.priceMode === 'live' && focusLivePriceReady(card.id)){
+      fields.currentPrice = liveFocusPrice.price;
+      fields.time = fields.time || nyTimeInput();
+    }
+    return fields;
+  }
+
   function trimSlash(s){
     return cleanUrl(s).replace(/\/+$/, '');
   }
@@ -525,6 +562,53 @@
         return next();
       });
     return next();
+  }
+
+  function ensureFocusLivePrice(card){
+    if(!card || isFinalLocked(card) || card.priceMode !== 'live' || route !== 'focus') return;
+    const symbol = normalizePriceSymbol(card.fields && card.fields.instrument);
+    if(!symbol || !validPriceSymbol(symbol)){
+      liveFocusPrice = {cardId: card.id, state: 'unsupported', price: '', source: '', fetchedAt: 0, message: 'Unsupported symbol for live price. Use Manual override.'};
+      return;
+    }
+    if(typeof fetch !== 'function'){
+      liveFocusPrice = {cardId: card.id, state: 'unavailable', price: '', source: '', fetchedAt: 0, message: 'Live price needs browser fetch support. Use Manual override.'};
+      return;
+    }
+    if(liveFocusPrice.cardId === card.id && liveFocusPrice.state === 'loading') return;
+    if(liveFocusPrice.cardId === card.id && liveFocusPrice.state === 'ok' && priceRefreshRemainingFor(liveFocusPrice.fetchedAt)) return;
+    liveFocusPrice = {cardId: card.id, state: 'loading', price: liveFocusPrice.cardId === card.id ? liveFocusPrice.price : '', source: liveFocusPrice.source || '', fetchedAt: liveFocusPrice.fetchedAt || 0, message: ''};
+    fetchPrice(symbol)
+      .then(data => {
+        const payload = validatePricePayload(data);
+        liveFocusPrice = {
+          cardId: card.id,
+          state: 'ok',
+          price: payload.price,
+          source: data.helperUrl === localPriceHelperUrl(symbol) ? 'local-yfinance' : 'hosted-yfinance',
+          fetchedAt: Date.now(),
+          message: ''
+        };
+        if(route === 'focus' && reviewId === card.id) render();
+      })
+      .catch(err => {
+        const kind = priceErrorKind(err);
+        liveFocusPrice = {
+          cardId: card.id,
+          state: kind,
+          price: '',
+          source: '',
+          fetchedAt: Date.now(),
+          message: kind === 'unsupported' ? 'Unsupported symbol for live price. Use Manual override.' : 'Live price unavailable. Use Manual override.'
+        };
+        if(route === 'focus' && reviewId === card.id) render();
+      });
+  }
+
+  function priceRefreshRemainingFor(timestamp){
+    if(!timestamp) return 0;
+    const elapsed = Math.floor((Date.now() - timestamp) / 1000);
+    return Math.max(0, PRICE_REFRESH_SECONDS - elapsed);
   }
 
   function derivePotentialPhase(phase){
@@ -747,6 +831,7 @@
       fields,
       marketContext,
       activeDolId: activeId,
+      priceMode: normPriceMode(source.priceMode),
       priceSnapshot: snapshot,
       priceHistory: normPriceHistory(source.priceHistory, snapshot, fields, createdAt),
       routeEvidence,
@@ -984,13 +1069,25 @@
       defaultInstrument: asText(saved.defaultInstrument || defaultSettings.defaultInstrument),
       defaultSession: asText(saved.defaultSession || defaultSettings.defaultSession),
       theme: normTheme(saved.theme || defaultSettings.theme),
+      appPasscode: normPasscode(saved.appPasscode, defaultSettings.appPasscode),
       riskDefaults: normRisk(saved.riskDefaults || defaultSettings.riskDefaults)
+    };
+  }
+
+  function publicSettings(settings){
+    const s = isObject(settings) ? settings : getSettings();
+    return {
+      defaultInstrument: asText(s.defaultInstrument || defaultSettings.defaultInstrument),
+      defaultSession: asText(s.defaultSession || defaultSettings.defaultSession),
+      theme: normTheme(s.theme || defaultSettings.theme),
+      riskDefaults: normRisk(s.riskDefaults || defaultSettings.riskDefaults)
     };
   }
 
   function saveSettings(settings, options){
     const next = Object.assign({}, getSettings(), isObject(settings) ? settings : {});
     next.theme = normTheme(next.theme);
+    next.appPasscode = normPasscode(next.appPasscode, getSettings().appPasscode);
     delete next['watch' + 'list'];
     next.riskDefaults = normRisk(next.riskDefaults);
     const store = storage();
@@ -1013,7 +1110,7 @@
       version: VERSION,
       exportedAt: new Date().toISOString(),
       analytics: getMetrics(cards),
-      settings: getSettings(),
+      settings: publicSettings(),
       cards: getCards()
     };
   }
@@ -1022,7 +1119,7 @@
     const parsed = typeof payload === 'string' ? parse(payload, null) : payload;
     const warning = importSchemaWarning(parsed);
     const settingsImported = !!(isObject(parsed) && isObject(parsed.settings));
-    if(settingsImported) saveSettings(parsed.settings);
+    if(settingsImported) saveSettings(publicSettings(parsed.settings));
     const settingsWarning = settingsImported && lastSettingsError ? lastSettingsError : '';
     const incoming = extractPayload(parsed).map(normaliseCard);
     const combinedWarning = [warning, settingsWarning].filter(Boolean).join(' ');
@@ -1258,13 +1355,7 @@
   }
 
   function getSettingsPayload(settings){
-    const s = isObject(settings) ? settings : getSettings();
-    return {
-      defaultInstrument: asText(s.defaultInstrument),
-      defaultSession: asText(s.defaultSession),
-      theme: normTheme(s.theme),
-      riskDefaults: normRisk(s.riskDefaults)
-    };
+    return publicSettings(settings);
   }
 
   function mergeCards(localCards, remoteCards){
@@ -1593,6 +1684,10 @@
         .concat(LEGACY)
         .forEach(k => store.removeItem(k));
     }
+    const sess = sessionStore();
+    if(sess) sess.removeItem(APP_UNLOCK_KEY);
+    appUnlockedMemory = false;
+    appAccessMessage = 'This device data was cleared. Enter the app passcode to continue.';
     const client = getSupabaseClient();
     const signOut = (supabaseUser || supabaseSession) && client && client.auth && client.auth.signOut
       ? client.auth.signOut().catch(() => false)
@@ -1842,11 +1937,14 @@
   let priceFetchState = '';
   let lastPriceSource = 'manual';
   let lastPriceFetchAt = 0;
+  let liveFocusPrice = {cardId: '', state: '', price: '', source: '', fetchedAt: 0, message: ''};
   let lastDraftState = '';
   let lastDraftSavedAt = '';
   let plannerDraftDiscarded = false;
   let manualPriceNeededAck = false;
   let plannerValidationMode = '';
+  let appUnlockedMemory = false;
+  let appAccessMessage = '';
   let supabaseClient = null;
   let supabaseSession = null;
   let supabaseUser = null;
@@ -1924,6 +2022,46 @@
     return notice;
   }
 
+  function appPasscode(){
+    return getSettings().appPasscode || DEFAULT_APP_PASSCODE;
+  }
+
+  function isAppUnlocked(){
+    const sess = sessionStore();
+    return appUnlockedMemory || !!(sess && sess.getItem(APP_UNLOCK_KEY) === '1');
+  }
+
+  function unlockApp(passcode){
+    if(asText(passcode) !== appPasscode()){
+      appAccessMessage = 'Incorrect passcode.';
+      return false;
+    }
+    const sess = sessionStore();
+    if(sess) sess.setItem(APP_UNLOCK_KEY, '1');
+    appUnlockedMemory = true;
+    appAccessMessage = '';
+    return true;
+  }
+
+  function lockApp(){
+    const sess = sessionStore();
+    if(sess) sess.removeItem(APP_UNLOCK_KEY);
+    appUnlockedMemory = false;
+    appAccessMessage = '';
+    render();
+  }
+
+  function changeAppPasscode(currentPasscode, nextPasscode, confirmPasscode){
+    const current = asText(currentPasscode);
+    const next = asText(nextPasscode);
+    const confirmValue = asText(confirmPasscode);
+    if(current !== appPasscode()) return {ok: false, message: 'Current app passcode is incorrect.'};
+    if(!/^\d{4}$/.test(next)) return {ok: false, message: 'New app passcode must be 4 digits.'};
+    if(next !== confirmValue) return {ok: false, message: 'New app passcodes do not match.'};
+    saveSettings({appPasscode: next}, {remote: false});
+    return {ok: !lastSettingsError, message: lastSettingsError || 'App passcode updated.'};
+  }
+
   const api = {
     KEY,
     LEGACY,
@@ -1963,6 +2101,13 @@
     noticeClass,
     noticeRole,
     setNotice,
+    DEFAULT_APP_PASSCODE,
+    APP_UNLOCK_KEY,
+    isAppUnlocked,
+    unlockApp,
+    lockApp,
+    changeAppPasscode,
+    publicSettings,
     clearDeviceData,
     supabaseConfig,
     adminSupabaseEmail,
@@ -2197,15 +2342,20 @@
     return `<div class='audit-strip'><span class='audit-pill'>Created <strong>${esc(c.createdAtNy || '-')}</strong></span><span class='audit-pill'>Last saved <strong>${esc(c.updatedAtNy || '-')}</strong></span></div>`;
   }
 
-  function priceSnapshotCardHtml(c){
+  function priceSnapshotCardHtml(c, displayFields){
     const latest = c.priceSnapshot || {};
     const created = c.priceHistory && c.priceHistory.length ? c.priceHistory[0] : latest;
-    return `<div class='snapshot-card'><div><div class='progress'>Latest saved price</div><div class='snapshot-value'>${esc(latest.price || c.fields.currentPrice || '-')}</div><div class='snapshot-meta'>${esc(latest.symbol || c.fields.instrument || 'No symbol')} · ${esc(latest.source || 'manual')} · ${esc(latest.capturedAtNy || c.updatedAtNy || '-')}</div></div><div class='snapshot-side'><span>Created price</span><strong>${esc(created.price || '-')}</strong></div></div><p class='snapshot-disclaimer'>${esc(PRICE_DELAY_DISCLAIMER)}</p><p class='hint'>Price source: ${esc(latest.source || 'manual')}</p>`;
+    const liveReady = c.priceMode === 'live' && focusLivePriceReady(c.id);
+    const shownPrice = liveReady ? liveFocusPrice.price : (latest.price || (displayFields && displayFields.currentPrice) || c.fields.currentPrice || '-');
+    const shownSource = liveReady ? liveFocusPrice.source : (latest.source || 'manual');
+    const shownTime = liveReady ? nyTimestamp(liveFocusPrice.fetchedAt) : (latest.capturedAtNy || c.updatedAtNy || '-');
+    const label = liveReady ? 'Live price preview' : 'Latest saved price';
+    return `<div class='snapshot-card'><div><div class='progress'>${esc(label)}</div><div class='snapshot-value'>${esc(shownPrice)}</div><div class='snapshot-meta'>${esc(latest.symbol || c.fields.instrument || 'No symbol')} · ${esc(shownSource)} · ${esc(shownTime)}</div></div><div class='snapshot-side'><span>Created price</span><strong>${esc(created.price || '-')}</strong></div></div><p class='snapshot-disclaimer'>${esc(PRICE_DELAY_DISCLAIMER)}</p><p class='hint'>${esc(focusLivePriceMessage(c) || ('Price source: ' + (latest.source || 'manual')))}</p>`;
   }
 
   function priceOverrideHtml(c){
     if(isFinalLocked(c)) return `<div class='override-panel'><p class='hint'>Final-saved card is locked. Price overrides are disabled.</p></div>`;
-    return `<div class='override-panel'><label class='label' for='focusCurrentPrice'>Override price before saving</label><input class='in numeric' id='focusCurrentPrice' inputmode='decimal' value='${esc(c.fields.currentPrice)}' placeholder='manual current price'><p class='hint'>Save changes or Final save to capture a new timestamp and price snapshot.</p></div>`;
+    return `<div class='override-panel'><label class='label' for='focusPriceMode'>Price update mode</label><select class='in' id='focusPriceMode'><option value='manual'${c.priceMode === 'manual' ? ' selected' : ''}>Manual override</option><option value='live'${c.priceMode === 'live' ? ' selected' : ''}>Live auto-update</option></select><div id='manualPricePanel'${c.priceMode === 'live' ? " class='hidden'" : ''}><label class='label' for='focusCurrentPrice'>Override price before saving</label><input class='in numeric' id='focusCurrentPrice' inputmode='decimal' value='${esc(c.fields.currentPrice)}' placeholder='manual current price'></div><p class='hint'>Save changes or Final save to capture a new timestamp and price snapshot.</p></div>`;
   }
 
   function priceHistoryHtml(c){
@@ -2363,6 +2513,14 @@
     return `<div class='app-shell'>${skip}<main class='app-main'>${notice ? `<div class='save-state ${noticeClass(noticeLevel)}' role='${noticeRole(noticeLevel)}'>${esc(notice)}</div>` : ''}${content}</main>${fabHtml()}${renderTabBar(activeTab())}</div>`;
   }
 
+  function lockScreen(){
+    return `<section class='screen access-screen'><div class='card-hero'><div class='progress'>Private single-user app</div><h2>Enter app passcode</h2><p class='sub'>This device-local passcode gates the trading planner on this browser.</p></div><div class='card access-card'><label class='label' for='appPasscodeInput'>4-digit app passcode</label><input class='in passcode-input' id='appPasscodeInput' type='password' inputmode='numeric' pattern='[0-9]*' maxlength='4' autocomplete='current-password' placeholder='Passcode' aria-label='4-digit app passcode'><div class='row-actions'><button class='btn primary' id='unlockAppBtn'>Unlock app</button></div>${appAccessMessage ? `<p class='hint bad' role='alert'>${esc(appAccessMessage)}</p>` : `<p class='hint'>Default passcode is 5880 until changed in Profile settings.</p>`}</div></section>`;
+  }
+
+  function renderLockedShell(){
+    return `<div class='app-shell access-shell'><main class='app-main'>${lockScreen()}</main></div>`;
+  }
+
   function home(){
     const homeCards = homeSession === 'All' ? cards : cards.filter(c => c.fields.session === homeSession);
     const sorted = homeCards.slice().sort((a, b) => new Date(b.updatedAt || b.savedAt) - new Date(a.updatedAt || a.savedAt));
@@ -2380,7 +2538,7 @@
     const draftMessage = lastDraftState || (plannerHasInput(f, marketContextDraft, plannerCardId) ? 'Autosave ready. Planner changes are kept locally before you save a card.' : 'No active planner draft.');
     const validation = plannerValidationState(f, marketContextDraft, plannerCardId);
     const validationHtml = plannerValidationMode ? plannerValidationHtml(validation, plannerValidationMode) : '';
-    return `<section class='screen'><div class='card'><div class='progress'>AI Trade Plan Builder</div><h2>Build a deterministic focus plan</h2><p class='sub'>This assistant formats DOL and Sweep inputs only. It does not forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<label class='check-row'><input type='checkbox' id='manualPriceNeededAck' ${manualPriceNeededAck ? 'checked' : ''}> <span>Manual price needed before generation</span></label><div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button>${priceCountdownHtml()}</div>${priceStatusHtml()}<p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the configured yfinance price API when available. Local development can also use the helper at 127.0.0.1:8765.</p>${priceValidationHtml(f)}</div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}</div><div class='card'><div class='progress'>Generated preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div id='plannerValidation'>${validationHtml}</div><div class='panel draft-state'><div><strong>Draft state</strong><p class='hint' id='draftState'>${esc(draftMessage)}</p></div><button class='btn ghost' id='discardDraftBtn'>Discard draft</button></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' id='plannerActions' style='bottom:var(--bottom-nav-height)' tabindex='-1'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Generate Focus Plan</button></div></div></section>`;
+    return `<section class='screen'><div class='card'><div class='progress'>Planner</div><h2>Build a plan for review</h2><p class='sub'>This workflow formats DOL and Sweep inputs only. It does not forecast price or generate trade signals.</p></div><div class='card'><div class='grid'><div>${input('date', 'Date', '', 'date')}</div><div>${input('time', 'Time', '', 'time')}</div></div><div class='grid'><div>${instrumentInput}</div><div>${select('session', 'Session', sessions, 'Optional')}</div></div>${input('currentPrice', 'Current price / tool-entry price', 'manual price at entry')}<label class='check-row'><input type='checkbox' id='manualPriceNeededAck' ${manualPriceNeededAck ? 'checked' : ''}> <span>Manual price needed before review</span></label><div class='row-actions'><button class='btn' id='autoPriceBtn'>${icon('sync')}Auto-detect price</button>${priceCountdownHtml()}</div>${priceStatusHtml()}<p class='hint'>Price source: ${esc(priceSourceLabel())}</p><p class='hint'>Auto-detect uses the configured yfinance price API when available. Local development can also use the helper at 127.0.0.1:8765.</p>${priceValidationHtml(f)}</div><div class='card'><div class='progress'>Price Map</div><h3>Liquidity ladder</h3><div id='priceMapPreview'>${priceMapHtml(f)}</div></div><div class='card'><div class='progress'>Draw on liquidity stack</div><h3>Up to three DOL records</h3>${row('dol', 1, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 2, 'DOL', 'Draw rationale / liquidity draw')}${row('dol', 3, 'DOL', 'Draw rationale / liquidity draw')}</div><div class='card'><div class='progress'>Potential sweep stack</div><h3>Up to three sweep records</h3>${row('sweep', 1, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 2, 'Sweep', 'Potential sweep liquidity')}${row('sweep', 3, 'Sweep', 'Potential sweep liquidity')}</div><div class='card'><div class='progress'>Plan preview</div><div class='focus-output' id='plannerPreview'>${summary(f, marketContextDraft)}${status}</div></div><div id='plannerValidation'>${validationHtml}</div><div class='panel draft-state'><div><strong>Draft state</strong><p class='hint' id='draftState'>${esc(draftMessage)}</p></div><button class='btn ghost' id='discardDraftBtn'>Discard draft</button></div><div aria-hidden='true' style='height:96px'></div><div class='sticky-cta' id='plannerActions' style='bottom:var(--bottom-nav-height)' tabindex='-1'><div class='inner'><button class='btn ghost' id='saveDraftBtn'>${icon('save')}Save Draft</button><button class='btn primary' id='nextBtn'>Review Plan</button></div></div></section>`;
   }
 
   function saved(){
@@ -2411,11 +2569,12 @@
     reviewId = c.id;
     const status = cardStatus(c);
     const locked = isFinalLocked(c);
+    const displayFields = focusDisplayFields(c);
     const latest = (c.priceHistory || []).slice(-1)[0] || c.priceSnapshot || {};
-    const mapSource = (latest && latest.source) || (c.priceSnapshot && c.priceSnapshot.source) || 'manual';
+    const mapSource = c.priceMode === 'live' && focusLivePriceReady(c.id) ? liveFocusPrice.source : ((latest && latest.source) || (c.priceSnapshot && c.priceSnapshot.source) || 'manual');
     const lockNotice = locked ? `<div class='panel'><h3>Final card locked</h3><p class='hint'>This card is final-saved and can only be viewed, copied, shared, or exported.</p></div>` : '';
     const editActions = locked ? '' : `<button class='btn' id='loadBtn'>Load to planner</button><button class='btn' id='saveChangesBtn'>Save changes</button><button class='btn good' id='finalSaveBtn'>Final save</button><button class='btn danger' id='deleteBtn'>Delete</button>`;
-    return `<section class='screen focus-detail'>${pageHead('Focus card details', c.fields.instrument || 'No instrument', c.fields.session || 'No session', 'saved')}<div class='card-hero'><div class='progress'>${esc(c.fields.date || 'No date')}</div><h2>${esc(c.fields.instrument || 'No instrument')}</h2><p class='sub'>${esc(c.fields.session || 'No session')}</p><div class='status-row'>${c.finalSaved ? pill('Final saved', 'info') : pill(status === 'complete' ? 'Complete draft' : 'Draft', status === 'complete' ? 'ok' : 'warn')}${locked ? pill('Locked', 'warn') : ''}${outcomePill(c.outcome)}</div><p class='hint'>Educational tool. Not financial advice.</p></div>${lockNotice}${auditStripHtml(c)}<div class='focus-grid'><div><div class='card'><div class='progress'>Price Map Dashboard</div>${priceValidationHtml(c.fields)}${priceMapHtml(c.fields, {updatedAt: c.updatedAt, source: mapSource, editable: true, locked})}</div><div class='card snapshot-section'>${priceSnapshotCardHtml(c)}${priceOverrideHtml(c)}${priceHistoryHtml(c)}</div></div><div><div class='card'><div class='progress'>DOL stack</div>${stackRows(c.fields, 'dol', 'DOL', locked)}</div><div class='card'><div class='progress'>Potential sweep stack</div>${stackRows(c.fields, 'sweep', 'Sweep', locked)}</div><div class='card'><h3>Trade highlights</h3><div class='review-grid'>${check('mark_dolRespected', 'DOL respected', c.markers.dolRespected, locked)}${check('mark_sweepConfirmed', 'LTF sweep confirmed', c.markers.sweepConfirmed, locked)}${check('mark_planFollowed', 'Plan followed', c.markers.planFollowed, locked)}</div><label class='label' for='reviewOutcome'>Outcome</label><select class='in' id='reviewOutcome' ${locked ? 'disabled' : ''}>${options(outcomes, c.outcome, '- outcome -')}</select><label class='label' for='reviewNotes'>Review notes</label><textarea class='in' id='reviewNotes' placeholder='Add review notes' ${locked ? 'disabled' : ''}>${esc(c.notes)}</textarea></div></div></div><div class='row-actions'><button class='btn' data-route='timeline'>Timeline</button><button class='btn' id='copyBtn'>Copy</button><button class='btn' id='shareBtn'>Share</button>${editActions}</div></section>`;
+    return `<section class='screen focus-detail'>${pageHead('Plan Review', c.fields.instrument || 'No instrument', c.fields.session || 'No session', 'saved')}<div class='card-hero'><div class='progress'>${esc(c.fields.date || 'No date')}</div><h2>${esc(c.fields.instrument || 'No instrument')}</h2><p class='sub'>${esc(c.fields.session || 'No session')}</p><div class='status-row'>${c.finalSaved ? pill('Final saved', 'info') : pill(status === 'complete' ? 'Complete draft' : 'Draft', status === 'complete' ? 'ok' : 'warn')}${locked ? pill('Locked', 'warn') : ''}${outcomePill(c.outcome)}</div><p class='hint'>Educational tool. Not financial advice.</p></div>${lockNotice}${auditStripHtml(c)}<div class='focus-grid'><div><div class='card'><div class='progress'>Price Map Dashboard</div>${priceValidationHtml(displayFields)}${priceMapHtml(displayFields, {updatedAt: c.updatedAt, source: mapSource, editable: true, locked})}</div><div class='card snapshot-section'>${priceSnapshotCardHtml(c, displayFields)}${priceOverrideHtml(c)}${priceHistoryHtml(c)}</div></div><div><div class='card'><div class='progress'>DOL stack</div>${stackRows(displayFields, 'dol', 'DOL', locked)}</div><div class='card'><div class='progress'>Potential sweep stack</div>${stackRows(displayFields, 'sweep', 'Sweep', locked)}</div><div class='card'><h3>Trade highlights</h3><div class='review-grid'>${check('mark_dolRespected', 'DOL respected', c.markers.dolRespected, locked)}${check('mark_sweepConfirmed', 'LTF sweep confirmed', c.markers.sweepConfirmed, locked)}${check('mark_planFollowed', 'Plan followed', c.markers.planFollowed, locked)}</div><label class='label' for='reviewOutcome'>Outcome</label><select class='in' id='reviewOutcome' ${locked ? 'disabled' : ''}>${options(outcomes, c.outcome, '- outcome -')}</select><label class='label' for='reviewNotes'>Review notes</label><textarea class='in' id='reviewNotes' placeholder='Add review notes' ${locked ? 'disabled' : ''}>${esc(c.notes)}</textarea></div></div></div><div class='row-actions'><button class='btn' data-route='timeline'>Timeline</button><button class='btn' id='copyBtn'>Copy</button><button class='btn' id='shareBtn'>Share</button>${editActions}</div></section>`;
 
   }
 
@@ -2475,7 +2634,7 @@
     const settings = getSettings();
     const m = getMetrics(cards);
     const recent = latestCard();
-    return `<section class='screen'>${pageHead('Trader profile', 'Profile', 'Local settings, account backup and portable data tools.', '')}${supabasePanelHtml()}<div class='card'><h3>Local summary</h3>${line('Saved cards', m.total)}${line('Final saved', m.finalSaved)}${line('Favorites', m.favorites)}${line('Recent plan', recent ? (recent.fields.instrument || 'No instrument') : '')}</div><div class='card'><h3>Settings</h3><label class='label' for='defaultInstrument'>Default instrument</label><input class='in' id='defaultInstrument' value='${esc(settings.defaultInstrument)}' placeholder='MNQ'><label class='label' for='defaultSession'>Default session</label><select class='in' id='defaultSession'>${options(sessions, settings.defaultSession, 'No default')}</select><label class='label' for='themeMode'>Theme</label><select class='in' id='themeMode'><option value='light'${settings.theme === 'light' ? ' selected' : ''}>Light mode</option><option value='dark'${settings.theme === 'dark' ? ' selected' : ''}>Dark mode</option></select><button class='btn primary' id='saveSettingsBtn'>Save settings</button></div><div class='card'><h3>Data tools</h3><p class='hint'>Export JSON regularly before clearing browser data, changing devices or testing beta builds. Clearing this device does not delete cloud backup.</p><div class='row-actions'><button class='btn primary' id='exportJsonBtn'>Export data</button><button class='btn' id='importJsonBtn'>Import data</button><a class='btn' id='feedbackLink' href='https://github.com/JGDev1215/ICT/issues/new' target='_blank' rel='noopener'>Beta feedback</a><button class='btn' data-route='component-gallery'>Component gallery</button><button class='btn danger' id='clearDataBtn'>Clear this device data</button><input class='file-input' id='importFile' type='file' accept='application/json,.json'></div></div></section>`;
+    return `<section class='screen'>${pageHead('Trader profile', 'Profile', 'Local settings, account backup and portable data tools.', '')}${supabasePanelHtml()}<div class='card'><h3>Local summary</h3>${line('Saved cards', m.total)}${line('Final saved', m.finalSaved)}${line('Favorites', m.favorites)}${line('Recent plan', recent ? (recent.fields.instrument || 'No instrument') : '')}</div><div class='card'><h3>Settings</h3><label class='label' for='defaultInstrument'>Default instrument</label><input class='in' id='defaultInstrument' value='${esc(settings.defaultInstrument)}' placeholder='MNQ'><label class='label' for='defaultSession'>Default session</label><select class='in' id='defaultSession'>${options(sessions, settings.defaultSession, 'No default')}</select><label class='label' for='themeMode'>Theme</label><select class='in' id='themeMode'><option value='light'${settings.theme === 'light' ? ' selected' : ''}>Light mode</option><option value='dark'${settings.theme === 'dark' ? ' selected' : ''}>Dark mode</option></select><button class='btn primary' id='saveSettingsBtn'>Save settings</button></div><div class='card'><h3>App passcode</h3><p class='hint'>Device-local access gate for this browser. It is separate from Account & Backup.</p><label class='label' for='currentAppPasscode'>Current passcode</label><input class='in passcode-input' id='currentAppPasscode' type='password' inputmode='numeric' pattern='[0-9]*' maxlength='4' autocomplete='current-password' placeholder='Current passcode'><label class='label' for='newAppPasscode'>New 4-digit passcode</label><input class='in passcode-input' id='newAppPasscode' type='password' inputmode='numeric' pattern='[0-9]*' maxlength='4' autocomplete='new-password' placeholder='New passcode'><label class='label' for='confirmAppPasscode'>Confirm new passcode</label><input class='in passcode-input' id='confirmAppPasscode' type='password' inputmode='numeric' pattern='[0-9]*' maxlength='4' autocomplete='new-password' placeholder='Confirm passcode'><div class='row-actions'><button class='btn primary' id='changeAppPasscodeBtn'>Change app passcode</button><button class='btn ghost' id='lockAppBtn'>Lock app</button></div></div><div class='card'><h3>Data tools</h3><p class='hint'>Export JSON regularly before clearing browser data, changing devices or testing beta builds. Clearing this device does not delete cloud backup.</p><div class='row-actions'><button class='btn primary' id='exportJsonBtn'>Export data</button><button class='btn' id='importJsonBtn'>Import data</button><a class='btn' id='feedbackLink' href='https://github.com/JGDev1215/ICT/issues/new' target='_blank' rel='noopener'>Beta feedback</a><button class='btn' data-route='component-gallery'>Component gallery</button><button class='btn danger' id='clearDataBtn'>Clear this device data</button><input class='file-input' id='importFile' type='file' accept='application/json,.json'></div></div></section>`;
   }
 
   function sync(){
@@ -2529,7 +2688,7 @@
     const validation = plannerValidationState(f, marketContextDraft, plannerCardId);
     if(openDetails ? !validation.canGenerateFocusPlan : !validation.canSaveDraft){
       plannerValidationMode = openDetails ? 'generate' : 'draft';
-      setNotice(openDetails ? 'Complete the required planner fields before generating.' : 'Add planning input before saving a draft.', 'warn');
+      setNotice(openDetails ? 'Complete the required planner fields before review.' : 'Add planning input before saving a draft.', 'warn');
       render();
       return;
     }
@@ -2555,7 +2714,7 @@
     }
     reviewId = c.id;
     route = openDetails ? 'focus' : 'planner';
-    setNotice(openDetails ? 'Focus plan saved.' : 'Draft saved.', 'good');
+    setNotice(openDetails ? 'Plan ready for review.' : 'Draft saved.', 'good');
     persistPlannerDraft();
     writeRouteHash();
     render();
@@ -2612,6 +2771,30 @@
       const n = q(id);
       if(n) n.onclick = fn;
     };
+
+    const unlockInput = q('appPasscodeInput');
+    on('unlockAppBtn', () => {
+      const passcode = unlockInput ? unlockInput.value.trim() : '';
+      if(!/^\d{4}$/.test(passcode)){
+        appAccessMessage = 'Enter the 4-digit app passcode.';
+        render();
+        return;
+      }
+      if(!unlockApp(passcode)){
+        render();
+        return;
+      }
+      setNotice('App unlocked.', 'good');
+      render();
+    });
+    if(unlockInput){
+      unlockInput.onkeydown = ev => {
+        if(ev && ev.key === 'Enter'){
+          const button = q('unlockAppBtn');
+          if(button && button.onclick) button.onclick();
+        }
+      };
+    }
 
     doc.querySelectorAll('.skip-link').forEach(n => {
       n.onclick = ev => {
@@ -2848,6 +3031,22 @@
     }
 
     const cur = () => cards.find(c => c.id === reviewId);
+    const focusMode = q('focusPriceMode');
+    if(focusMode){
+      focusMode.onchange = () => {
+        const c = cur();
+        if(!c || isFinalLocked(c)){
+          setNotice(LOCKED_CARD_MESSAGE, 'warn');
+          render();
+          return;
+        }
+        const mode = normPriceMode(focusMode.value);
+        const saved = updateCard(c.id, {priceMode: mode, priceHistoryEvent: false});
+        liveFocusPrice = {cardId: c.id, state: '', price: '', source: '', fetchedAt: 0, message: ''};
+        setNotice(saved ? (mode === 'live' ? 'Live price mode selected. Save changes to capture live price.' : 'Manual price override selected.') : (lastStorageError || 'Price mode could not be updated.'), saved ? 'good' : 'bad');
+        render();
+      };
+    }
     function read(finalSave){
       const c = cur();
       if(!c) return;
@@ -2863,10 +3062,14 @@
         return;
       }
       const fieldsPatch = Object.assign({}, focusReviewFields(c, q));
-      const focusPrice = q('focusCurrentPrice') ? clean(q('focusCurrentPrice').value) : c.fields.currentPrice;
+      const priceMode = normPriceMode(q('focusPriceMode') ? q('focusPriceMode').value : c.priceMode);
+      const focusPrice = priceMode === 'live' && focusLivePriceReady(c.id)
+        ? liveFocusPrice.price
+        : q('focusCurrentPrice') ? clean(q('focusCurrentPrice').value) : c.fields.currentPrice;
       if(focusPrice !== c.fields.currentPrice) fieldsPatch.currentPrice = focusPrice;
       const saved = updateCard(c.id, {
         fields: fieldsPatch,
+        priceMode,
         activeDolId: c.activeDolId,
         routeEvidence: c.routeEvidence,
         riskPlan: c.riskPlan,
@@ -2881,7 +3084,7 @@
         outcome,
         notes: q('reviewNotes').value.trim(),
         finalSaved: !!(finalSave && finalOutcomes.includes(outcome)),
-        priceSource: focusPrice !== c.fields.currentPrice ? 'manual' : (c.priceSnapshot.source || 'manual'),
+        priceSource: priceMode === 'live' && focusLivePriceReady(c.id) ? liveFocusPrice.source : (focusPrice !== c.fields.currentPrice ? 'manual' : (c.priceSnapshot.source || 'manual')),
         priceHistoryEvent: finalSave ? 'final-save' : 'saved-edit',
         journal: c.journal,
         risk: {
@@ -2990,6 +3193,19 @@
       setNotice(lastSettingsError || 'Settings saved.', lastSettingsError ? 'bad' : 'good');
       render();
     });
+    on('changeAppPasscodeBtn', () => {
+      const result = changeAppPasscode(
+        q('currentAppPasscode') ? q('currentAppPasscode').value.trim() : '',
+        q('newAppPasscode') ? q('newAppPasscode').value.trim() : '',
+        q('confirmAppPasscode') ? q('confirmAppPasscode').value.trim() : ''
+      );
+      setNotice(result.message, result.ok ? 'good' : 'bad');
+      render();
+    });
+    on('lockAppBtn', () => {
+      setNotice('App locked.', 'warn');
+      lockApp();
+    });
     on('adminLoginBtn', () => {
       const pin = q('adminPin') ? q('adminPin').value.trim() : '';
       if(!/^\d{4}$/.test(pin)){
@@ -3088,6 +3304,12 @@
   function render(){
     if(!app) return;
     applyTheme(getSettings().theme);
+    if(!isAppUnlocked()){
+      ensureLiveRegion();
+      app.innerHTML = renderLockedShell();
+      bind();
+      return;
+    }
     if(doc && doc.body && doc.body.setAttribute && doc.body.removeAttribute){
       if(['focus','review','timeline'].includes(route) && reviewId) doc.body.setAttribute('data-ict-review-id', reviewId);
       else doc.body.removeAttribute('data-ict-review-id');
@@ -3105,6 +3327,10 @@
     notice = '';
     noticeLevel = 'good';
     bind();
+    if(route === 'focus'){
+      const card = cards.find(x => x.id === reviewId);
+      ensureFocusLivePrice(card);
+    }
   }
 
   function tick(){
@@ -3114,6 +3340,10 @@
     doc.querySelectorAll('.price-countdown').forEach(n => {
       n.textContent = priceCountdownText();
     });
+    if(route === 'focus' && liveFocusPrice.cardId && liveFocusPrice.state === 'ok' && !priceRefreshRemainingFor(liveFocusPrice.fetchedAt)){
+      const card = cards.find(x => x.id === liveFocusPrice.cardId);
+      ensureFocusLivePrice(card);
+    }
   }
 
   restorePlannerDraft();

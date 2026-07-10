@@ -18,7 +18,7 @@ A lightweight browser-based ICT planning tool for one focused job:
 - Runtime dependencies: no build-time bundle; optional Supabase JS is loaded from CDN for Account & Backup
 - Dev QA dependencies: Playwright, installed only through `npm install`
 - Data storage: browser localStorage/sessionStorage with optional Supabase server sync for Focus Cards
-- Current app version: v0.8.10
+- Current app version: v0.8.11
 - Main entrypoint: index.html
 - Runtime config: assets/config.js
 - Stylesheet: assets/styles.css
@@ -39,9 +39,13 @@ The redesigned main page is a mobile-first dashboard with:
 
 Saved cards can still be opened directly without going through the planner.
 
+## App Access
+
+The app is protected by a device-local 4-digit passcode gate. The default passcode is `5880` until changed from Profile. This is a convenience gate for the private single-user static app; it is separate from Account & Backup and is not exported or synced to Supabase.
+
 ## Planner Flow
 
-The planner is now the mobile AI Trade Plan Builder. It is deterministic and local-only: the assistant copy formats the workflow, but the app does not call an AI service, forecast price, or generate trade signals.
+The Planner is deterministic and local-only: it formats DOL and Sweep inputs for Plan Review, but the app does not call an AI service, forecast price, or generate trade signals.
 
 The planner captures:
 
@@ -49,12 +53,12 @@ The planner captures:
 2. Current price / price at tool entry.
 3. Up to three draw-on-liquidity records using Price Level, Draw Rationale, and Timeframe Used.
 4. Up to three potential sweep records using Price Level, Sweep Liquidity, and Timeframe Used, with optional Sweep Taken, confidence, and hit-time context.
-5. Generated preview with DOL distance from the current price where numeric.
-6. Save Draft or Generate Focus Plan.
+5. Plan preview with DOL distance from the current price where numeric.
+6. Save Draft or Review Plan.
 
 Missing required inputs are shown as Draft, and the user can still save an incomplete draft card after adding at least one meaningful planning input. Completely empty/default-only Planner saves are blocked to prevent accidental blank Focus Cards. Sweep confidence and hit time are optional detail fields and do not decide Complete/Draft status.
 
-Generate Focus Plan validates the minimum Focus Card inputs before opening the details screen: instrument, session, at least one complete DOL row, and either a valid current price or explicit acknowledgement that manual price is needed. Partial DOL or Sweep rows must be completed or cleared before generation.
+Review Plan validates the minimum Focus Card inputs before opening Plan Review: instrument, session, at least one complete DOL row, and either a valid current price or explicit acknowledgement that manual price is needed. Partial DOL or Sweep rows must be completed or cleared before review.
 
 Current price can be entered manually. The app can also call an optional hosted yfinance price API on Vercel. Manual entry remains the fallback when the hosted API is unavailable or the symbol is unsupported. Zero, negative, malformed, scientific-notation, ambiguous, stale/unusable API responses are rejected for price-map math.
 
@@ -191,25 +195,25 @@ The ladder shows:
 - Include an empty state when no current price or mapped levels exist.
 - Include a loading state while yfinance price is being fetched.
 - Include an error state if live price is unavailable, while allowing manual price entry to remain usable.
-- Integrate a compact Price Map into the Planner generated preview and the full Price Map into Focus Card Details.
+- Integrate a compact Price Map into the Planner Plan preview and the full Price Map into Plan Review.
 
 The module uses `.price-map`, `.price-map-current`, `.price-map-row.dol`, `.price-map-row.sweep`, `.price-map-empty`, `.price-map-loading`, and `.price-map-error` hooks.
 
 ## Focus Card Details
 
-Focus Card Details starts with the Price Map Dashboard, then timestamp/price snapshot tools, DOL/Sweep review stacks, trade highlights, outcome, and review notes.
+Plan Review starts with the Price Map Dashboard, then timestamp/price snapshot tools, DOL/Sweep review stacks, trade highlights, outcome, and review notes.
 
 The Focus Card records:
 
 - Created timestamp in New York time.
 - Last edited timestamp in New York time.
 - Price snapshot at creation.
-- Latest saved price snapshot.
+- Latest saved price snapshot, with Manual override or Live auto-update mode while editable.
 - Price history for created, saved-edit, and final-save events.
 - DOL and Sweep records, including DOL/Sweep taken status.
 - Outcome, DOL respected, LTF sweep confirmed, plan followed, and review notes.
 
-Typing does not update a draft card. The user must press Save changes or Final save to capture edits, timestamps, price data, review markers, outcome, and notes.
+Typing does not update a draft card. The user must press Save changes or Final save to capture edits, timestamps, price data, review markers, outcome, and notes. Live price mode updates the visible review price while the card is open, but saved price history changes only when the user saves.
 
 After Final save, the card is locked. Locked final cards are view/copy/share/export only and cannot be edited, deleted, favorited/unfavorited, loaded back into Planner, overwritten by import, or changed by saved-card helper actions.
 

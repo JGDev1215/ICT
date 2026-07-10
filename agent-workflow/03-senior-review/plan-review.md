@@ -2,7 +2,7 @@
 
 ## Plan Quality
 
-The plan directly addresses the requested closeout, commit, and push.
+The plan is specific, scoped, and aligned with the requested v0.8.11 changes.
 
 ## Missing Steps
 
@@ -10,22 +10,23 @@ None.
 
 ## Risk Areas
 
-- Ensure the daily report is historical and not treated as source of truth.
-- Do not skip final checks before committing all accumulated product changes.
-- Confirm push target before pushing.
+- Keep passcode local-only and out of export/remote settings.
+- Preserve final-saved card locking.
+- Do not change Planner validation requirements from the completed Historical plan.
+- Keep cache/version strings synchronized.
 
 ## Overengineering Concerns
 
-No extra release process is needed beyond the requested report, checks, commit, and push.
+Do not add backend auth, encryption claims, or route rewrites.
 
 ## Simpler Alternatives
 
-None appropriate; the user explicitly requested commit and push.
+Use localStorage/sessionStorage convenience gate and stable existing routes.
 
 ## Required Amendments
 
-Use one commit that summarizes the combined planner simplification, final-card lock, Watchlist removal, and end-of-day report.
+None.
 
 ## Decision
 
-APPROVED WITH AMENDMENTS
+APPROVED

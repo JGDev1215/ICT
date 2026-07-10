@@ -1,5 +1,12 @@
 const {test, expect} = require('@playwright/test');
 
+async function unlockApp(page, passcode = '5880'){
+  await expect(page.locator('#appPasscodeInput')).toBeVisible();
+  await page.locator('#appPasscodeInput').fill(passcode);
+  await page.locator('#unlockAppBtn').click();
+  await expect(page.locator('#appPasscodeInput')).toHaveCount(0);
+}
+
 test.beforeEach(async ({page}) => {
   await page.goto('/');
   await page.evaluate(() => {
@@ -7,11 +14,35 @@ test.beforeEach(async ({page}) => {
     sessionStorage.clear();
   });
   await page.reload();
+  await unlockApp(page);
+});
+
+test('app starts locked and accepts the default passcode', async ({page}) => {
+  await page.evaluate(() => sessionStorage.clear());
+  await page.reload();
+
+  await expect(page.getByText('Enter app passcode')).toBeVisible();
+  await expect(page.getByText('ICT Sweep Tracker')).toHaveCount(0);
+  await page.locator('#appPasscodeInput').fill('5880');
+  await page.locator('#unlockAppBtn').click();
+
+  await expect(page.getByText('ICT Sweep Tracker')).toBeVisible();
+});
+
+test('wrong app passcode keeps normal app content hidden', async ({page}) => {
+  await page.evaluate(() => sessionStorage.clear());
+  await page.reload();
+
+  await page.locator('#appPasscodeInput').fill('1234');
+  await page.locator('#unlockAppBtn').click();
+
+  await expect(page.getByText('Incorrect passcode.')).toBeVisible();
+  await expect(page.getByText('ICT Sweep Tracker')).toHaveCount(0);
 });
 
 test('empty planner save draft is blocked', async ({page}) => {
   await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
-  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+  await expect(page.getByText('Build a plan for review')).toBeVisible();
 
   await page.locator('#saveDraftBtn').click();
 
@@ -21,20 +52,20 @@ test('empty planner save draft is blocked', async ({page}) => {
 
 test('empty planner generate focus plan is blocked', async ({page}) => {
   await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
-  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+  await expect(page.getByText('Build a plan for review')).toBeVisible();
 
   await page.locator('#nextBtn').click();
 
   await expect(page.locator('#plannerValidation')).toContainText('Instrument is required.');
   await expect(page.locator('#plannerValidation')).toContainText('Session is required.');
   await expect(page.locator('#plannerValidation')).toContainText('Add at least one complete DOL row');
-  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+  await expect(page.getByText('Build a plan for review')).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().length)).toBe(0);
 });
 
 test('partial meaningful planner draft can save', async ({page}) => {
   await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
-  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+  await expect(page.getByText('Build a plan for review')).toBeVisible();
 
   await page.locator('#instrument').fill('MNQ');
   await page.locator('#saveDraftBtn').click();
@@ -47,7 +78,7 @@ test('partial meaningful planner draft can save', async ({page}) => {
 
 test('planner creates a focus card and preserves it after reload', async ({page}) => {
   await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
-  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+  await expect(page.getByText('Build a plan for review')).toBeVisible();
 
   await page.locator('#instrument').fill('MNQ');
   await page.locator('#session').selectOption('New York AM');
@@ -60,12 +91,12 @@ test('planner creates a focus card and preserves it after reload', async ({page}
   await page.locator('#sweep1Tf').selectOption('15m');
 
   await page.locator('#nextBtn').click();
-  await expect(page.getByText('Focus card details')).toBeVisible();
+  await expect(page.getByText('Plan Review')).toBeVisible();
   await expect(page.locator('.card-hero h2')).toHaveText('MNQ');
   await expect(page.getByText('Price Map Dashboard')).toBeVisible();
 
   await page.reload();
-  await expect(page.getByText('Focus card details')).toBeVisible();
+  await expect(page.getByText('Plan Review')).toBeVisible();
   await expect(page.locator('.card-hero h2')).toHaveText('MNQ');
 
   await page.locator("nav[aria-label='Primary'] [data-route='saved']").click();
@@ -75,7 +106,7 @@ test('planner creates a focus card and preserves it after reload', async ({page}
 
 test('manual price acknowledgement restores and can generate complete no-sweep plan', async ({page}) => {
   await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
-  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+  await expect(page.getByText('Build a plan for review')).toBeVisible();
 
   await page.locator('#instrument').fill('MNQ');
   await page.locator('#session').selectOption('New York AM');
@@ -85,11 +116,11 @@ test('manual price acknowledgement restores and can generate complete no-sweep p
   await page.locator('#dol1Tf').selectOption('Daily');
 
   await page.reload();
-  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+  await expect(page.getByText('Build a plan for review')).toBeVisible();
   await expect(page.locator('#manualPriceNeededAck')).toBeChecked();
 
   await page.locator('#nextBtn').click();
-  await expect(page.getByText('Focus card details')).toBeVisible();
+  await expect(page.getByText('Plan Review')).toBeVisible();
   await expect(page.getByText('Complete draft')).toBeVisible();
 });
 
@@ -196,8 +227,8 @@ test('clear this device data is local-only and clears sync metadata', async ({pa
   });
   await page.locator('#clearDataBtn').click();
 
-  await expect(page.locator('.save-state.warn')).toContainText('This device data was cleared');
-  await expect(page.locator('.save-state.warn')).toHaveAttribute('role', 'status');
+  await expect(page.getByText('This device data was cleared. Enter the app passcode to continue.')).toBeVisible();
+  await expect(page.locator('#appPasscodeInput')).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards().length)).toBe(0);
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ict_cards_v078'))).toBeNull();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ict_supabase_sync_queue_v1'))).toBeNull();
@@ -237,6 +268,112 @@ test('profile backup sign-in uses a 4 digit PIN field', async ({page}) => {
   await page.locator('#adminLoginBtn').click();
   await expect(page.locator('#globalStatus')).toContainText('Enter the 4-digit PIN.');
   await expect.poll(() => page.evaluate(() => window.__pinLoginArgs || null)).toBeNull();
+});
+
+test('profile can change the device-local app passcode', async ({page}) => {
+  await page.locator("nav[aria-label='Primary'] [data-route='profile']").click();
+  await expect(page.getByRole('heading', {name: 'Profile'})).toBeVisible();
+
+  await page.locator('#currentAppPasscode').fill('5880');
+  await page.locator('#newAppPasscode').fill('2468');
+  await page.locator('#confirmAppPasscode').fill('2468');
+  await page.locator('#changeAppPasscodeBtn').click();
+  await expect(page.locator('#globalStatus')).toContainText('App passcode updated.');
+
+  await page.locator('#lockAppBtn').click();
+  await expect(page.getByText('Enter app passcode')).toBeVisible();
+  await page.locator('#appPasscodeInput').fill('5880');
+  await page.locator('#unlockAppBtn').click();
+  await expect(page.getByText('Incorrect passcode.')).toBeVisible();
+  await page.locator('#appPasscodeInput').fill('2468');
+  await page.locator('#unlockAppBtn').click();
+  await expect(page.getByRole('heading', {name: 'Profile'})).toBeVisible();
+});
+
+test('focus card manual price override saves a new snapshot', async ({page}) => {
+  await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
+  await page.locator('#instrument').fill('MNQ');
+  await page.locator('#session').selectOption('New York AM');
+  await page.locator('#currentPrice').fill('20000');
+  await page.locator('#dol1Level').fill('20250');
+  await page.locator('#dol1Draw').selectOption('Previous day high (PDH)');
+  await page.locator('#dol1Tf').selectOption('Daily');
+  await page.locator('#nextBtn').click();
+  await expect(page.getByText('Plan Review')).toBeVisible();
+
+  await expect(page.locator('#focusPriceMode')).toHaveValue('manual');
+  await page.locator('#focusCurrentPrice').fill('20111');
+  await page.locator('#saveChangesBtn').click();
+
+  await expect(page.locator('.snapshot-value')).toContainText('20111');
+  await expect.poll(() => page.evaluate(() => {
+    const card = window.ICTSweepState.getCards()[0];
+    return card.priceSnapshot.price;
+  })).toBe('20111');
+});
+
+test('focus card live price mode previews mocked price and stores it on save', async ({page}) => {
+  await page.evaluate(() => {
+    window.ICT_PRICE_API_BASE = `${window.location.origin}/api/price`;
+    window.fetch = async () => new Response(JSON.stringify({
+      symbol: 'MNQ',
+      yfSymbol: 'MNQ=F',
+      price: 20555.25,
+      source: 'yfinance',
+      cached: false,
+      timestamp: '2026-07-10T12:00:00Z'
+    }), {
+      status: 200,
+      headers: {'Content-Type': 'application/json'}
+    });
+  });
+
+  await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
+  await page.locator('#instrument').fill('MNQ');
+  await page.locator('#session').selectOption('New York AM');
+  await page.locator('#currentPrice').fill('20000');
+  await page.locator('#dol1Level').fill('20250');
+  await page.locator('#dol1Draw').selectOption('Previous day high (PDH)');
+  await page.locator('#dol1Tf').selectOption('Daily');
+  await page.locator('#nextBtn').click();
+  await expect(page.getByText('Plan Review')).toBeVisible();
+
+  await page.locator('#focusPriceMode').selectOption('live');
+  await expect(page.getByText('Live price preview')).toBeVisible();
+  await expect(page.locator('.snapshot-value')).toContainText('20555.25');
+  await expect.poll(() => page.evaluate(() => window.ICTSweepState.getCards()[0].priceSnapshot.price)).toBe('20000');
+
+  await page.locator('#saveChangesBtn').click();
+  await expect.poll(() => page.evaluate(() => {
+    const card = window.ICTSweepState.getCards()[0];
+    return `${card.priceMode}:${card.priceSnapshot.price}:${card.priceSnapshot.source}`;
+  })).toBe('live:20555.25:hosted-yfinance');
+});
+
+test('final-saved cards do not allow price mode changes', async ({page}) => {
+  await page.evaluate(() => {
+    const api = window.ICTSweepState;
+    const card = api.createBlankDraft({
+      id: 'locked-price-card',
+      fields: {
+        instrument: 'MNQ',
+        session: 'New York AM',
+        currentPrice: '20000',
+        dol1Level: '20250',
+        dol1Draw: 'Previous day high (PDH)',
+        dol1Tf: 'Daily'
+      },
+      outcome: 'Hit',
+      finalSaved: true
+    });
+    api.saveCards([Object.assign({}, card, {finalSaved: true, outcome: 'Hit'})]);
+    api.go('focus', {id: 'locked-price-card'});
+  });
+
+  await expect(page.getByText('Plan Review')).toBeVisible();
+  await expect(page.getByText('Final card locked')).toBeVisible();
+  await expect(page.locator('#focusPriceMode')).toHaveCount(0);
+  await expect(page.getByText('Price overrides are disabled.')).toBeVisible();
 });
 
 test('json import through file input imports cards, settings, and schema warnings', async ({page}) => {
@@ -308,7 +445,7 @@ test('bad notices render as alerts', async ({page}) => {
 
 test('planner skip link reaches sticky actions without changing route', async ({page}) => {
   await page.locator("nav[aria-label='Primary'] [data-route='planner']").click();
-  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+  await expect(page.getByText('Build a plan for review')).toBeVisible();
 
   const skip = page.locator('.skip-link');
   await skip.focus();
@@ -316,7 +453,7 @@ test('planner skip link reaches sticky actions without changing route', async ({
   await skip.press('Enter');
 
   await expect(page.locator('#plannerActions')).toBeFocused();
-  await expect(page.getByText('AI Trade Plan Builder')).toBeVisible();
+  await expect(page.getByText('Build a plan for review')).toBeVisible();
 });
 
 test('home session chips filter the visible focus card', async ({page}) => {
@@ -384,7 +521,7 @@ test('legacy bias and risk data stay hidden in active focus UI but export', asyn
     api.go('focus', {id: 'legacy-hidden-card'});
   });
 
-  await expect(page.getByText('Focus card details')).toBeVisible();
+  await expect(page.getByText('Plan Review')).toBeVisible();
   await expect(page.getByText('Price Map Dashboard')).toBeVisible();
   await expect(page.getByText('Bias Determination For Session')).toHaveCount(0);
   await expect(page.getByText('Market Context')).toHaveCount(0);

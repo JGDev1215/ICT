@@ -2,47 +2,58 @@
 
 ## Goal
 
-Complete project closeout documentation and publish the current worktree to GitHub.
+Implement v0.8.11 passcode access, per-card price mode, and Planner/Plan Review navigation copy with tests and documentation.
 
 ## Repo Findings
 
-- The current dirty worktree contains the intended Planner simplification, final-card lock, Watchlist removal, docs, tests, QA, and workflow evidence.
-- Daily reports belong in `docs/daily-reports/`.
-- Commit and push are explicitly requested.
+- Existing settings are stored under `ict_settings_v1`.
+- Existing app export includes `settings: getSettings()`.
+- Existing Supabase settings sync uses `getSettingsPayload`.
+- Existing Focus Card save path is `read(finalSave)` and `updateCard`.
+- Existing price fetch helper is `fetchPrice(symbol)` with hosted/local fallback.
+- Existing version/cache updates can be coordinated with `tools/bump-version.js`.
 
 ## Files Likely Affected
 
-- `docs/daily-reports/2026-07-09-session-report-3.md`
+- `assets/app.js`
+- `assets/styles.css`
+- `index.html`
+- `service-worker.js`
+- `tests/smoke.js`
+- `tests/e2e/planner.spec.js`
+- `README.md`
+- `CHANGELOG.md`
+- `CLAUDE.md`
 - `agent-workflow/*`
-- Existing dirty files already present in the worktree
 
 ## Proposed Changes
 
-- Add an end-of-day historical report.
-- Update workflow evidence for this closeout task.
-- Run checks.
-- Stage all changes.
-- Commit with a message covering the shipped planner/final-lock updates.
-- Push `main` to `origin`.
+- Add local passcode helpers, lock screen rendering, unlock/session state, and passcode change UI.
+- Extend card normalization with safe price mode default.
+- Add Focus Card price mode selector and live fetch behavior that updates visible draft state without persisting until save.
+- Rename user-facing Planner/Focus copy to one coherent Planner/Plan Review workflow.
+- Bump version/cache strings to v0.8.11.
+- Add smoke and Playwright coverage.
 
 ## Step-by-Step Plan
 
-1. Run required safety checks.
-2. Read docs routing and daily-report guidance.
-3. Create the end-of-day report.
-4. Run `npm test`, `npm run test:e2e -- --reporter=dot`, and `git diff --check`.
-5. Complete workflow review/final approval files.
-6. Run `git status` and `git diff`.
-7. `git add .`
-8. Commit all changes.
-9. Push the current branch.
+1. Update workflow evidence and obtain approved plan.
+2. Implement passcode local settings and lock screen gate.
+3. Add passcode settings controls in Profile and handlers.
+4. Add price mode normalization, UI, live fetch state, and save integration.
+5. Update Planner/Plan Review labels and docs.
+6. Run version bump for v0.8.11.
+7. Update tests for new behavior and cache strings.
+8. Run required checks.
+9. Complete review/final workflow files.
 
 ## Acceptance Criteria
 
-- Report is present and factual.
-- Checks pass.
-- Commit exists locally.
-- Push succeeds.
+- The app cannot render normal routes until unlocked.
+- Existing browser data remains compatible.
+- Price mode does not mutate final-saved cards.
+- Stored price snapshots/history update only on save.
+- Tests and docs reflect v0.8.11.
 
 ## Test Plan
 
@@ -52,9 +63,10 @@ Complete project closeout documentation and publish the current worktree to GitH
 
 ## Risks
 
-- Playwright may take time but should reuse existing local static server configuration.
-- Push may fail if remote rejects or network/auth is unavailable.
+- Lock screen can break test harnesses or route rendering if not bypassed correctly after unlock.
+- Live price fetch must not create background storage writes.
+- Version/cache strings must stay in sync.
 
 ## Rollback Plan
 
-If checks fail, fix before commit. If push fails after commit, report the local commit hash and push failure.
+- Revert v0.8.11 product edits and restore v0.8.10 cache strings if behavior is unsafe.
